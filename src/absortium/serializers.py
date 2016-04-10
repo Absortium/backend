@@ -5,7 +5,7 @@ from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 
 from absortium import constants
-from absortium.models import Order, Offer
+from absortium.models import Order, Offer, Address
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -25,6 +25,7 @@ class MyChoiceField(serializers.Field):
         This class used for translation incoming strings values to
         integer representation by the given mapping dict.
     """
+
     def __init__(self, choices):
         super().__init__()
         self.to_internal = choices
@@ -99,3 +100,9 @@ class OfferSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = Offer
         fields = ('pair', 'type', 'amount', 'price')
+
+
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = ('address', 'currency')

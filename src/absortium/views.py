@@ -1,15 +1,17 @@
 __author__ = 'andrew.shvv@gmail.com'
 
 from django.contrib.auth.models import User, Group
+from django.contrib.auth import settings
+
 from rest_framework import generics
 from rest_framework import mixins
 from rest_framework.viewsets import ModelViewSet
 
 from absortium.constants import AVAILABLE_PAIRS, AVAILABLE_ORDER_TYPES
 from absortium.exceptions import Http400
-from absortium.models import Order, Offer
-from absortium.serializers import UserSerializer, GroupSerializer, OrderSerializer, OfferSerializer
-
+from absortium.models import Order, Offer, Address
+from absortium.serializers import UserSerializer, GroupSerializer, OrderSerializer, OfferSerializer, AddressSerializer
+from absortium.wallet.bitcoin import get_coinbase_client
 
 class UserList(generics.ListAPIView):
     queryset = User.objects.all().order_by('-date_joined')
@@ -116,3 +118,24 @@ class OfferListView(mixins.ListModelMixin,
 
     def get(self, request, pair, type, *args, **kwargs):
         return self.list(request, *args, **kwargs)
+
+
+class AddressListView(mixins.ListModelMixin,
+                      mixins.CreateModelMixin,
+                      generics.GenericAPIView):
+    """
+    API endpoint that allows orders to be viewed and created.
+    """
+    queryset = Address.objects.all()
+    serializer_class = AddressSerializer
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        client = get_coinbase_client()
+        client.create_address()
+        return self.create(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)

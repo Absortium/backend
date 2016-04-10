@@ -67,3 +67,20 @@ class Offer(models.Model):
 
     class Meta:
         ordering = ('price',)
+
+
+class Address(models.Model):
+    """
+    """
+
+    amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                 decimal_places=constants.DECIMAL_PLACES)
+
+    address = models.TextField()
+    currency = models.IntegerField()
+
+    created = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL)
+
+    class Meta:
+        unique_together = ("currency", "address")

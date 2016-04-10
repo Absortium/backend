@@ -11,40 +11,53 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 """
 
 import os
+import sys
 
-_assert_msg = "Set '{}' variable in the service 'environment' section in the docker-compose.yaml file!"
+secret_settings = {
+    'SECRET_KEY': 'DJANGO_SECRET_KEY',
+    'SOCIAL_AUTH_GITHUB_OAUTH2_SECRET': 'SOCIAL_AUTH_GITHUB_OAUTH2_SECRET',
+    'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET': 'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET',
+    'SOCIAL_AUTH_TWITTER_OAUTH1_SECRET': 'SOCIAL_AUTH_TWITTER_OAUTH1_SECRET',
+    'SOCIAL_AUTH_TWITTER_OAUTH1_KEY': 'SOCIAL_AUTH_TWITTER_OAUTH1_KEY',
+    'POSTGRES_PASSWORD': 'POSTGRES_PASSWORD',
+    'COINBASE_API_KEY': 'COINBASE_API_KEY',
+    'COINBASE_API_SECRET': 'COINBASE_API_SECRET'
+}
 
-_env_name = "DJANGO_SECRET_KEY"
-assert (_env_name in os.environ, _assert_msg.format(_env_name))
-SECRET_KEY = os.environ[_env_name]
+settings_module = sys.modules[__name__]
+for name, env_name in secret_settings.items():
+    assert_msg = "Set '{}' variable in the service 'environment' section in the docker-compose.yaml file!"
+    assert (env_name in os.environ, assert_msg.format(env_name))
+    value = os.environ[env_name]
+    setattr(settings_module, name, value)
 
-_env_name = "SOCIAL_AUTH_GITHUB_OAUTH2_SECRET"
-assert (_env_name in os.environ, _assert_msg.format(_env_name))
-SOCIAL_AUTH_GITHUB_OAUTH2_SECRET = os.environ[_env_name]
-
-_env_name = "SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET"
-assert (_env_name in os.environ, _assert_msg.format(_env_name))
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ[_env_name]
-
-_env_name = "SOCIAL_AUTH_TWITTER_OAUTH1_SECRET"
-assert (_env_name in os.environ, _assert_msg.format(_env_name))
-SOCIAL_AUTH_TWITTER_OAUTH1_SECRET = os.environ[_env_name]
-
-_env_name = "SOCIAL_AUTH_TWITTER_OAUTH1_KEY"
-assert (_env_name in os.environ, _assert_msg.format(_env_name))
-SOCIAL_AUTH_TWITTER_OAUTH1_KEY = os.environ[_env_name]
-
-_env_name = "POSTGRES_PASSWORD"
-assert (_env_name in os.environ, _assert_msg.format(_env_name))
-POSTGRES_PASSWORD = os.environ[_env_name]
-
-_env_name = "COINBASE_API_KEY"
-assert (_env_name in os.environ, _assert_msg.format(_env_name))
-COINBASE_API_KEY = os.environ[_env_name]
-
-_env_name = "COINBASE_API_SECRET"
-assert (_env_name in os.environ, _assert_msg.format(_env_name))
-COINBASE_API_SECRET = os.environ[_env_name]
+# _env_name = "SOCIAL_AUTH_GITHUB_OAUTH2_SECRET"
+# assert (_env_name in os.environ, _assert_msg.format(_env_name))
+# SOCIAL_AUTH_GITHUB_OAUTH2_SECRET = os.environ[_env_name]
+#
+# _env_name = "SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET"
+# assert (_env_name in os.environ, _assert_msg.format(_env_name))
+# SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ[_env_name]
+#
+# _env_name = "SOCIAL_AUTH_TWITTER_OAUTH1_SECRET"
+# assert (_env_name in os.environ, _assert_msg.format(_env_name))
+# SOCIAL_AUTH_TWITTER_OAUTH1_SECRET = os.environ[_env_name]
+#
+# _env_name = "SOCIAL_AUTH_TWITTER_OAUTH1_KEY"
+# assert (_env_name in os.environ, _assert_msg.format(_env_name))
+# SOCIAL_AUTH_TWITTER_OAUTH1_KEY = os.environ[_env_name]
+#
+# _env_name = "POSTGRES_PASSWORD"
+# assert (_env_name in os.environ, _assert_msg.format(_env_name))
+# POSTGRES_PASSWORD = os.environ[_env_name]
+#
+# _env_name = "COINBASE_API_KEY"
+# assert (_env_name in os.environ, _assert_msg.format(_env_name))
+# COINBASE_API_KEY = os.environ[_env_name]
+#
+# _env_name = "COINBASE_API_SECRET"
+# assert (_env_name in os.environ, _assert_msg.format(_env_name))
+# COINBASE_API_SECRET = os.environ[_env_name]
 
 COINBASE_SANDBOX = True
 if COINBASE_SANDBOX:
@@ -131,7 +144,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'postgres',
         'USER': 'postgres',
-        'PASSWORD': POSTGRES_PASSWORD,
+        'PASSWORD': getattr(settings_module, 'POSTGRES_PASSWORD'),
         'HOST': 'docker.postgres',
         'PORT': '5432',
     }
