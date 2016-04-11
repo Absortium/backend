@@ -103,6 +103,8 @@ class OfferSerializer(DynamicFieldsModelSerializer):
 
 
 class AddressSerializer(serializers.ModelSerializer):
+    currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
+
     class Meta:
         model = Address
         fields = ('address', 'currency')

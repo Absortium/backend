@@ -30,3 +30,8 @@ def get_primary_account():
         client = get_coinbase_client()
         _primary_account = client.get_primary_account()
     return _primary_account
+
+
+def create_address(account_id):
+    client = get_coinbase_client()
+    return client.create_address(account_id=account_id)

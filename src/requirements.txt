@@ -20,6 +20,8 @@ djangorestframework-jwt==1.8.0
 mock==2.0.0
 coinbase
 celery
+redlock-py
+
 
 # ======================================================================================
 # All other libraries that was installed during general libs installation

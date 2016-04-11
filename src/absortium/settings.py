@@ -37,6 +37,10 @@ if COINBASE_SANDBOX:
 else:
     COINBASE_API_URL = 'https://api.coinbase.com'
 
+COINBASE_ACCOUNT_ID='2bbf394c-193b-5b2a-9155-3b4732659ede'
+
+CELERY_BROKER = 'amqp://guest@docker.broker//'
+
 # SOCIAL_AUTH_PIPELINE = (
 #     'users.social_pipeline.auto_logout',  # custom action
 #     'social.pipeline.social_auth.social_details',

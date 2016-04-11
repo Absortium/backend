@@ -74,7 +74,7 @@ class Address(models.Model):
     """
 
     amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
-                                 decimal_places=constants.DECIMAL_PLACES)
+                                 decimal_places=constants.DECIMAL_PLACES, default=0)
 
     address = models.TextField()
     currency = models.IntegerField()

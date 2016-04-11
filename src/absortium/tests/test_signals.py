@@ -32,16 +32,22 @@ class SignalTest(APITestCase):
         self.user = user
 
     def test_order_post_save(self, *args, **kwargs):
-        N = 3
+        n = 3
 
-        for i in range(0, N):
-            print(i)
+        for i in range(0, n):
             order = Order(type=SELL, amount=1, price=1, pair=BTC_ETH, owner=self.user)
             order.save()
 
-        offer = Offer.objects.filter(type=SELL, price=1, pair=BTC_ETH).first()
-        self.assertNotEqual(offer, None)
-        self.assertEqual(offer.amount, N)
+        offers = Offer.objects.filter(type=SELL, price=1, pair=BTC_ETH).all()
+
+        # Count of offers should be equal to 1 because price is similar for all created orders
+        self.assertEqual(len(offers), 1)
+
+        offer = offers[0]
+
+        # Amount of offers should be equal to 3 because price is similar for all created orders
+        # and all orders should be merged in one offer
+        self.assertEqual(offer.amount, n)
 
     def test_order_post_save_inaccuracies(self, *args, **kwargs):
         price = 1
@@ -60,10 +66,14 @@ class SignalTest(APITestCase):
             self.assertEqual(response.status_code, 201)
 
         response = self.client.get('/api/offers/{}/{}'.format(currency_pair, order_type), format='json')
-        offers = response.json()['results']
+        self.assertEqual(response.status_code,  200)
+
+        offers = Offer.objects.filter(type=SELL, price=price, pair=BTC_ETH).all()
+
+        # Count of offers should be equal to 1 because price is similar for all created orders
+        self.assertEqual(len(offers), 1)
 
         offer = offers[0]
-        amount = decimal.Decimal(offer['amount'])
 
-        self.assertEqual(len(offers), 1)
-        self.assertEqual(amount, sum(amounts))
+        # Shouldn't be inaccurancies
+        self.assertEqual(offer.amount, sum(amounts))

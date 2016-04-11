@@ -1,17 +1,19 @@
 __author__ = 'andrew.shvv@gmail.com'
 
-from django.contrib.auth.models import User, Group
 from django.contrib.auth import settings
-
-from rest_framework import generics
-from rest_framework import mixins
+from django.contrib.auth.models import User, Group
+from rest_framework import generics, mixins, status
+from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
+
+from absortium.celery import app
 from absortium.constants import AVAILABLE_PAIRS, AVAILABLE_ORDER_TYPES
 from absortium.exceptions import Http400
 from absortium.models import Order, Offer, Address
 from absortium.serializers import UserSerializer, GroupSerializer, OrderSerializer, OfferSerializer, AddressSerializer
-from absortium.wallet.bitcoin import get_coinbase_client
+from absortium.wallet import bitcoin
+
 
 class UserList(generics.ListAPIView):
     queryset = User.objects.all().order_by('-date_joined')
@@ -120,22 +122,47 @@ class OfferListView(mixins.ListModelMixin,
         return self.list(request, *args, **kwargs)
 
 
-class AddressListView(mixins.ListModelMixin,
-                      mixins.CreateModelMixin,
+class AddressListView(mixins.CreateModelMixin,
                       generics.GenericAPIView):
     """
-    API endpoint that allows orders to be viewed and created.
+    API endpoint that allows address to be viewed and created.
     """
     queryset = Address.objects.all()
     serializer_class = AddressSerializer
 
-    def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
+    def post(self, request, currency, *args, **kwargs):
 
-    def post(self, request, *args, **kwargs):
-        client = get_coinbase_client()
-        client.create_address()
-        return self.create(request, *args, **kwargs)
+        if currency == 'btc':
+            response = bitcoin.create_address(account_id=settings.COINBASE_ACCOUNT_ID)
+            coinbase_data = response['data']
+            data = request.data.copy()
+
+            data['currency'] = currency
+            data['address'] = coinbase_data['address']
+
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+        return Http400("We do not support such currency as '{}'".format(currency))
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+
+class MoneyView(mixins.ListModelMixin,
+                mixins.DestroyModelMixin,
+                generics.GenericAPIView):
+
+    """
+    API endpoint that allows address to be viewed and created.
+    """
+
+    queryset = Address.objects.all()
+    serializer_class = AddressSerializer
+
+    def post(self, request, currency, *args, **kwargs):
+
+

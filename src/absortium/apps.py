@@ -12,8 +12,3 @@ class AbsortiumConfig(AppConfig):
         # This will make sure the signals is always imported when
         # Django starts so that exclude import cycles
         import absortium.signals
-
-
-        # This will make sure the app is always imported when
-        # Django starts so that shared_task will use this app.
-        from absortium.celery import app as celery_app  # noqa
