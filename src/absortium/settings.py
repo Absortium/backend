@@ -31,34 +31,6 @@ for name, env_name in secret_settings.items():
     value = os.environ[env_name]
     setattr(settings_module, name, value)
 
-# _env_name = "SOCIAL_AUTH_GITHUB_OAUTH2_SECRET"
-# assert (_env_name in os.environ, _assert_msg.format(_env_name))
-# SOCIAL_AUTH_GITHUB_OAUTH2_SECRET = os.environ[_env_name]
-#
-# _env_name = "SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET"
-# assert (_env_name in os.environ, _assert_msg.format(_env_name))
-# SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ[_env_name]
-#
-# _env_name = "SOCIAL_AUTH_TWITTER_OAUTH1_SECRET"
-# assert (_env_name in os.environ, _assert_msg.format(_env_name))
-# SOCIAL_AUTH_TWITTER_OAUTH1_SECRET = os.environ[_env_name]
-#
-# _env_name = "SOCIAL_AUTH_TWITTER_OAUTH1_KEY"
-# assert (_env_name in os.environ, _assert_msg.format(_env_name))
-# SOCIAL_AUTH_TWITTER_OAUTH1_KEY = os.environ[_env_name]
-#
-# _env_name = "POSTGRES_PASSWORD"
-# assert (_env_name in os.environ, _assert_msg.format(_env_name))
-# POSTGRES_PASSWORD = os.environ[_env_name]
-#
-# _env_name = "COINBASE_API_KEY"
-# assert (_env_name in os.environ, _assert_msg.format(_env_name))
-# COINBASE_API_KEY = os.environ[_env_name]
-#
-# _env_name = "COINBASE_API_SECRET"
-# assert (_env_name in os.environ, _assert_msg.format(_env_name))
-# COINBASE_API_SECRET = os.environ[_env_name]
-
 COINBASE_SANDBOX = True
 if COINBASE_SANDBOX:
     COINBASE_API_URL = 'https://api.sandbox.coinbase.com'
