@@ -128,7 +128,7 @@ MIDDLEWARE_CLASSES = [
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'urls'
+ROOT_URLCONF = 'absortium.urls'
 
 JWT_AUTH = {
     'JWT_PAYLOAD_HANDLER': 'jwtauth.utils.wrapped_jwt_payload_handler',

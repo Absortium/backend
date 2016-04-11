@@ -19,6 +19,7 @@ djangorestframework==3.3.3
 djangorestframework-jwt==1.8.0
 mock==2.0.0
 coinbase
+celery
 
 # ======================================================================================
 # All other libraries that was installed during general libs installation
