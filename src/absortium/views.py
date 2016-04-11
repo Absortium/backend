@@ -164,5 +164,4 @@ class MoneyView(mixins.ListModelMixin,
     serializer_class = AddressSerializer
 
     def post(self, request, currency, *args, **kwargs):
-
-
+        pass
