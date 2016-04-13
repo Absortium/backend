@@ -5,9 +5,11 @@ from mock import patch
 from rest_framework.test import APITestCase, APIClient
 
 from absortium import constants
-from absortium.models import Address
+from absortium.model.models import Address
 from .data import coinbase_response
 
+from core.utils.logging import getLogger
+logger = getLogger(__name__)
 
 class AddressTest(APITestCase):
     def setUp(self):

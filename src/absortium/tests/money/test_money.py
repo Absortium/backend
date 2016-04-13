@@ -5,7 +5,7 @@ import decimal
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase, APIClient
 
-from absortium.models import Address
+from absortium.model.models import Address
 from .data import coinbase_notification
 
 

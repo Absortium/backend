@@ -1,7 +1,14 @@
 from django.conf import settings
+
 from django.db import models
 
 from absortium import constants
+
+from django.contrib.auth.models import User
+
+
+class AbsortiumUser(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
 
 
 class Order(models.Model):
@@ -84,3 +91,43 @@ class Address(models.Model):
 
     class Meta:
         unique_together = ("currency", "address")
+
+
+class Account(models.Model):
+    """
+        Comment me!
+    """
+    amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                 decimal_places=constants.DECIMAL_PLACES, default=0)
+
+    address = models.TextField()
+    currency = models.IntegerField()
+
+    created = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="accounts")
+
+
+class Exchange(models.Model):
+    """
+        Exchange model represent order for exchange base determined as account currency
+        secondary currency determined from post request.
+
+    currency - represent currency BTC, XMR etc, but values stored in Integer,
+    translation from string representation "BTC" to integer code 0 happens on the serialization state.
+
+    amount - represent amount of the currency that  user want to exchange.
+
+    price - represent the price for the 1 amount of base currency he wants to exchange.
+
+    created - order time creation.
+
+    account - account from which exchange is happening.
+    """
+
+    currency = models.IntegerField()
+    amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                 decimal_places=constants.DECIMAL_PLACES)
+    price = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                decimal_places=constants.DECIMAL_PLACES)
+    created = models.DateTimeField(auto_now_add=True)
+    account = models.ForeignKey(Account, related_name="exchanges")

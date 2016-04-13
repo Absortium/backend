@@ -1,17 +1,17 @@
 __author__ = 'andrew.shvv@gmail.com'
 
-import six
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 
 from absortium import constants
-from absortium.models import Order, Offer, Address
+from absortium.model.models import Order, Offer, Address, Account, Exchange
+from absortium.serializer.fields import MyChoiceField
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = User
-        fields = ('url', 'username', 'email')
+        fields = ('username', 'email')
 
 
 class GroupSerializer(serializers.HyperlinkedModelSerializer):
@@ -20,31 +20,7 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'name')
 
 
-class MyChoiceField(serializers.Field):
-    """
-        This class used for translation incoming strings values to
-        integer representation by the given mapping dict.
-    """
 
-    def __init__(self, choices):
-        super().__init__()
-        self.to_internal = choices
-        self.to_repr = {value: key for key, value in choices.items()}
-
-    def to_internal_value(self, data):
-        if not isinstance(data, six.text_type):
-            msg = 'Incorrect type. Expected a string, but got %s'
-            raise serializers.ValidationError(msg % type(data).__name__)
-
-        data = data.lower()
-        return self.to_internal[data]
-
-    def to_representation(self, value):
-        if not isinstance(value, six.integer_types):
-            msg = 'Incorrect type. Expected a int, but got %s'
-            raise serializers.ValidationError(msg % type(value).__name__)
-
-        return self.to_repr[value]
 
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -107,4 +83,30 @@ class AddressSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Address
-        fields = ('address', 'currency')
+        fields = ('pk', 'address', 'currency')
+
+
+class AccountSerializer(serializers.ModelSerializer):
+    currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
+
+    class Meta:
+        model = Account
+        fields = ('pk', 'address', 'currency', 'amount')
+        read_only_fields = ('address', 'amount')
+
+
+class ExchangeSerializer(serializers.ModelSerializer):
+    currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
+
+    amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
+                                      decimal_places=constants.DECIMAL_PLACES,
+                                      min_value=constants.AMOUNT_MIN_VALUE)
+    price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
+                                     decimal_places=constants.DECIMAL_PLACES,
+                                     min_value=constants.PRICE_MIN_VALUE)
+
+    account = serializers.ReadOnlyField(source='account.username')
+
+    class Meta:
+        model = Exchange
+        fields = ('pk', 'currency', 'amount', 'price', 'account')

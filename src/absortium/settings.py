@@ -68,6 +68,7 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
+    'django_extensions',
     'rest_framework',
     'absortium',
     'jwtauth',
@@ -125,6 +126,8 @@ DATABASES = {
         'PORT': '5432',
     }
 }
+
+SILENCED_SYSTEM_CHECKS = ["models.W001"]
 
 # Password validation
 # # https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators

@@ -2,17 +2,25 @@ __author__ = 'andrew.shvv@gmail.com'
 
 from django.contrib.auth import settings
 from django.contrib.auth.models import User, Group
-from rest_framework import generics, mixins, status
+from rest_framework import generics, mixins, status, viewsets
+from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet
 
-
-from absortium.celery import app
 from absortium.constants import AVAILABLE_PAIRS, AVAILABLE_ORDER_TYPES
-from absortium.exceptions import Http400
-from absortium.models import Order, Offer, Address
-from absortium.serializers import UserSerializer, GroupSerializer, OrderSerializer, OfferSerializer, AddressSerializer
+from absortium.model.models import Order, Offer, Address, Account
+from absortium.permissions import IsOwnerOrReadOnly
+from absortium.serializer.serializers import \
+    UserSerializer, \
+    GroupSerializer, \
+    OrderSerializer, \
+    OfferSerializer, \
+    AddressSerializer, \
+    AccountSerializer, \
+    ExchangeSerializer
 from absortium.wallet import bitcoin
+from core.utils.logging import getLogger
+
+logger = getLogger(__name__)
 
 
 class UserList(generics.ListAPIView):
@@ -25,7 +33,7 @@ class UserDetail(generics.RetrieveAPIView):
     serializer_class = UserSerializer
 
 
-class GroupViewSet(ModelViewSet):
+class GroupViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows groups to be viewed or edited.
     """
@@ -95,7 +103,7 @@ class OfferListView(mixins.ListModelMixin,
                 filter.update(type=order_type)
                 self.exclude_fields.append('type')
         else:
-            raise Http400("Not available order type '{}'".format(order_type))
+            raise ValidationError("Not available order type '{}'".format(order_type))
 
         pair = self.kwargs.get('pair')
 
@@ -107,7 +115,7 @@ class OfferListView(mixins.ListModelMixin,
                 filter.update(pair=pair)
                 self.exclude_fields.append('pair')
         else:
-            raise Http400("Not available currency pair '{}'".format(pair))
+            raise ValidationError("Not available currency pair '{}'".format(pair))
 
         return Offer.objects.filter(**filter).all()
 
@@ -131,7 +139,6 @@ class AddressListView(mixins.CreateModelMixin,
     serializer_class = AddressSerializer
 
     def post(self, request, currency, *args, **kwargs):
-
         if currency == 'btc':
             response = bitcoin.create_address(account_id=settings.COINBASE_ACCOUNT_ID)
             coinbase_data = response['data']
@@ -146,7 +153,7 @@ class AddressListView(mixins.CreateModelMixin,
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-        return Http400("We do not support such currency as '{}'".format(currency))
+        return ValidationError("We do not support such currency as '{}'".format(currency))
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -155,7 +162,6 @@ class AddressListView(mixins.CreateModelMixin,
 class MoneyView(mixins.ListModelMixin,
                 mixins.DestroyModelMixin,
                 generics.GenericAPIView):
-
     """
     API endpoint that allows address to be viewed and created.
     """
@@ -165,3 +171,86 @@ class MoneyView(mixins.ListModelMixin,
 
     def post(self, request, currency, *args, **kwargs):
         pass
+
+
+class AccountViewSet(mixins.CreateModelMixin,
+                     mixins.RetrieveModelMixin,
+                     mixins.ListModelMixin,
+                     viewsets.GenericViewSet):
+    serializer_class = AccountSerializer
+    permission_classes = (IsOwnerOrReadOnly,)
+
+    def check_account(self, account_pk):
+        try:
+            account = Account.objects.get(pk=account_pk)
+        except Account.DoesNotExist:
+            raise NotFound("Could not found account: {}".format(account_pk))
+
+        if account.owner != self.request.user:
+            raise PermissionDenied("You are not owner of this account.")
+
+    def get_queryset(self):
+        return self.request.user.accounts.all()
+
+    def retrieve(self, request, *args, **kwargs):
+        account_pk = self.kwargs.get('pk')
+        self.check_account(account_pk)
+
+        super().retrieve(self, request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
+class ExchangeViewSet(mixins.CreateModelMixin,
+                      mixins.RetrieveModelMixin,
+                      mixins.ListModelMixin,
+                      mixins.DestroyModelMixin,
+                      viewsets.GenericViewSet):
+    serializer_class = ExchangeSerializer
+
+    def __init__(self, *args, **kwargs):
+        self.account = None
+        super().__init__(*args, **kwargs)
+
+    def init_account(self, account_pk):
+        try:
+            account = Account.objects.get(pk=account_pk)
+        except Account.DoesNotExist:
+            raise NotFound("Could not found account: {}".format(account_pk))
+
+        if account.owner != self.request.user:
+            raise PermissionDenied("You are not owner of this account.")
+
+        self.request.account = account
+
+    def get_queryset(self):
+        return self.request.account.exchanges.all()
+
+    def perform_create(self, serializer):
+        serializer.save(account=self.request.account)
+
+    def destroy(self, request, *args, **kwargs):
+        account_pk = self.kwargs.get('accounts_pk')
+        self.init_account(account_pk)
+
+        super().destroy(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        account_pk = self.kwargs.get('accounts_pk')
+        self.init_account(account_pk)
+
+        return super().retrieve(request, *args, **kwargs)
+
+    def list(self, request, *args, **kwargs):
+        account_pk = self.kwargs.get('accounts_pk')
+        self.init_account(account_pk)
+
+        return super().list(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        logger.debug(self.kwargs)
+        account_pk = self.kwargs.get('accounts_pk')
+
+        self.init_account(account_pk)
+        return super().create(request, *args, **kwargs)

@@ -3,12 +3,12 @@ __author__ = 'andrew.shvv@gmail.com'
 import decimal
 import random
 
+from core.utils.logging import getLogger
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase, APIClient
 
 from absortium.constants import BTC_ETH, SELL, MAX_DIGITS, DECIMAL_PLACES, AMOUNT_MIN_VALUE
-from absortium.models import Offer, Order
-from core.utils.logging import getLogger
+from absortium.model.models import Offer, Order
 
 logger = getLogger(__name__)
 

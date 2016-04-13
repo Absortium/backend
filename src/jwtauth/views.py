@@ -11,9 +11,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_jwt.settings import api_settings
 from rest_framework_jwt.views import ObtainJSONWebToken, VerifyJSONWebToken, RefreshJSONWebToken
-
+from rest_framework.exceptions import ValidationError
 from core.utils.logging import getLogger
-from jwtauth.exceptions import Http400
 from jwtauth.serializers import BasicJWTSerializer, OAuth2Serializer, OAuth1Serializer
 
 jwt_response_payload_handler = api_settings.JWT_RESPONSE_PAYLOAD_HANDLER
@@ -47,7 +46,7 @@ class ViewObtainSocialOAuth2(APIView):
             user = authenticate(**params)
             if user:
                 if not user.is_active:
-                    raise Http400("User account is disabled.")
+                    raise ValidationError("User account is disabled.")
 
                 payload = jwt_payload_handler(user)
                 token = jwt_encode_handler(payload)
@@ -56,7 +55,7 @@ class ViewObtainSocialOAuth2(APIView):
                 return Response(response_data)
             else:
                 msg = "Looks like there is no such provider: {}".format(provider)
-                raise Http400(msg)
+                raise ValidationError(msg)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -104,7 +103,7 @@ class ViewObtainSocialOAuth1(APIView):
 
             if user:
                 if not user.is_active:
-                    raise Http400("User account is disabled.")
+                    raise ValidationError("User account is disabled.")
 
                 payload = jwt_payload_handler(user)
                 token = jwt_encode_handler(payload)
@@ -113,7 +112,7 @@ class ViewObtainSocialOAuth1(APIView):
                 return Response(response_data)
             else:
                 msg = "Looks like there is no such provider: {}".format(provider)
-                raise Http400(msg)
+                raise ValidationError(msg)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

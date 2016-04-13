@@ -32,6 +32,10 @@ def get_primary_account():
     return _primary_account
 
 
-def create_address(account_id):
-    client = get_coinbase_client()
-    return client.create_address(account_id=account_id)
+class BitcoinClient():
+    def create_address(self):
+        client = get_coinbase_client()
+        response = client.create_address(account_id=settings.COINBASE_ACCOUNT_ID)
+        coinbase_data = response['data']
+
+        return coinbase_data['address']
