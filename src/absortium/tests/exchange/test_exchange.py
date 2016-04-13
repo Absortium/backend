@@ -59,8 +59,9 @@ class ExchangeTest(AbsortiumTest, ExchangeMixin, AccountMixin):
         url = '/api/accounts/{account_pk}/exchanges/{exchange_pk}/'.format(account_pk=trash_account_pk,
                                                                            exchange_pk=trash_exchange_pk)
 
+
+        # Create an account and try to get uncreated exchange
         account_pk, _ = self.create_account(self.user, 'btc')
-        # Try to get exchange info from uncreated account
         url = '/api/accounts/{account_pk}/exchanges/{exchange_pk}/'.format(account_pk=account_pk,
                                                                            exchange_pk=trash_exchange_pk)
 

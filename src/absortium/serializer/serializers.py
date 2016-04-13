@@ -4,7 +4,7 @@ from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 
 from absortium import constants
-from absortium.model.models import Order, Offer, Address, Account, Exchange
+from absortium.model.models import Account, Exchange
 from absortium.serializer.fields import MyChoiceField
 
 
@@ -18,9 +18,6 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Group
         fields = ('url', 'name')
-
-
-
 
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -44,46 +41,21 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
                 self.fields.pop(field_name)
 
 
-class OrderSerializer(serializers.ModelSerializer):
-    type = MyChoiceField(choices=constants.AVAILABLE_ORDER_TYPES)
-    pair = MyChoiceField(choices=constants.AVAILABLE_PAIRS)
+# class OfferSerializer(DynamicFieldsModelSerializer):
+#     type = MyChoiceField(choices=constants.AVAILABLE_ORDER_TYPES)
+#     pair = MyChoiceField(choices=constants.AVAILABLE_PAIRS)
+#
+#     amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
+#                                       decimal_places=constants.DECIMAL_PLACES,
+#                                       min_value=constants.AMOUNT_MIN_VALUE)
+#     price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
+#                                      decimal_places=constants.DECIMAL_PLACES,
+#                                      min_value=constants.PRICE_MIN_VALUE)
+#
+#     class Meta:
+#         model = Offer
+#         fields = ('pair', 'type', 'amount', 'price')
 
-    amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
-                                      decimal_places=constants.DECIMAL_PLACES,
-                                      min_value=constants.AMOUNT_MIN_VALUE)
-    price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
-                                     decimal_places=constants.DECIMAL_PLACES,
-                                     min_value=constants.PRICE_MIN_VALUE)
-
-    owner = serializers.ReadOnlyField(source='owner.username')
-
-    class Meta:
-        model = Order
-        fields = ('pk', 'type', 'pair', 'amount', 'price', 'owner')
-
-
-class OfferSerializer(DynamicFieldsModelSerializer):
-    type = MyChoiceField(choices=constants.AVAILABLE_ORDER_TYPES)
-    pair = MyChoiceField(choices=constants.AVAILABLE_PAIRS)
-
-    amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
-                                      decimal_places=constants.DECIMAL_PLACES,
-                                      min_value=constants.AMOUNT_MIN_VALUE)
-    price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
-                                     decimal_places=constants.DECIMAL_PLACES,
-                                     min_value=constants.PRICE_MIN_VALUE)
-
-    class Meta:
-        model = Offer
-        fields = ('pair', 'type', 'amount', 'price')
-
-
-class AddressSerializer(serializers.ModelSerializer):
-    currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
-
-    class Meta:
-        model = Address
-        fields = ('pk', 'address', 'currency')
 
 
 class AccountSerializer(serializers.ModelSerializer):
