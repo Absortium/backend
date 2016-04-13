@@ -4,7 +4,7 @@ from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 
 from absortium import constants
-from absortium.model.models import Account, Exchange
+from absortium.model.models import Account, Exchange, Offer, Deposit, Withdrawal
 from absortium.serializer.fields import MyChoiceField
 
 
@@ -41,21 +41,21 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
                 self.fields.pop(field_name)
 
 
-# class OfferSerializer(DynamicFieldsModelSerializer):
-#     type = MyChoiceField(choices=constants.AVAILABLE_ORDER_TYPES)
-#     pair = MyChoiceField(choices=constants.AVAILABLE_PAIRS)
-#
-#     amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
-#                                       decimal_places=constants.DECIMAL_PLACES,
-#                                       min_value=constants.AMOUNT_MIN_VALUE)
-#     price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
-#                                      decimal_places=constants.DECIMAL_PLACES,
-#                                      min_value=constants.PRICE_MIN_VALUE)
-#
-#     class Meta:
-#         model = Offer
-#         fields = ('pair', 'type', 'amount', 'price')
+class OfferSerializer(DynamicFieldsModelSerializer):
+    primary_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
+    secondary_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
 
+    amount = serializers.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
+                                      decimal_places=constants.DECIMAL_PLACES,
+                                      min_value=constants.AMOUNT_MIN_VALUE)
+    price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
+                                     decimal_places=constants.DECIMAL_PLACES,
+                                     min_value=constants.PRICE_MIN_VALUE)
+
+    class Meta:
+        model = Offer
+        fields = ('primary_currency', 'secondary_currency', 'amount', 'price')
+        read_only_fields = ('amount', 'price')
 
 
 class AccountSerializer(serializers.ModelSerializer):
@@ -81,4 +81,32 @@ class ExchangeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Exchange
-        fields = ('pk', 'currency', 'amount', 'price', 'account')
+        fields = ('pk', 'currency', 'amount', 'price', 'account', 'created')
+
+
+class DepositSerializer(serializers.ModelSerializer):
+    currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, read_only=True)
+    address = serializers.ReadOnlyField(source='account.address')
+
+    amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
+                                      decimal_places=constants.DECIMAL_PLACES,
+                                      min_value=constants.AMOUNT_MIN_VALUE)
+
+
+
+    class Meta:
+        model = Deposit
+        fields = ('pk', 'currency', 'address',  'amount', 'created')
+
+
+class WithdrawSerializer(serializers.ModelSerializer):
+    currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, read_only=True)
+
+    address = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
+                                      decimal_places=constants.DECIMAL_PLACES,
+                                      min_value=constants.AMOUNT_MIN_VALUE)
+
+    class Meta:
+        model = Withdrawal
+        fields = ('pk', 'currency', 'address', 'amount', 'created')

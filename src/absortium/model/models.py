@@ -9,37 +9,32 @@ class AbsortiumUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
 
-# class Offer(models.Model):
-#     """
-#         Offer model represent summarized amount of currency by the given price.
-#         Example:
-#             Order(price=1.0. amount=1.0, type="sell", pair="BTC_ETH")
-#             Order(price=1.0. amount=1.0, type="sell", pair="BTC_ETH")
-#             Order(price=1.0. amount=1.0, type="sell", pair="BTC_ETH")
-#
-#             is one offer Offer(price=1.0. amount=3.0, type="sell", pair="BTC_ETH")
-#
-#
-#     type - represent type of the order sell/buy , but values stored in Integer,
-#     translation from string representation "sell" to integer code 0 happens on the serialization state.
-#
-#     pair - represent currency pairs BTC_ETH, BTC_XMR etc, but values stored in Integer,
-#     translation from string representation "sell" to integer code 0 happens on the serialization state.
-#
-#     amount - represent amount of the currency that  user want to exchange.
-#
-#     price - represent the price for the 1 amount of currency he wants to exchange.
-#     """
-#
-#     type = models.IntegerField()
-#     pair = models.IntegerField()
-#     amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
-#                                  decimal_places=constants.DECIMAL_PLACES)
-#     price = models.DecimalField(max_digits=constants.MAX_DIGITS,
-#                                 decimal_places=constants.DECIMAL_PLACES)
-#
-#     class Meta:
-#         ordering = ('price',)
+class Offer(models.Model):
+    """
+        Offer model represent summarized amount of currency that we want to sell grouped by price.
+
+    primary_currency - represent currency which we will give, for example exchange BTC to XMR,
+    primary currency BTC, secondary currency XMR. As input we get string but values stored in Integer, translation from
+    string representation "BTC" to integer code 0 happens on the serialization state.
+
+    secondary_currency - represent currency which we will take, for example exchange BTC to XMR,
+    primary currency BTC, secondary currency XMR. As input we get string but values stored in Integer, translation from
+    string representation "BTC" to integer code 0 happens on the serialization state.
+
+    amount - represent amount of the currency that user want to exchange.
+
+    price - represent the price for the 1 amount of primary currency represented in secondary currency.
+    """
+
+    primary_currency = models.IntegerField()
+    secondary_currency = models.IntegerField()
+    amount = models.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
+                                 decimal_places=constants.DECIMAL_PLACES)
+    price = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                decimal_places=constants.DECIMAL_PLACES)
+
+    class Meta:
+        ordering = ('price',)
 
 
 class Account(models.Model):
@@ -49,7 +44,7 @@ class Account(models.Model):
     amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                  decimal_places=constants.DECIMAL_PLACES, default=0)
 
-    address = models.TextField()
+    address = models.CharField(max_length=50)
     currency = models.IntegerField()
 
     created = models.DateTimeField(auto_now_add=True)
@@ -58,8 +53,8 @@ class Account(models.Model):
 
 class Exchange(models.Model):
     """
-        Exchange model represent order for exchange base determined as account currency
-        secondary currency determined from post request.
+        Exchange model represent order for exchange primary currency determined as account currency
+        secondary currency determined from the post request.
 
     currency - represent currency BTC, XMR etc, but values stored in Integer,
     translation from string representation "BTC" to integer code 0 happens on the serialization state.
@@ -80,3 +75,19 @@ class Exchange(models.Model):
                                 decimal_places=constants.DECIMAL_PLACES)
     created = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(Account, related_name="exchanges")
+
+
+class Deposit(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+    account = models.ForeignKey(Account, related_name="deposits")
+    amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                 decimal_places=constants.DECIMAL_PLACES)
+
+
+class Withdrawal(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+    account = models.ForeignKey(Account, related_name="withdrawals")
+    amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                 decimal_places=constants.DECIMAL_PLACES)
+
+    address = models.CharField(max_length=50)

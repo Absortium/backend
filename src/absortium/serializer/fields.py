@@ -10,8 +10,8 @@ class MyChoiceField(serializers.Field):
         integer representation by the given mapping dict.
     """
 
-    def __init__(self, choices):
-        super().__init__()
+    def __init__(self, choices , *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.to_internal = choices
         self.to_repr = {value: key for key, value in choices.items()}
 

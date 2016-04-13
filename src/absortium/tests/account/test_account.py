@@ -3,14 +3,14 @@ __author__ = 'andrew.shvv@gmail.com'
 from django.contrib.auth import get_user_model
 from rest_framework.status import HTTP_200_OK, HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN, HTTP_405_METHOD_NOT_ALLOWED
 
-from absortium.tests.account.mixins import AccountMixin, address
+from absortium.tests.account.mixins import CreateAccountMixin, address
 from absortium.tests.base import AbsortiumTest
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
 
-class AccountTest(AbsortiumTest, AccountMixin):
+class AccountTest(AbsortiumTest, CreateAccountMixin):
     def test_serialization(self, *args, **kwargs):
         account_pk = self.create_account(self.user, 'btc')
 
@@ -22,7 +22,7 @@ class AccountTest(AbsortiumTest, AccountMixin):
         self.assertEqual(account['currency'], 'btc')
 
     def test_permissions(self, *args, **kwargs):
-        account_pk,_ = self.create_account(self.user, 'btc')
+        account_pk, _ = self.create_account(self.user, 'btc')
 
         # User trying to delete account
         response = self.client.delete('/api/accounts/{pk}/'.format(pk=account_pk), format='json')
@@ -55,3 +55,7 @@ class AccountTest(AbsortiumTest, AccountMixin):
         # User trying to delete not created account
         response = self.client.get('/api/accounts/{pk}/'.format(pk=trash_account_pk), format='json')
         self.assertEqual(response.status_code, HTTP_404_NOT_FOUND)
+
+    # TODO test deposit notification
+    def test_deposit(self):
+        pass

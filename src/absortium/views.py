@@ -2,18 +2,18 @@ __author__ = 'andrew.shvv@gmail.com'
 
 from django.contrib.auth.models import User, Group
 from rest_framework import generics, mixins, viewsets
-from rest_framework.decorators import detail_route
 from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
 
-from absortium.constants import AVAILABLE_PAIRS, AVAILABLE_ORDER_TYPES
+from absortium import constants
 from absortium.model.models import Offer, Account
-from absortium.permissions import IsOwnerOrReadOnly
 from absortium.serializer.serializers import \
     UserSerializer, \
     GroupSerializer, \
     OfferSerializer, \
     AccountSerializer, \
-    ExchangeSerializer
+    ExchangeSerializer, \
+    DepositSerializer, \
+    WithdrawSerializer
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
@@ -37,65 +37,84 @@ class GroupViewSet(viewsets.ModelViewSet):
     serializer_class = GroupSerializer
 
 
-# class OfferListView(mixins.ListModelMixin,
-#                     generics.GenericAPIView):
-#     """
-#     This view should return a list of all offers
-#     by the given order type and currency pair value.
-#     """
-#
-#     serializer_class = OfferSerializer
-#
-#     permission_classes = ()
-#     authentication_classes = ()
-#
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         self.exclude_fields = []
-#
-#     def get_queryset(self):
-#         """
-#             This method used for filter origin offers queryset by the given order type and
-#             pair values that usually are coming from the url. See urls.py
-#         """
-#         filter = {}
-#         self.exclude_fields = []
-#
-#         order_type = self.kwargs.get('type')
-#
-#         if order_type:
-#             order_type = order_type.lower()
-#
-#             if order_type in AVAILABLE_ORDER_TYPES.keys():
-#                 order_type = AVAILABLE_ORDER_TYPES[order_type]
-#                 filter.update(type=order_type)
-#                 self.exclude_fields.append('type')
-#         else:
-#             raise ValidationError("Not available order type '{}'".format(order_type))
-#
-#         pair = self.kwargs.get('pair')
-#
-#         if pair:
-#             pair = pair.lower()
-#
-#             if pair in AVAILABLE_PAIRS.keys():
-#                 pair = AVAILABLE_PAIRS[pair]
-#                 filter.update(pair=pair)
-#                 self.exclude_fields.append('pair')
-#         else:
-#             raise ValidationError("Not available currency pair '{}'".format(pair))
-#
-#         return Offer.objects.filter(**filter).all()
-#
-#     def get_serializer(self, *args, **kwargs):
-#         """
-#             This method used setting 'exclude_fields' parameter
-#             that was constructed in the 'get_queryset' method
-#         """
-#         return super().get_serializer(exclude_fields=self.exclude_fields, *args, **kwargs)
-#
-#     def get(self, request, pair, type, *args, **kwargs):
-#         return self.list(request, *args, **kwargs)
+class OfferListView(mixins.ListModelMixin,
+                    generics.GenericAPIView):
+    """
+    This view should return a list of all offers
+    by the given order type and currency pair value.
+    """
+
+    serializer_class = OfferSerializer
+
+    permission_classes = ()
+    authentication_classes = ()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.exclude_fields = []
+
+    def get_queryset(self):
+        """
+            This method used for filter origin offers queryset by the given order type and
+            pair values that usually are coming from the url. See urls.py
+        """
+        filter = {}
+        self.exclude_fields = []
+
+        primary_currency = self.request.data['primary_currency']
+        if primary_currency:
+            primary_currency = primary_currency.lower()
+
+            if primary_currency in constants.AVAILABLE_CURRENCIES.keys():
+                primary_currency = constants.AVAILABLE_CURRENCIES[primary_currency]
+                filter.update(primary_currency=primary_currency)
+                self.exclude_fields.append('primary_currency')
+        else:
+            raise ValidationError("Not available currency type '{}'".format(primary_currency))
+
+        secondary_currency = self.request.data['secondary_currency']
+        if secondary_currency:
+            secondary_currency = secondary_currency.lower()
+
+            if secondary_currency in constants.AVAILABLE_CURRENCIES.keys():
+                secondary_currency = constants.AVAILABLE_CURRENCIES[secondary_currency]
+                filter.update(secondary_currency=secondary_currency)
+                self.exclude_fields.append('secondary_currency')
+        else:
+            raise ValidationError("Not available currency '{}'".format(secondary_currency))
+
+        return Offer.objects.filter(**filter).all()
+
+    def get_serializer(self, *args, **kwargs):
+        """
+            This method used setting 'exclude_fields' parameter
+            that was constructed in the 'get_queryset' method
+        """
+        return super().get_serializer(exclude_fields=self.exclude_fields, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+
+def init_account(pk_name="accounts_pk"):
+    def wrapper(func):
+        def decorator(self, request, *args, **kwargs):
+            account_pk = self.kwargs.get(pk_name)
+
+            try:
+                account = Account.objects.get(pk=account_pk)
+            except Account.DoesNotExist:
+                raise NotFound("Could not found account: {}".format(account_pk))
+
+            if account.owner != self.request.user:
+                raise PermissionDenied("You are not owner of this account.")
+
+            request.account = account
+            return func(self, request, *args, **kwargs)
+
+        return decorator
+
+    return wrapper
 
 
 class AccountViewSet(mixins.CreateModelMixin,
@@ -103,39 +122,68 @@ class AccountViewSet(mixins.CreateModelMixin,
                      mixins.ListModelMixin,
                      viewsets.GenericViewSet):
     serializer_class = AccountSerializer
-    permission_classes = (IsOwnerOrReadOnly,)
-
-    def check_account(self, account_pk):
-        try:
-            account = Account.objects.get(pk=account_pk)
-        except Account.DoesNotExist:
-            raise NotFound("Could not found account: {}".format(account_pk))
-
-        if account.owner != self.request.user:
-            raise PermissionDenied("You are not owner of this account.")
 
     def get_queryset(self):
         return self.request.user.accounts.all()
 
+    @init_account(pk_name="pk")
     def retrieve(self, request, *args, **kwargs):
-        account_pk = self.kwargs.get('pk')
-        self.check_account(account_pk)
-
         super().retrieve(self, request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
-    @detail_route(methods=['post'], permission_classes=[], url_path='deposit')
-    def deposit(self, request):
-        # TODO: for now user may send /api/accounts/1/withdraw
-        account_pk = self.kwargs.get('pk')
-        self.check_account(account_pk)
 
-    @detail_route(methods=['post'], url_path='withdraw')
-    def withdraw(self, request, *args, **kwargs):
-        account_pk = self.kwargs.get('pk')
-        self.check_account(account_pk)
+class DepositViewSet(mixins.CreateModelMixin,
+                     mixins.RetrieveModelMixin,
+                     mixins.ListModelMixin,
+                     viewsets.GenericViewSet):
+    serializer_class = DepositSerializer
+
+    def get_queryset(self):
+        return self.request.account.deposits.all()
+
+    def perform_create(self, serializer):
+        serializer.save(account=self.request.account)
+
+    @init_account()
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
+    @init_account()
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @init_account()
+    def create(self, request, *args, **kwargs):
+        # TODO Celery queue, ACCEPT ONLY NOTIFICATION SERVICE USER
+        return super().create(request, *args, **kwargs)
+
+
+class WithdrawViewSet(mixins.CreateModelMixin,
+                      mixins.RetrieveModelMixin,
+                      mixins.ListModelMixin,
+                      viewsets.GenericViewSet):
+    serializer_class = WithdrawSerializer
+
+    def get_queryset(self):
+        return self.request.account.withdrawals.all()
+
+    def perform_create(self, serializer):
+        serializer.save(account=self.request.account)
+
+    @init_account()
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
+    @init_account()
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @init_account()
+    def create(self, request, *args, **kwargs):
+        # TODO Celery queue
+        return super().create(request, *args, **kwargs)
 
 
 class ExchangeViewSet(mixins.CreateModelMixin,
@@ -149,44 +197,26 @@ class ExchangeViewSet(mixins.CreateModelMixin,
         self.account = None
         super().__init__(*args, **kwargs)
 
-    def init_account(self, account_pk):
-        try:
-            account = Account.objects.get(pk=account_pk)
-        except Account.DoesNotExist:
-            raise NotFound("Could not found account: {}".format(account_pk))
-
-        if account.owner != self.request.user:
-            raise PermissionDenied("You are not owner of this account.")
-
-        self.request.account = account
-
     def get_queryset(self):
         return self.request.account.exchanges.all()
 
     def perform_create(self, serializer):
         serializer.save(account=self.request.account)
 
+    @init_account()
     def destroy(self, request, *args, **kwargs):
-        account_pk = self.kwargs.get('accounts_pk')
-        self.init_account(account_pk)
-
+        # TODO Celery queue
         super().destroy(request, *args, **kwargs)
 
+    @init_account()
     def retrieve(self, request, *args, **kwargs):
-        account_pk = self.kwargs.get('accounts_pk')
-        self.init_account(account_pk)
-
         return super().retrieve(request, *args, **kwargs)
 
+    @init_account()
     def list(self, request, *args, **kwargs):
-        account_pk = self.kwargs.get('accounts_pk')
-        self.init_account(account_pk)
-
         return super().list(request, *args, **kwargs)
 
+    @init_account()
     def create(self, request, *args, **kwargs):
-        logger.debug(self.kwargs)
-        account_pk = self.kwargs.get('accounts_pk')
-
-        self.init_account(account_pk)
+        # TODO Celery queue
         return super().create(request, *args, **kwargs)
