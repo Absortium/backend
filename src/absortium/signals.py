@@ -82,7 +82,6 @@ def exchange_post_save(sender, instance, *args, **kwargs):
                       secondary_currency=exchange.currency,
                       amount=exchange.amount)
         offer.save()
-        logger.debug("DO CREATE EXCHANGE")
         app.do_create_exchange.delay()
     else:
         amount = offer.amount + exchange.amount
@@ -90,6 +89,10 @@ def exchange_post_save(sender, instance, *args, **kwargs):
         # update() is converted directly to an SQL statement; it doesn't call save() on the model
         # instances, and so the pre_save and post_save signals aren't emitted.
         Offer.objects.filter(pk=offer.pk).update(amount=amount)
+
+
+
+
 
 
 
@@ -120,8 +123,6 @@ def withdraw_pre_save(sender, instance, *args, **kwargs):
         # update() is converted directly to an SQL statement; it doesn't call save() on the model
         # instances, and so the pre_save and post_save signals aren't emitted.
         Account.objects.filter(pk=account.pk).update(amount=amount)
-        logger.debug("DO WITHDRAW")
-        app.do_withdrawal.delay()
     else:
         raise ValidationError("Withdrawal exceed amount of money on the account")
 
@@ -136,5 +137,4 @@ def deposit_pre_save(sender, instance, *args, **kwargs):
     amount = account.amount + withdraw.amount
     Account.objects.filter(pk=account.pk).update(amount=amount)
 
-    logger.debug("DO DEPOSIT")
     app.do_deposit.delay()

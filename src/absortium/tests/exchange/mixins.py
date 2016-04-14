@@ -1,5 +1,6 @@
 __author__ = 'andrew.shvv@gmail.com'
 
+from mock import patch
 from rest_framework.status import HTTP_201_CREATED
 
 from absortium.model.models import Exchange

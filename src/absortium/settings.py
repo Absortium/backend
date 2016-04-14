@@ -26,9 +26,7 @@ secret_settings = {
 
 settings_module = sys.modules[__name__]
 for name, env_name in secret_settings.items():
-    assert_msg = "Set '{}' variable in the service 'environment' section in the docker-compose.yaml file!"
-    assert (env_name in os.environ, assert_msg.format(env_name))
-    value = os.environ[env_name]
+    value = os.environ[env_name] if env_name in os.environ else None
     setattr(settings_module, name, value)
 
 COINBASE_SANDBOX = True
@@ -54,6 +52,15 @@ CELERY_BROKER = 'amqp://guest@docker.broker//'
 #     'social.pipeline.user.user_details',
 #     'users.social_pipeline.save_avatar',  # custom action
 # )
+
+
+## Broker settings.
+BROKER_URL = 'amqp://guest:guest@docker.broker//'
+
+# List of modules to import when celery starts.
+# CELERY_IMPORTS = ('myapp.tasks', )
+
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

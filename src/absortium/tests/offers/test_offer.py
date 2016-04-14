@@ -26,7 +26,6 @@ class OfferTest(AbsortiumTest, CreateExchangeMixin, CreateAccountMixin):
             amount = decimal.Decimal('%d.%d' % (random.randint(0, self.before_dot), random.randint(0, self.after_dot)))
         return amount
 
-    @patch("absortium.crossbarhttp.client.Client.publish")
     def test_calculation_accuracy(self, *args, **kwargs):
         account_pk, _ = self.create_account(self.user, 'btc')
 
@@ -45,7 +44,6 @@ class OfferTest(AbsortiumTest, CreateExchangeMixin, CreateAccountMixin):
 
         self.assertEqual(decimal.Decimal(offer['amount']), sum(amounts))
 
-    @patch("absortium.crossbarhttp.client.Client.publish")
     def test_different_price(self, *args, **kwargs):
         account_pk, _ = self.create_account(self.user, 'btc')
 
