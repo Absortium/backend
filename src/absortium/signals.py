@@ -9,6 +9,7 @@ from django.dispatch.dispatcher import receiver
 from rest_framework.exceptions import ValidationError
 
 from absortium import constants
+from absortium.celery import app
 from absortium.crossbarhttp import get_crossbar_client
 from absortium.model.models import Account, Exchange, Offer, Deposit, Withdrawal
 from absortium.serializer.serializers import OfferSerializer
@@ -30,7 +31,6 @@ logger = getLogger(__name__)
 
 @receiver(pre_save, sender=Account, dispatch_uid="account_pre_save")
 def account_pre_save(sender, instance, *args, **kwargs):
-
     account = instance
     client = get_client(currency=account.currency)
     account.address = client.create_address()
@@ -58,7 +58,10 @@ def exchange_post_delete(sender, instance, *args, **kwargs):
     elif offer.amount - exchange.amount == 0:
         offer.delete()
     else:
-        amount=offer.amount - exchange.amount
+        amount = offer.amount - exchange.amount
+
+        # update() is converted directly to an SQL statement; it doesn't call save() on the model
+        # instances, and so the pre_save and post_save signals aren't emitted.
         Offer.objects.filter(pk=offer.pk).update(amount=amount)
 
 
@@ -79,9 +82,15 @@ def exchange_post_save(sender, instance, *args, **kwargs):
                       secondary_currency=exchange.currency,
                       amount=exchange.amount)
         offer.save()
+        logger.debug("DO CREATE EXCHANGE")
+        app.do_create_exchange.delay()
     else:
-        amount=offer.amount + exchange.amount
+        amount = offer.amount + exchange.amount
+
+        # update() is converted directly to an SQL statement; it doesn't call save() on the model
+        # instances, and so the pre_save and post_save signals aren't emitted.
         Offer.objects.filter(pk=offer.pk).update(amount=amount)
+
 
 
 @receiver(post_save, sender=Offer, dispatch_uid="offer_post_save")
@@ -108,7 +117,11 @@ def withdraw_pre_save(sender, instance, *args, **kwargs):
 
     if account.amount - withdraw.amount >= 0:
         amount = account.amount - withdraw.amount
+        # update() is converted directly to an SQL statement; it doesn't call save() on the model
+        # instances, and so the pre_save and post_save signals aren't emitted.
         Account.objects.filter(pk=account.pk).update(amount=amount)
+        logger.debug("DO WITHDRAW")
+        app.do_withdrawal.delay()
     else:
         raise ValidationError("Withdrawal exceed amount of money on the account")
 
@@ -122,3 +135,6 @@ def deposit_pre_save(sender, instance, *args, **kwargs):
     # instances, and so the pre_save and post_save signals aren't emitted.
     amount = account.amount + withdraw.amount
     Account.objects.filter(pk=account.pk).update(amount=amount)
+
+    logger.debug("DO DEPOSIT")
+    app.do_deposit.delay()

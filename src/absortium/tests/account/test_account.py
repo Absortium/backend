@@ -4,15 +4,17 @@ from django.contrib.auth import get_user_model
 from rest_framework.status import HTTP_200_OK, HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN, HTTP_405_METHOD_NOT_ALLOWED
 
 from absortium.tests.account.mixins import CreateAccountMixin, address
+from absortium.tests.deposit.mixins import CreateDepositMixin
 from absortium.tests.base import AbsortiumTest
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
 
-class AccountTest(AbsortiumTest, CreateAccountMixin):
+class AccountTest(AbsortiumTest, CreateAccountMixin, CreateDepositMixin):
     def test_serialization(self, *args, **kwargs):
         account_pk = self.create_account(self.user, 'btc')
+        self.create_deposit(self.user)
 
         response = self.client.get('/api/accounts/', format='json')
         account = self.get_first(response)
