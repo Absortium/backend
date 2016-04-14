@@ -4,6 +4,7 @@ from django.contrib.auth.models import User, Group
 from rest_framework import generics, mixins, viewsets
 from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
 
+from absortium import celery_app
 from absortium import constants
 from absortium.model.models import Offer, Account
 from absortium.serializer.serializers import \
@@ -144,7 +145,9 @@ class DepositViewSet(mixins.CreateModelMixin,
         return self.request.account.deposits.all()
 
     def perform_create(self, serializer):
-        serializer.save(account=self.request.account)
+        account_pk = self.request.account.pk
+        celery_app.do_deposit(account_pk, serializer)
+
 
     @init_account()
     def retrieve(self, request, *args, **kwargs):
@@ -182,7 +185,6 @@ class WithdrawViewSet(mixins.CreateModelMixin,
 
     @init_account()
     def create(self, request, *args, **kwargs):
-        # TODO Celery queue
         return super().create(request, *args, **kwargs)
 
 

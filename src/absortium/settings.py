@@ -38,7 +38,8 @@ else:
 COINBASE_ACCOUNT_ID='2bbf394c-193b-5b2a-9155-3b4732659ede'
 
 CELERY_BROKER = 'amqp://guest@docker.broker//'
-
+CELERY_RETRY_COUNTDOWN = 2
+CELERY_MAX_RETRIES = 1000
 # SOCIAL_AUTH_PIPELINE = (
 #     'users.social_pipeline.auto_logout',  # custom action
 #     'social.pipeline.social_auth.social_details',
@@ -57,9 +58,7 @@ CELERY_BROKER = 'amqp://guest@docker.broker//'
 ## Broker settings.
 BROKER_URL = 'amqp://guest:guest@docker.broker//'
 
-# List of modules to import when celery starts.
-# CELERY_IMPORTS = ('myapp.tasks', )
-
+REDLOCK_URL = "docker.redlockdb"
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -79,6 +78,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'absortium',
     'jwtauth',
+    'absortium.celery'
 ]
 
 AUTHENTICATION_BACKENDS = (

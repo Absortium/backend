@@ -8,10 +8,10 @@ from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch.dispatcher import receiver
 from rest_framework.exceptions import ValidationError
 
-from absortium import constants
+from absortium import constants, celery
 from absortium.celery import app
 from absortium.crossbarhttp import get_crossbar_client
-from absortium.model.models import Account, Exchange, Offer, Deposit, Withdrawal
+from absortium.model.models import Account, Exchange, Offer, Withdrawal
 from absortium.serializer.serializers import OfferSerializer
 from absortium.wallet.base import get_client
 from core.utils.logging import getLogger
@@ -82,7 +82,7 @@ def exchange_post_save(sender, instance, *args, **kwargs):
                       secondary_currency=exchange.currency,
                       amount=exchange.amount)
         offer.save()
-        app.do_create_exchange.delay()
+        celery.do_create_exchange.delay()
     else:
         amount = offer.amount + exchange.amount
 
@@ -127,14 +127,15 @@ def withdraw_pre_save(sender, instance, *args, **kwargs):
         raise ValidationError("Withdrawal exceed amount of money on the account")
 
 
-@receiver(pre_save, sender=Deposit, dispatch_uid="deposit_pre_save")
-def deposit_pre_save(sender, instance, *args, **kwargs):
-    withdraw = instance
-    account = withdraw.account
-
-    # update() is converted directly to an SQL statement; it doesn't call save() on the model
-    # instances, and so the pre_save and post_save signals aren't emitted.
-    amount = account.amount + withdraw.amount
-    Account.objects.filter(pk=account.pk).update(amount=amount)
-
-    app.do_deposit.delay()
+# @receiver(pre_save, sender=Deposit, dispatch_uid="deposit_pre_save")
+# def deposit_pre_save(sender, instance, *args, **kwargs):
+#     deposit = instance
+#     account = deposit.account
+#
+#     # update() is converted directly to an SQL statement; it doesn't call save() on the model
+#     # instances, and so the pre_save and post_save signals aren't emitted.
+#     amount = account.amount + deposit.amount
+#     Account.objects.filter(pk=account.pk).update(amount=amount)
+#
+#     #TODO
+#     app.do_deposit.delay(deposit.pk)
