@@ -68,7 +68,7 @@ def locker(retry_countdown=settings.CELERY_RETRY_COUNTDOWN):
 
 
 @app.task(bind=True, max_retries=settings.CELERY_MAX_RETRIES)
-# @locker()
+@locker()
 def do_deposit(self, account_pk):
     logger.info("DEPOSIT!")
     # account = Account.objects.get(pk=account_pk)
