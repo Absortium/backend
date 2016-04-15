@@ -1,14 +1,19 @@
 __author__ = 'andrew.shvv@gmail.com'
 
+from django.test import override_settings
 from rest_framework.status import HTTP_201_CREATED
 
 from absortium.model.models import Deposit
+from absortium.tests.lockmanager.mixins import LockManagerMixin
+from absortium.tests.router.mixins import RouterMixin
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
 
-class CreateDepositMixin():
+class CreateDepositMixin(RouterMixin, LockManagerMixin):
+    @override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
+                     CELERY_ALWAYS_EAGER=True)
     def create_deposit(self, user, amount="0.00001"):
         data = {
             'amount': amount
@@ -28,7 +33,12 @@ class CreateDepositMixin():
         url = '/api/accounts/{account_pk}/deposits/'.format(account_pk=account_pk)
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, HTTP_201_CREATED)
-        deposit_pk = response.json()['pk']
+
+        # Get the publishment that we sent to the router
+        publishment = self.get_publishment(user.pk)
+
+        self.assertEqual(publishment["status"], "SUCCESS")
+        deposit_pk = publishment["data"]["pk"]
 
         # Check that deposit exist in db
         try:

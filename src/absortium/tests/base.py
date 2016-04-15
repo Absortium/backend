@@ -28,3 +28,4 @@ class AbsortiumTest(APITestCase):
         self.user = user
         self.client = APIClient()
         self.client.force_authenticate(user)
+        super().setUp()

@@ -20,6 +20,30 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'name')
 
 
+class PrepopulateSerializer(serializers.ModelSerializer):
+    def populate_with_valid_data(self, data):
+        self._validated_data = data
+
+    def save(self, **kwargs):
+        validated_data = dict(
+            list(self.validated_data.items()) +
+            list(kwargs.items())
+        )
+
+        if self.instance is not None:
+            self.instance = self.update(self.instance, validated_data)
+            assert self.instance is not None, (
+                '`update()` did not return an object instance.'
+            )
+        else:
+            self.instance = self.create(validated_data)
+            assert self.instance is not None, (
+                '`create()` did not return an object instance.'
+            )
+
+        return self.instance
+
+
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
     A ModelSerializer that takes an additional `exclude_fields` argument that
@@ -84,7 +108,7 @@ class ExchangeSerializer(serializers.ModelSerializer):
         fields = ('pk', 'currency', 'amount', 'price', 'account', 'created')
 
 
-class DepositSerializer(serializers.ModelSerializer):
+class DepositSerializer(PrepopulateSerializer):
     currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, read_only=True)
     address = serializers.ReadOnlyField(source='account.address')
 
@@ -92,14 +116,12 @@ class DepositSerializer(serializers.ModelSerializer):
                                       decimal_places=constants.DECIMAL_PLACES,
                                       min_value=constants.AMOUNT_MIN_VALUE)
 
-
-
     class Meta:
         model = Deposit
-        fields = ('pk', 'currency', 'address',  'amount', 'created')
+        fields = ('pk', 'currency', 'address', 'amount', 'created')
 
 
-class WithdrawSerializer(serializers.ModelSerializer):
+class WithdrawSerializer(PrepopulateSerializer):
     currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, read_only=True)
 
     address = serializers.CharField()

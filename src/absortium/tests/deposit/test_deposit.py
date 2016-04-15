@@ -67,6 +67,8 @@ class DepositTest(AbsortiumTest, CreateDepositMixin, CreateAccountMixin):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, HTTP_404_NOT_FOUND)
 
-    # TODO: Create test that checks incorrect amount etc
     def test_malformed_amount_price(self):
-        pass
+        account_pk, _ = self.create_account(self.user, 'btc')
+
+        with self.assertRaises(AssertionError):
+            self.create_deposit(self.user, amount="asdmnajsid")

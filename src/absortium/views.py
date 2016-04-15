@@ -2,10 +2,12 @@ __author__ = 'andrew.shvv@gmail.com'
 
 from django.contrib.auth.models import User, Group
 from rest_framework import generics, mixins, viewsets
+from rest_framework import status
 from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
+from rest_framework.response import Response
 
-from absortium import celery_app
 from absortium import constants
+from absortium.celery import tasks
 from absortium.model.models import Offer, Account
 from absortium.serializer.serializers import \
     UserSerializer, \
@@ -144,11 +146,6 @@ class DepositViewSet(mixins.CreateModelMixin,
     def get_queryset(self):
         return self.request.account.deposits.all()
 
-    def perform_create(self, serializer):
-        account_pk = self.request.account.pk
-        celery_app.do_deposit(account_pk, serializer)
-
-
     @init_account()
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
@@ -159,8 +156,24 @@ class DepositViewSet(mixins.CreateModelMixin,
 
     @init_account()
     def create(self, request, *args, **kwargs):
-        # TODO Celery queue, ACCEPT ONLY NOTIFICATION SERVICE USER
-        return super().create(request, *args, **kwargs)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = self.perform_create(serializer)
+        return Response(data, status=status.HTTP_201_CREATED)
+
+    def perform_create(self, serializer):
+        # TODO: Change topik (pk) to some more secure and long number
+        context = {
+            "validated_data": serializer.validated_data,
+            "topic": self.request.user.pk,
+            "account_pk": self.request.account.pk
+        }
+        task = tasks.do_deposit.delay(**context)
+        return {
+            "id": task.id,
+            "status": task.status,
+            "name": task.task_name
+        }
 
 
 class WithdrawViewSet(mixins.CreateModelMixin,
