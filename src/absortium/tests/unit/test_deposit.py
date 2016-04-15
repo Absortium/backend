@@ -69,6 +69,8 @@ class DepositTest(AbsortiumTest, CreateDepositMixin, CreateAccountMixin):
 
     def test_malformed_amount_price(self):
         account_pk, _ = self.create_account(self.user, 'btc')
+        malformed_amount = "*asa1&^*%^&$*%EOP"
 
+        # Create deposit should assert if deposit response code is not 200
         with self.assertRaises(AssertionError):
-            self.create_deposit(self.user, amount="asdmnajsid")
+            self.create_deposit(self.user, amount=malformed_amount)

@@ -1,8 +1,10 @@
 __author__ = 'andrew.shvv@gmail.com'
 
+from functools import wraps
+
 from django.conf import settings
 from redlock import Redlock
-from functools import wraps
+
 
 def locker(retry_countdown=settings.CELERY_RETRY_COUNTDOWN):
     lock_manager = get_lock_manager()

@@ -35,7 +35,7 @@ if COINBASE_SANDBOX:
 else:
     COINBASE_API_URL = 'https://api.coinbase.com'
 
-COINBASE_ACCOUNT_ID='2bbf394c-193b-5b2a-9155-3b4732659ede'
+COINBASE_ACCOUNT_ID = '2bbf394c-193b-5b2a-9155-3b4732659ede'
 
 CELERY_BROKER = 'amqp://guest@docker.broker//'
 CELERY_RETRY_COUNTDOWN = 2
@@ -59,7 +59,6 @@ CELERY_MAX_RETRIES = 1000
 BROKER_URL = 'amqp://guest:guest@docker.broker//'
 
 REDLOCK_URL = "docker.redlockdb"
-
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
