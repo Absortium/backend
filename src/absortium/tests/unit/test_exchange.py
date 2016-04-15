@@ -3,15 +3,13 @@ __author__ = 'andrew.shvv@gmail.com'
 from django.contrib.auth import get_user_model
 from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN
 
-from absortium.tests.base import AbsortiumTest
-from absortium.tests.mixins.account import CreateAccountMixin
-from absortium.tests.mixins.exchange import CreateExchangeMixin
+from absortium.tests.base import AbsoritumUnitTest
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
 
-class ExchangeTest(AbsortiumTest, CreateExchangeMixin, CreateAccountMixin):
+class ExchangeTest(AbsoritumUnitTest):
     def test_permissions(self, *args, **kwargs):
         account_pk, _ = self.create_account(self.user, 'btc')
         exchange_pk, _ = self.create_exchange(self.user)

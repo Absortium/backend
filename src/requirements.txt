@@ -23,7 +23,7 @@ celery
 redlock-py
 drf-nested-routers
 django-extensions
-
+flower
 
 # ======================================================================================
 # All other libraries that was installed during general libs installation

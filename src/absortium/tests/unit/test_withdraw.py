@@ -3,16 +3,13 @@ __author__ = 'andrew.shvv@gmail.com'
 from django.contrib.auth import get_user_model
 from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN, HTTP_405_METHOD_NOT_ALLOWED
 
-from absortium.tests.base import AbsortiumTest
-from absortium.tests.mixins.account import CreateAccountMixin
-from absortium.tests.mixins.deposit import CreateDepositMixin
-from absortium.tests.mixins.withdrawal import CreateWithdrawalMixin
+from absortium.tests.base import AbsoritumUnitTest
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
 
-class WithdrawalTest(AbsortiumTest, CreateWithdrawalMixin, CreateAccountMixin, CreateDepositMixin):
+class WithdrawalTest(AbsoritumUnitTest):
     def test_permissions(self, *args, **kwargs):
         account_pk, _ = self.create_account(self.user, 'btc')
         self.create_deposit(self.user)

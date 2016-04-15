@@ -6,15 +6,13 @@ import random
 from rest_framework.status import HTTP_200_OK
 
 from absortium import constants
-from absortium.tests.base import AbsortiumTest
-from absortium.tests.mixins.account import CreateAccountMixin
-from absortium.tests.mixins.exchange import CreateExchangeMixin
+from absortium.tests.base import AbsoritumUnitTest
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
 
-class OfferTest(AbsortiumTest, CreateExchangeMixin, CreateAccountMixin):
+class OfferTest(AbsoritumUnitTest):
     before_dot = 10 ** (constants.MAX_DIGITS - constants.DECIMAL_PLACES) - 1
     after_dot = 10 ** constants.DECIMAL_PLACES - 1
 
