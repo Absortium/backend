@@ -169,11 +169,7 @@ class DepositViewSet(mixins.CreateModelMixin,
             "account_pk": self.request.account.pk
         }
         task = tasks.do_deposit.delay(**context)
-        return {
-            "id": task.id,
-            "status": task.status,
-            "name": task.task_name
-        }
+        return {"task_id": task.id}
 
 
 class WithdrawViewSet(mixins.CreateModelMixin,
@@ -185,9 +181,6 @@ class WithdrawViewSet(mixins.CreateModelMixin,
     def get_queryset(self):
         return self.request.account.withdrawals.all()
 
-    def perform_create(self, serializer):
-        serializer.save(account=self.request.account)
-
     @init_account()
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
@@ -198,7 +191,20 @@ class WithdrawViewSet(mixins.CreateModelMixin,
 
     @init_account()
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = self.perform_create(serializer)
+        return Response(data, status=status.HTTP_201_CREATED)
+
+    def perform_create(self, serializer):
+        # TODO: Change topik (pk) to some more secure and long number
+        context = {
+            "validated_data": serializer.validated_data,
+            "topic": self.request.user.pk,
+            "account_pk": self.request.account.pk
+        }
+        task = tasks.do_withdraw.delay(**context)
+        return {"task_id": task.id}
 
 
 class ExchangeViewSet(mixins.CreateModelMixin,

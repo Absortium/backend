@@ -1,14 +1,18 @@
 __author__ = 'andrew.shvv@gmail.com'
-
+from django.test import override_settings
 from rest_framework.status import HTTP_201_CREATED
 
 from absortium.model.models import Withdrawal
+from absortium.tests.lockmanager.mixins import LockManagerMixin
+from absortium.tests.router.mixins import RouterMixin
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
 
-class CreateWithdrawalMixin():
+class CreateWithdrawalMixin(RouterMixin, LockManagerMixin):
+    @override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
+                       CELERY_ALWAYS_EAGER=True)
     def create_withdrawal(self, user, amount="0.00001"):
         data = {
             'amount': amount,
@@ -29,7 +33,14 @@ class CreateWithdrawalMixin():
         url = '/api/accounts/{account_pk}/withdrawals/'.format(account_pk=account_pk)
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, HTTP_201_CREATED)
-        withdrawal_pk = response.json()['pk']
+        task_id = response.json()['task_id']
+
+        # Get the publishment that we sent to the router
+        publishment = self.get_publishment_by_task_id(topic=user.pk, task_id=task_id)
+        self.assertNotEqual(publishment, None)
+
+        self.assertEqual(publishment["status"], "SUCCESS")
+        withdrawal_pk = publishment["data"]["pk"]
 
         # Check that withdrawal exist in db
         try:

@@ -10,7 +10,7 @@ logger = getLogger(__name__)
 
 class LockManagerMixin(APITestCase):
     """
-        LockManagerMixin substitute original lock manager and always return mock lock.
+        LockManagerMixin substitute original lock manager and always return lock.
     """
     def __init__(self, *args, **kwargs):
         self.mock_lockmanager = None

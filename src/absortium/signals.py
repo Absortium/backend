@@ -82,7 +82,6 @@ def exchange_post_save(sender, instance, *args, **kwargs):
                       secondary_currency=exchange.currency,
                       amount=exchange.amount)
         offer.save()
-        celery.do_create_exchange.delay()
     else:
         amount = offer.amount + exchange.amount
 
@@ -113,18 +112,18 @@ def offer_post_save(sender, instance, *args, **kwargs):
     client.publish(topic, **publishment)
 
 
-@receiver(pre_save, sender=Withdrawal, dispatch_uid="withdraw_pre_save")
-def withdraw_pre_save(sender, instance, *args, **kwargs):
-    withdraw = instance
-    account = withdraw.account
-
-    if account.amount - withdraw.amount >= 0:
-        amount = account.amount - withdraw.amount
-        # update() is converted directly to an SQL statement; it doesn't call save() on the model
-        # instances, and so the pre_save and post_save signals aren't emitted.
-        Account.objects.filter(pk=account.pk).update(amount=amount)
-    else:
-        raise ValidationError("Withdrawal exceed amount of money on the account")
+# @receiver(pre_save, sender=Withdrawal, dispatch_uid="withdraw_pre_save")
+# def withdraw_pre_save(sender, instance, *args, **kwargs):
+#     withdraw = instance
+#     account = withdraw.account
+#
+#     if account.amount - withdraw.amount >= 0:
+#         amount = account.amount - withdraw.amount
+#         # update() is converted directly to an SQL statement; it doesn't call save() on the model
+#         # instances, and so the pre_save and post_save signals aren't emitted.
+#         Account.objects.filter(pk=account.pk).update(amount=amount)
+#     else:
+#         raise ValidationError("Withdrawal exceed amount of money on the account")
 
 
 # @receiver(pre_save, sender=Deposit, dispatch_uid="deposit_pre_save")

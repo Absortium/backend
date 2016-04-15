@@ -13,7 +13,7 @@ logger = getLogger(__name__)
 
 class CreateDepositMixin(RouterMixin, LockManagerMixin):
     @override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
-                     CELERY_ALWAYS_EAGER=True)
+                       CELERY_ALWAYS_EAGER=True)
     def create_deposit(self, user, amount="0.00001"):
         data = {
             'amount': amount
@@ -33,9 +33,11 @@ class CreateDepositMixin(RouterMixin, LockManagerMixin):
         url = '/api/accounts/{account_pk}/deposits/'.format(account_pk=account_pk)
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, HTTP_201_CREATED)
+        task_id = response.json()['task_id']
 
         # Get the publishment that we sent to the router
-        publishment = self.get_publishment(user.pk)
+        publishment = self.get_publishment_by_task_id(topic=user.pk, task_id=task_id)
+        self.assertNotEqual(publishment, None)
 
         self.assertEqual(publishment["status"], "SUCCESS")
         deposit_pk = publishment["data"]["pk"]

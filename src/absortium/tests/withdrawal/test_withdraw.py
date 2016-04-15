@@ -6,6 +6,7 @@ from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN, HTTP_4
 from absortium.tests.account.mixins import CreateAccountMixin
 from absortium.tests.withdrawal.mixins import CreateWithdrawalMixin
 from absortium.tests.deposit.mixins import CreateDepositMixin
+
 from absortium.tests.base import AbsortiumTest
 
 from core.utils.logging import getLogger
@@ -70,6 +71,8 @@ class WithdrawalTest(AbsortiumTest, CreateWithdrawalMixin, CreateAccountMixin, C
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, HTTP_404_NOT_FOUND)
 
-    # TODO: Create test that checks incorrect amount etc
     def test_malformed_amount_price(self):
-        pass
+        account_pk, _ = self.create_account(self.user, 'btc')
+
+        with self.assertRaises(AssertionError):
+            self.create_withdrawal(self.user, amount="asdmnajsid")

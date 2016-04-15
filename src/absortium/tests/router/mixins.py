@@ -13,6 +13,7 @@ class RouterMixin(APITestCase):
         RouterMixin substitute original crossbarhttp client and save all publishments in local variable,
         after that you can check is publishment was made and is publishment data is valid.
     """
+
     def __init__(self, *args, **kwargs):
         self.mock_client = None
         super().__init__(*args, **kwargs)
@@ -31,6 +32,12 @@ class RouterMixin(APITestCase):
     def get_publishment(self, topic):
         publishments = self.get_publishments(topic)
         return publishments[0]
+
+    def get_publishment_by_task_id(self, topic, task_id):
+        for pubslishment in self.get_publishments(topic):
+            if pubslishment['task_id'] == task_id:
+                return pubslishment
+        return None
 
     def is_published(self, topic):
         topics = self.mock_client.topics
