@@ -3,8 +3,8 @@ from django.test import override_settings
 from rest_framework.status import HTTP_201_CREATED
 
 from absortium.model.models import Withdrawal
-from absortium.tests.lockmanager.mixins import LockManagerMixin
-from absortium.tests.router.mixins import RouterMixin
+from absortium.tests.mixins.lockmanager import LockManagerMixin
+from absortium.tests.mixins.router import RouterMixin
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)

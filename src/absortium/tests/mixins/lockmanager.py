@@ -12,6 +12,7 @@ class LockManagerMixin(APITestCase):
     """
         LockManagerMixin substitute original lock manager and always return lock.
     """
+
     def __init__(self, *args, **kwargs):
         self.mock_lockmanager = None
         super().__init__(*args, **kwargs)

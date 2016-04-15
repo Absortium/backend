@@ -3,13 +3,12 @@ __author__ = 'andrew.shvv@gmail.com'
 import decimal
 import random
 
-from mock import patch
 from rest_framework.status import HTTP_200_OK
 
 from absortium import constants
-from absortium.tests.account.mixins import CreateAccountMixin
 from absortium.tests.base import AbsortiumTest
-from absortium.tests.exchange.mixins import CreateExchangeMixin
+from absortium.tests.mixins.account import CreateAccountMixin
+from absortium.tests.mixins.exchange import CreateExchangeMixin
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)

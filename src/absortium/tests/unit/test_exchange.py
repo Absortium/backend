@@ -3,9 +3,9 @@ __author__ = 'andrew.shvv@gmail.com'
 from django.contrib.auth import get_user_model
 from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN
 
-from absortium.tests.account.mixins import CreateAccountMixin
 from absortium.tests.base import AbsortiumTest
-from absortium.tests.exchange.mixins import CreateExchangeMixin
+from absortium.tests.mixins.account import CreateAccountMixin
+from absortium.tests.mixins.exchange import CreateExchangeMixin
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
