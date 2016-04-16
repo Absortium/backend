@@ -1,15 +1,13 @@
 __author__ = 'andrew.shvv@gmail.com'
 from rest_framework.status import HTTP_201_CREATED
 
-from absortium.model.models import Withdrawal
-from absortium.tests.mixins.lockmanager import LockManagerMixin
-from absortium.tests.mixins.router import RouterMixin
+from absortium.models import Withdrawal
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
 
-class CreateWithdrawalMixin(RouterMixin, LockManagerMixin):
+class CreateWithdrawalMixin():
     def create_withdrawal(self, user, amount="0.00001", with_authentication=True, with_checks=True, account_pk=None):
         data = {
             'amount': amount,
@@ -37,7 +35,7 @@ class CreateWithdrawalMixin(RouterMixin, LockManagerMixin):
             task_id = response.json()['task_id']
 
             # Get the publishment that we sent to the router
-            publishment = self.get_publishment_by_task_id(topic=user.pk, task_id=task_id)
+            publishment = self.get_publishment_by_task_id(topic=str(user.pk), task_id=task_id)
             self.assertNotEqual(publishment, None)
 
             self.assertEqual(publishment["status"], "SUCCESS")

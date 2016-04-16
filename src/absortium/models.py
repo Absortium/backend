@@ -41,7 +41,7 @@ class Account(models.Model):
     """
         Comment me!
     """
-    amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
+    amount = models.DecimalField(max_digits=constants.ACCOUNT_MAX_DIGITS,
                                  decimal_places=constants.DECIMAL_PLACES, default=0)
 
     address = models.CharField(max_length=50)

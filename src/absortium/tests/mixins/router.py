@@ -1,32 +1,33 @@
 __author__ = 'andrew.shvv@gmail.com'
 
 from mock import patch, Mock
-from rest_framework.test import APITestCase
 
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
 
-class RouterMixin(APITestCase):
+class RouterMockMixin():
     """
-        RouterMixin substitute original crossbarhttp client and save all publishments in local variable,
+        RouterMockMixin substitute original crossbarhttp client and save all publishments in local variable,
         after that you can check is publishment was made and is publishment data is valid.
     """
 
-    def __init__(self, *args, **kwargs):
-        self.mock_client = None
-        super().__init__(*args, **kwargs)
+    def __init__(self):
+        # WARNING!: Be careful with names you may override variables in the class that inherit this mixin!
+        self._router_client = None
+        self._router_patcher = None
 
-    def setUp(self):
-        client = MockClient()
-        self.patcher = patch('absortium.crossbarhttp.client.Client', new=client)
-        self.mock_client = self.patcher.start()
-        self.addCleanup(self.patcher.stop)
-        super().setUp()
+    def mock_router(self):
+        self._router_client = MockClient()
+        self._router_patcher = patch('absortium.crossbarhttp.client.Client', new=self._router_client)
+        self._router_patcher.start()
+
+    def unmock_router(self):
+        self._router_patcher.stop()
 
     def get_publishments(self, topic):
-        topics = self.mock_client.topics
+        topics = self._router_client.topics
         return topics[topic]
 
     def get_publishment(self, topic):
@@ -34,13 +35,16 @@ class RouterMixin(APITestCase):
         return publishments[0]
 
     def get_publishment_by_task_id(self, topic, task_id):
+        self.assertTrue(type(topic) == str)
+        self.assertTrue(type(task_id) == str)
+
         for pubslishment in self.get_publishments(topic):
             if pubslishment['task_id'] == task_id:
                 return pubslishment
         return None
 
     def is_published(self, topic):
-        topics = self.mock_client.topics
+        topics = self._router_client.topics
         return topic in topics
 
 

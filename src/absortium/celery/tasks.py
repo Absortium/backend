@@ -3,22 +3,23 @@ __author__ = 'andrew.shvv@gmail.com'
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.conf import settings
+from django.contrib.auth import get_user_model
 
-from absortium import constants
-from absortium.crossbarhttp.client import get_crossbar_client
 from absortium.lockmanager import locker
-from absortium.model.models import Account, Withdrawal
+from absortium.crossbarhttp.client import get_crossbar_client
+from absortium.models import Account
 from absortium.serializer.serializers import DepositSerializer, WithdrawSerializer
 
 celery_logger = get_task_logger(__name__)
 
-from core.utils.logging import getLogger
 
-django_logger = getLogger(__name__)
+# from core.utils.logging import getLogger
+#
+# django_logger = getLogger(__name__)
 
 
 @shared_task(bind=True, max_retries=settings.CELERY_MAX_RETRIES)
-@locker()
+# @locker()
 def do_deposit(self, *args, **kwargs):
     serializer = DepositSerializer()
     serializer.populate_with_valid_data(kwargs['validated_data'])
@@ -37,16 +38,18 @@ def do_deposit(self, *args, **kwargs):
         "data": serializer.data,
     }
 
-    client = get_crossbar_client(url=constants.ROUTER_URL)
+    client = get_crossbar_client()
+    celery_logger.info(client)
     client.publish(kwargs['topic'], **publishment)
 
 
 @shared_task(bind=True, max_retries=settings.CELERY_MAX_RETRIES)
-@locker()
+# @locker()
 def do_withdraw(self, *args, **kwargs):
     serializer = WithdrawSerializer()
     serializer.populate_with_valid_data(kwargs['validated_data'])
 
+    celery_logger.info(kwargs['account_pk'])
     account = Account.objects.get(pk=kwargs['account_pk'])
     deposit = serializer.save(account=account)
 
@@ -72,5 +75,28 @@ def do_withdraw(self, *args, **kwargs):
             "reason": "Not enough money for withdrawal",
         })
 
-    client = get_crossbar_client(url=constants.ROUTER_URL)
+    client = get_crossbar_client()
     client.publish(kwargs['topic'], **publishment)
+
+
+@shared_task(bind=True, max_retries=settings.CELERY_MAX_RETRIES)
+def do_check_users(self, *args, **kwargs):
+    User = get_user_model()
+    users = User.objects.all()
+
+    if not users:
+        celery_logger.info("There is no users")
+
+    for user in users:
+        celery_logger.info("\nUser username: {}".format(user.username))
+
+
+@shared_task(bind=True, max_retries=settings.CELERY_MAX_RETRIES)
+def do_check_accounts(self, *args, **kwargs):
+    accounts = Account.objects.all()
+
+    if not accounts:
+        celery_logger.info("There is no accounts")
+
+    for account in accounts:
+        celery_logger.info("\nUser pk: {}\n Amount: {}".format(account.owner.pk, account.amount))

@@ -173,7 +173,7 @@ class Client(object):
             headers = {}
 
         if encoded_params is not None and self.verbose is True:
-            print("crossbarhttp: Params: "+encoded_params)
+            print("crossbarhttp: Params: " + encoded_params)
 
         if self.key is not None and self.secret is not None and encoded_params is not None:
             signature, nonce, timestamp = self._compute_signature(encoded_params)
@@ -185,8 +185,8 @@ class Client(object):
                 "key": self.key
             })
             if self.verbose is True:
-                print("crossbarhttp: Signature Params: "+params)
-            url += "?"+params
+                print("crossbarhttp: Signature Params: " + params)
+            url += "?" + params
 
         # TODO: I can't figure out what this is.  Guessing it is a number you increment on every call
         self.sequence += 1
@@ -196,7 +196,7 @@ class Client(object):
             request.get_method = lambda: method
             response = urlopen(request).read().decode()
             if self.verbose is True:
-                print("crossbarhttp: Response: "+response)
+                print("crossbarhttp: Response: " + response)
 
             return json.loads(response)
 
@@ -212,10 +212,15 @@ class Client(object):
             raise ClientBadHost(str(e))
 
 
-_clients = {}
+from django.conf import settings
+
+_client = None
 
 
-def get_crossbar_client(url, *args, **kwargs):
-    if _clients.get(url) is None:
-        _clients[url] = Client(url, *args, **kwargs)
-    return _clients[url]
+def get_crossbar_client(*args, **kwargs):
+    url = settings.ROUTER_URL
+
+    global _client
+    if _client is None:
+        _client = Client(url, *args, **kwargs)
+    return _client

@@ -5,6 +5,8 @@ from functools import wraps
 from django.conf import settings
 from redlock import Redlock
 
+from celery.utils.log import get_task_logger
+celery_logger = get_task_logger(__name__)
 
 def locker(retry_countdown=settings.CELERY_RETRY_COUNTDOWN):
     lock_manager = get_lock_manager()
@@ -13,7 +15,10 @@ def locker(retry_countdown=settings.CELERY_RETRY_COUNTDOWN):
         @wraps(func)
         def decorator(self, *args, **kwargs):
             account_pk = kwargs['account_pk']
+            celery_logger.info(account_pk)
             lock = lock_manager.lock(account_pk)
+            celery_logger.info(lock)
+            celery_logger.info(lock_manager)
             if lock:
                 func(self, account_pk, *args, **kwargs)
                 lock_manager.unlock(lock)
@@ -23,6 +28,16 @@ def locker(retry_countdown=settings.CELERY_RETRY_COUNTDOWN):
         return decorator
 
     return wrapper
+
+# def atomic():
+#     def wrapper(func):
+#         @wraps(func)
+#         def decorator(self, *args, **kwargs):
+#             with transaction.atomic():
+#                 func(self, *args, **kwargs)
+#         return decorator
+#
+#     return wrapper
 
 
 class LockManager():

@@ -6,12 +6,9 @@ __author__ = 'andrew.shvv@gmail.com'
 
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch.dispatcher import receiver
-from rest_framework.exceptions import ValidationError
 
-from absortium import constants, celery
-from absortium.celery import app
 from absortium.crossbarhttp import get_crossbar_client
-from absortium.model.models import Account, Exchange, Offer, Withdrawal
+from absortium.models import Account, Exchange, Offer
 from absortium.serializer.serializers import OfferSerializer
 from absortium.wallet.base import get_client
 from core.utils.logging import getLogger
@@ -90,11 +87,6 @@ def exchange_post_save(sender, instance, *args, **kwargs):
         Offer.objects.filter(pk=offer.pk).update(amount=amount)
 
 
-
-
-
-
-
 @receiver(post_save, sender=Offer, dispatch_uid="offer_post_save")
 def offer_post_save(sender, instance, *args, **kwargs):
     """
@@ -108,9 +100,8 @@ def offer_post_save(sender, instance, *args, **kwargs):
     del publishment['primary_currency']
     del publishment['secondary_currency']
 
-    client = get_crossbar_client(url=constants.ROUTER_URL)
+    client = get_crossbar_client()
     client.publish(topic, **publishment)
-
 
 # @receiver(pre_save, sender=Withdrawal, dispatch_uid="withdraw_pre_save")
 # def withdraw_pre_save(sender, instance, *args, **kwargs):

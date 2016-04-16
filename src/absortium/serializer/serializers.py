@@ -4,7 +4,7 @@ from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 
 from absortium import constants
-from absortium.model.models import Account, Exchange, Offer, Deposit, Withdrawal
+from absortium.models import Account, Exchange, Offer, Deposit, Withdrawal
 from absortium.serializer.fields import MyChoiceField
 
 

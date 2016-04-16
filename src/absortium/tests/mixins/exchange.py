@@ -2,7 +2,7 @@ __author__ = 'andrew.shvv@gmail.com'
 
 from rest_framework.status import HTTP_201_CREATED
 
-from absortium.model.models import Exchange
+from absortium.models import Exchange
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)

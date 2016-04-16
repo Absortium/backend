@@ -8,7 +8,7 @@ from rest_framework.response import Response
 
 from absortium import constants
 from absortium.celery import tasks
-from absortium.model.models import Offer, Account
+from absortium.models import Offer, Account
 from absortium.serializer.serializers import \
     UserSerializer, \
     GroupSerializer, \
@@ -165,7 +165,7 @@ class DepositViewSet(mixins.CreateModelMixin,
         # TODO: Change topik (pk) to some more secure and long number
         context = {
             "validated_data": serializer.validated_data,
-            "topic": self.request.user.pk,
+            "topic": str(self.request.user.pk),
             "account_pk": self.request.account.pk
         }
         task = tasks.do_deposit.delay(**context)
@@ -200,7 +200,7 @@ class WithdrawViewSet(mixins.CreateModelMixin,
         # TODO: Change topik (pk) to some more secure and long number
         context = {
             "validated_data": serializer.validated_data,
-            "topic": self.request.user.pk,
+            "topic": str(self.request.user.pk),
             "account_pk": self.request.account.pk
         }
         task = tasks.do_withdraw.delay(**context)

@@ -21,7 +21,8 @@ secret_settings = {
     'SOCIAL_AUTH_TWITTER_OAUTH1_KEY': 'SOCIAL_AUTH_TWITTER_OAUTH1_KEY',
     'POSTGRES_PASSWORD': 'POSTGRES_PASSWORD',
     'COINBASE_API_KEY': 'COINBASE_API_KEY',
-    'COINBASE_API_SECRET': 'COINBASE_API_SECRET'
+    'COINBASE_API_SECRET': 'COINBASE_API_SECRET',
+    'CELERY_TEST': 'CELERY_TEST'
 }
 
 settings_module = sys.modules[__name__]
@@ -59,6 +60,8 @@ CELERY_MAX_RETRIES = 1000
 BROKER_URL = 'amqp://guest:guest@docker.broker//'
 
 REDLOCK_URL = "docker.redlockdb"
+
+ROUTER_URL = "http://docker.router:8080/publish"
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -122,10 +125,12 @@ WSGI_APPLICATION = 'wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases
 
+CELERY_TEST = getattr(settings_module, 'CELERY_TEST') == "True"
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'postgres',
+        'NAME': 'postgres' if not CELERY_TEST else 'test_postgres',
         'USER': 'postgres',
         'PASSWORD': getattr(settings_module, 'POSTGRES_PASSWORD'),
         'HOST': 'docker.postgres',

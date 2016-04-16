@@ -13,7 +13,11 @@ def get_prev_method_name():
 def pretty_wrapper(func):
     def decorator(msg, *args, **kwargs):
         pretty_msg = "Func:  %s\n" % get_prev_method_name()
-        pretty_msg += pp.fmt(msg)
+
+        if type(msg) == str:
+            pretty_msg += msg
+        else:
+            pretty_msg += pp.fmt(msg)
         pretty_msg += "\n+ "+"- " * 30+"+\n"
 
         func(pretty_msg, *args, **kwargs)
