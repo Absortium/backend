@@ -24,16 +24,11 @@ class BenchmarkTest(AbsoritumLiveTest):
             amount = decimal.Decimal('%d.%d' % (random.randint(0, self.before_dot), random.randint(0, self.after_dot)))
         return amount
 
-    def tearDown(self):
-        super().tearDown()
-        # import time
-        # time.sleep(600)
-
     def test_benchmark(self, *args, **kwargs):
-        users_count = 2
+        users_count = 10
         username_length = 20
         number_of_deposit = 30
-        number_of_withrawals = 0
+        number_of_withrawals = 10
 
         User = get_user_model()
         contexts = {}
@@ -68,7 +63,7 @@ class BenchmarkTest(AbsoritumLiveTest):
             })
 
         import time
-        time.sleep(3)
+        time.sleep(5)
 
         for user, context in contexts.items():
             account = Account.objects.get(pk=context['account_pk'])
