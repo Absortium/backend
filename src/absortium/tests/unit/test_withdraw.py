@@ -11,9 +11,9 @@ logger = getLogger(__name__)
 
 class WithdrawalTest(AbsoritumUnitTest):
     def test_permissions(self, *args, **kwargs):
-        account_pk, _ = self.create_account(self.user, 'btc')
-        self.create_deposit(self.user)
-        withdrawal_pk, _ = self.create_withdrawal(self.user)
+        account_pk, _ = self.create_account('btc')
+        self.create_deposit(account_pk=account_pk)
+        withdrawal_pk, _ = self.create_withdrawal(account_pk=account_pk)
 
         # Create hacker user
         User = get_user_model()
@@ -59,7 +59,7 @@ class WithdrawalTest(AbsoritumUnitTest):
                                                                                withdrawal_pk=trash_withdrawal_pk)
 
         # Create an account and try to get uncreated withdrawal
-        account_pk, _ = self.create_account(self.user, 'btc')
+        account_pk, _ = self.create_account('btc')
         url = '/api/accounts/{account_pk}/withdrawals/{withdrawal_pk}/'.format(account_pk=account_pk,
                                                                                withdrawal_pk=trash_withdrawal_pk)
 
@@ -67,7 +67,7 @@ class WithdrawalTest(AbsoritumUnitTest):
         self.assertEqual(response.status_code, HTTP_404_NOT_FOUND)
 
     def test_malformed_amount_price(self):
-        account_pk, _ = self.create_account(self.user, 'btc')
+        account_pk, _ = self.create_account('btc')
 
         with self.assertRaises(AssertionError):
-            self.create_withdrawal(self.user, amount="asdmnajsid")
+            self.create_withdrawal(account_pk=account_pk, amount="asdmnajsid")

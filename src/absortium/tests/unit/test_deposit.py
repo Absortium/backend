@@ -11,8 +11,8 @@ logger = getLogger(__name__)
 
 class DepositTest(AbsoritumUnitTest):
     def test_permissions(self, *args, **kwargs):
-        account_pk, _ = self.create_account(self.user, 'btc')
-        deposit_pk, _ = self.create_deposit(self.user)
+        account_pk, _ = self.create_account('btc')
+        deposit_pk, _ = self.create_deposit(account_pk=account_pk)
 
         # Create hacker user
         User = get_user_model()
@@ -58,7 +58,7 @@ class DepositTest(AbsoritumUnitTest):
                                                                          deposit_pk=trash_deposit_pk)
 
         # Create an account and try to get uncreated deposit
-        account_pk, _ = self.create_account(self.user, 'btc')
+        account_pk, _ = self.create_account('btc')
         url = '/api/accounts/{account_pk}/deposits/{deposit_pk}/'.format(account_pk=account_pk,
                                                                          deposit_pk=trash_deposit_pk)
 
@@ -66,9 +66,9 @@ class DepositTest(AbsoritumUnitTest):
         self.assertEqual(response.status_code, HTTP_404_NOT_FOUND)
 
     def test_malformed_amount_price(self):
-        account_pk, _ = self.create_account(self.user, 'btc')
+        account_pk, _ = self.create_account('btc')
         malformed_amount = "*asa1&^*%^&$*%EOP"
 
         # Create deposit should assert if deposit response code is not 200
         with self.assertRaises(AssertionError):
-            self.create_deposit(self.user, amount=malformed_amount)
+            self.create_deposit(account_pk=account_pk, amount=malformed_amount)

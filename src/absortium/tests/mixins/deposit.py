@@ -2,29 +2,22 @@ __author__ = 'andrew.shvv@gmail.com'
 
 from rest_framework.status import HTTP_201_CREATED
 
-from absortium.models import Deposit
+from absortium.model.models import Deposit
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
 
 class CreateDepositMixin():
-    def create_deposit(self, user, amount="0.00001", with_checks=True, with_authentication=True, account_pk=None):
+    def create_deposit(self, account_pk, amount="0.00001", with_checks=True, user=None):
         data = {
             'amount': amount
         }
 
-        if with_authentication:
+        if user:
             # Authenticate normal user
             # TODO: now it is usual user but then we should change it to notification service user!!
             self.client.force_authenticate(user)
-
-        if not account_pk:
-            # Get list of accounts
-            # TODO: now get account lists but then notification server will search account by address given in notification from coinbase!!
-            response = self.client.get('/api/accounts/', format='json')
-            account = self.get_first(response)
-            account_pk = account['pk']
 
         # Create deposit
         url = '/api/accounts/{account_pk}/deposits/'.format(account_pk=account_pk)
@@ -35,8 +28,8 @@ class CreateDepositMixin():
             task_id = response.json()['task_id']
 
             # Get the publishment that we sent to the router
-            #TODO: This is not good when one mixin depends of methods of another (RouterMixin)
-            publishment = self.get_publishment_by_task_id(topic=str(user.pk), task_id=task_id)
+            # TODO: This is not good when one mixin depends of methods of another (RouterMixin)
+            publishment = self.get_publishment_by_task_id(task_id=task_id)
             self.assertNotEqual(publishment, None)
 
             self.assertEqual(publishment["status"], "SUCCESS")

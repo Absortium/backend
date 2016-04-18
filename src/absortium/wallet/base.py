@@ -2,6 +2,7 @@ __author__ = 'andrew.shvv@gmail.com'
 
 from absortium import constants
 from absortium.wallet.bitcoin import BitcoinClient
+from absortium.wallet.ethereum import EthereumClient
 
 _clients = {
     constants.BTC: None,
@@ -26,6 +27,8 @@ def get_client(currency):
     if _clients[currency] is None:
         if currency is constants.BTC:
             _clients[currency] = BitcoinClient()
+        elif currency is constants.ETH:
+            _clients[currency] = EthereumClient()
         else:
             raise Exception('There is no such wallet client')
 

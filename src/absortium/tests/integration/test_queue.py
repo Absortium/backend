@@ -1,17 +1,18 @@
 __author__ = 'andrew.shvv@gmail.com'
 
+import decimal
+import random
+from string import ascii_letters
+
 from django.contrib.auth import get_user_model
 
 from absortium import constants
 from absortium.celery import tasks
-from absortium.models import Account
+from absortium.model.models import Account
 from absortium.tests.base import AbsoritumLiveTest
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
-import random
-import decimal
-from string import ascii_letters
 
 
 class BenchmarkTest(AbsoritumLiveTest):
@@ -28,7 +29,7 @@ class BenchmarkTest(AbsoritumLiveTest):
         users_count = 10
         username_length = 20
         number_of_deposit = 30
-        number_of_withrawals = 10
+        number_of_withdrawals = 10
 
         User = get_user_model()
         contexts = {}
@@ -42,20 +43,20 @@ class BenchmarkTest(AbsoritumLiveTest):
 
         for user, context in contexts.items():
             self.client.force_authenticate(user)
-            account_pk, _ = self.create_account(user, 'btc', with_authentication=False)
+            account_pk, _ = self.create_account('btc')
             contexts[user].update(account_pk=account_pk)
 
         for user, context in contexts.items():
             self.client.force_authenticate(user)
 
             random_deposits = [self.random_amount() for _ in range(number_of_deposit)]
-            random_withdrawals = [self.random_amount() for _ in range(number_of_withrawals)]
+            random_withdrawals = [self.random_amount() for _ in range(number_of_withdrawals)]
 
             for amount in random_deposits:
-                self.create_deposit(user, amount=amount, with_authentication=False, with_checks=False)
+                self.create_deposit(account_pk=context['account_pk'], amount=amount, with_checks=False)
 
             for amount in random_withdrawals:
-                self.create_withdrawal(user, amount=amount, with_authentication=False, with_checks=False)
+                self.create_withdrawal(account_pk=context['account_pk'], amount=amount, with_checks=False)
 
             contexts[user].update({
                 "deposits": random_deposits,

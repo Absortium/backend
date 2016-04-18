@@ -4,7 +4,7 @@ from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 
 from absortium import constants
-from absortium.models import Account, Exchange, Offer, Deposit, Withdrawal
+from absortium.model.models import Account, Exchange, Offer, Deposit, Withdrawal, Test
 from absortium.serializer.fields import MyChoiceField
 
 
@@ -91,8 +91,9 @@ class AccountSerializer(serializers.ModelSerializer):
         read_only_fields = ('address', 'amount')
 
 
-class ExchangeSerializer(serializers.ModelSerializer):
+class ExchangeSerializer(PrepopulateSerializer):
     currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
+    status = MyChoiceField(choices=constants.AVAILABLE_EXCHANGE_STATUS, default=constants.EXCHANGE_INIT)
 
     amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                       decimal_places=constants.DECIMAL_PLACES,
@@ -101,11 +102,12 @@ class ExchangeSerializer(serializers.ModelSerializer):
                                      decimal_places=constants.DECIMAL_PLACES,
                                      min_value=constants.PRICE_MIN_VALUE)
 
-    account = serializers.ReadOnlyField(source='account.username')
+    from_account = serializers.ReadOnlyField(source='from_account.username')
+    to_account = serializers.ReadOnlyField(source='to_account.username')
 
     class Meta:
         model = Exchange
-        fields = ('pk', 'currency', 'amount', 'price', 'account', 'created')
+        fields = ('pk', 'currency', 'amount', 'price', 'from_account','to_account', 'created', 'status')
 
 
 class DepositSerializer(PrepopulateSerializer):
@@ -132,3 +134,9 @@ class WithdrawSerializer(PrepopulateSerializer):
     class Meta:
         model = Withdrawal
         fields = ('pk', 'currency', 'address', 'amount', 'created')
+
+
+class TestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Test
+        fields = ('pk', 'amount')

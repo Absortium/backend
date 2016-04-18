@@ -8,7 +8,7 @@ from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch.dispatcher import receiver
 
 from absortium.crossbarhttp import get_crossbar_client
-from absortium.models import Account, Exchange, Offer
+from absortium.model.models import Account, Exchange, Offer, Test
 from absortium.serializer.serializers import OfferSerializer
 from absortium.wallet.base import get_client
 from core.utils.logging import getLogger
@@ -40,7 +40,7 @@ def exchange_post_delete(sender, instance, *args, **kwargs):
     """
     exchange = instance
     offer = Offer.objects.filter(price=exchange.price,
-                                 primary_currency=exchange.account.currency,
+                                 primary_currency=exchange.from_account.currency,
                                  secondary_currency=exchange.currency).first()
 
     if offer is None:
@@ -62,29 +62,34 @@ def exchange_post_delete(sender, instance, *args, **kwargs):
         Offer.objects.filter(pk=offer.pk).update(amount=amount)
 
 
-@receiver(post_save, sender=Exchange, dispatch_uid="exchange_post_save")
-def exchange_post_save(sender, instance, *args, **kwargs):
+@receiver(pre_save, sender=Exchange, dispatch_uid="exchange_pre_save")
+def exchange_pre_save(sender, instance, *args, **kwargs):
     """
         Create or change offer object if exchange object is received and saved.
     """
-    exchange = instance
+    new_exchange = instance
 
-    offer = Offer.objects.filter(price=exchange.price,
-                                 primary_currency=exchange.account.currency,
-                                 secondary_currency=exchange.currency).first()
+    offer = Offer.objects.filter(price=new_exchange.price,
+                                 primary_currency=new_exchange.from_account.currency,
+                                 secondary_currency=new_exchange.currency).first()
 
-    if offer is None:
-        offer = Offer(price=exchange.price,
-                      primary_currency=exchange.account.currency,
-                      secondary_currency=exchange.currency,
-                      amount=exchange.amount)
-        offer.save()
+    # if exchange is being updated, then we must remove substract previous amount and add new one
+    if new_exchange.id:
+
+        # if exchange is updating than offer should exist
+        old_exchange = Exchange.objects.get(pk=instance.id)
+        offer.amount -= old_exchange.amount
+        offer.amount += new_exchange.amount
     else:
-        amount = offer.amount + exchange.amount
+        if offer is None:
+            offer = Offer(price=new_exchange.price,
+                          primary_currency=new_exchange.from_account.currency,
+                          secondary_currency=new_exchange.currency,
+                          amount=new_exchange.amount)
+        else:
+            offer.amount += new_exchange.amount
 
-        # update() is converted directly to an SQL statement; it doesn't call save() on the model
-        # instances, and so the pre_save and post_save signals aren't emitted.
-        Offer.objects.filter(pk=offer.pk).update(amount=amount)
+    offer.save()
 
 
 @receiver(post_save, sender=Offer, dispatch_uid="offer_post_save")
@@ -102,6 +107,25 @@ def offer_post_save(sender, instance, *args, **kwargs):
 
     client = get_crossbar_client()
     client.publish(topic, **publishment)
+
+
+@receiver(post_delete, sender=Offer, dispatch_uid="offer_post_delete")
+def offer_post_delete(sender, instance, *args, **kwargs):
+    """
+        Send websocket notification to the router if offer is changed.
+    """
+    offer = instance
+    serializer = OfferSerializer(offer)
+
+    publishment = serializer.data
+    topic = "{primary_currency}_{secondary_currency}".format(**publishment)
+    del publishment['primary_currency']
+    del publishment['secondary_currency']
+
+    publishment['amount'] = 0
+    client = get_crossbar_client()
+    client.publish(topic, **publishment)
+
 
 # @receiver(pre_save, sender=Withdrawal, dispatch_uid="withdraw_pre_save")
 # def withdraw_pre_save(sender, instance, *args, **kwargs):
@@ -129,3 +153,10 @@ def offer_post_save(sender, instance, *args, **kwargs):
 #
 #     #TODO
 #     app.do_deposit.delay(deposit.pk)
+
+@receiver(post_save, sender=Test, dispatch_uid="test_post_save")
+def test_post_save(sender, instance, created, *args, **kwargs):
+    if not created:
+        logger.debug(args)
+        logger.debug(kwargs)
+        logger.debug("21312312")

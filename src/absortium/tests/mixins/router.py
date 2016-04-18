@@ -34,13 +34,13 @@ class RouterMockMixin():
         publishments = self.get_publishments(topic)
         return publishments[0]
 
-    def get_publishment_by_task_id(self, topic, task_id):
-        self.assertTrue(type(topic) == str)
+    def get_publishment_by_task_id(self, task_id):
         self.assertTrue(type(task_id) == str)
 
-        for pubslishment in self.get_publishments(topic):
-            if pubslishment['task_id'] == task_id:
-                return pubslishment
+        for _, publishments in self._router_client.topics.items():
+            for pubslishment in publishments:
+                if 'task_id' in pubslishment and pubslishment['task_id'] == task_id:
+                    return pubslishment
         return None
 
     def is_published(self, topic):

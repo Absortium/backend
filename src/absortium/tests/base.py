@@ -57,8 +57,7 @@ class AbsoritumUnitTest(APITestCase,
                         CreateExchangeMixin,
                         CreateWithdrawalMixin,
                         RouterMockMixin,
-                        CoinbaseMockMixin,
-                        LockManagerMockMixin):
+                        CoinbaseMockMixin):
     def setUp(self):
         User = get_user_model()
         user = User(username="primary")
@@ -69,7 +68,6 @@ class AbsoritumUnitTest(APITestCase,
         self.client.force_authenticate(user)
 
         self.mock_router()
-        self.mock_lockmanager()
         self.mock_coinbase()
 
         super().setUp()
@@ -78,5 +76,4 @@ class AbsoritumUnitTest(APITestCase,
         super().tearDown()
 
         self.unmock_router()
-        self.unmock_lockmanager()
         self.unmock_coinbase()

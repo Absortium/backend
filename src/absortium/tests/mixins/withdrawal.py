@@ -1,30 +1,23 @@
 __author__ = 'andrew.shvv@gmail.com'
 from rest_framework.status import HTTP_201_CREATED
 
-from absortium.models import Withdrawal
+from absortium.model.models import Withdrawal
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
 
 class CreateWithdrawalMixin():
-    def create_withdrawal(self, user, amount="0.00001", with_authentication=True, with_checks=True, account_pk=None):
+    def create_withdrawal(self, account_pk, amount="0.00001", user=None, with_checks=True):
         data = {
             'amount': amount,
             'address': '1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX'
         }
 
-        if with_authentication:
+        if user:
             # Authenticate normal user
             # TODO: now it is usual user but then we should change it to notification service user!!
             self.client.force_authenticate(user)
-
-        if not account_pk:
-            # Get list of accounts
-            # TODO: now get account lists but then notification server will search account by address given in notification from coinbase!!
-            response = self.client.get('/api/accounts/', format='json')
-            account = self.get_first(response)
-            account_pk = account['pk']
 
         # Create withdrawal
         url = '/api/accounts/{account_pk}/withdrawals/'.format(account_pk=account_pk)
@@ -35,7 +28,7 @@ class CreateWithdrawalMixin():
             task_id = response.json()['task_id']
 
             # Get the publishment that we sent to the router
-            publishment = self.get_publishment_by_task_id(topic=str(user.pk), task_id=task_id)
+            publishment = self.get_publishment_by_task_id(task_id=task_id)
             self.assertNotEqual(publishment, None)
 
             self.assertEqual(publishment["status"], "SUCCESS")

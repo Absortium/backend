@@ -3,7 +3,7 @@ __author__ = 'andrew.shvv@gmail.com'
 from django.contrib.auth import get_user_model
 from rest_framework.status import HTTP_200_OK, HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN, HTTP_405_METHOD_NOT_ALLOWED
 
-from absortium.models import Account
+from absortium.model.models import Account
 from absortium.tests.base import AbsoritumUnitTest
 from absortium.tests.mixins.coinbase import address
 from core.utils.logging import getLogger
@@ -13,7 +13,7 @@ logger = getLogger(__name__)
 
 class AccountTest(AbsoritumUnitTest):
     def test_creation_mixin(self):
-        account_pk, _ = self.create_account(self.user, 'btc')
+        account_pk, _ = self.create_account('btc')
 
         accounts = Account.objects.all()
         self.assertEqual(len(accounts), 1)
@@ -22,8 +22,8 @@ class AccountTest(AbsoritumUnitTest):
         self.assertEqual(account.owner, self.user)
 
     def test_serialization(self, *args, **kwargs):
-        account_pk = self.create_account(self.user, 'btc')
-        self.create_deposit(self.user)
+        account_pk,_ = self.create_account('btc')
+        self.create_deposit(account_pk=account_pk)
 
         response = self.client.get('/api/accounts/', format='json')
         account = self.get_first(response)
@@ -33,7 +33,7 @@ class AccountTest(AbsoritumUnitTest):
         self.assertEqual(account['currency'], 'btc')
 
     def test_permissions(self, *args, **kwargs):
-        account_pk, _ = self.create_account(self.user, 'btc')
+        account_pk, _ = self.create_account('btc')
 
         # User trying to delete account
         response = self.client.delete('/api/accounts/{pk}/'.format(pk=account_pk), format='json')
