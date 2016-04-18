@@ -8,6 +8,7 @@ from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
+
 class CreateAccountMixin():
     def create_account(self, currency, with_checks=False, user=None):
         if user:

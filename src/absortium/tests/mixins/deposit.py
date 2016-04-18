@@ -9,7 +9,7 @@ logger = getLogger(__name__)
 
 
 class CreateDepositMixin():
-    def create_deposit(self, account_pk, amount="0.00001", with_checks=True, user=None):
+    def create_deposit(self, account_pk, amount="0.00001", with_checks=True, user=None, status="COMPLETED"):
         data = {
             'amount': amount
         }
@@ -22,9 +22,9 @@ class CreateDepositMixin():
         # Create deposit
         url = '/api/accounts/{account_pk}/deposits/'.format(account_pk=account_pk)
         response = self.client.post(url, data=data, format='json')
+        self.assertEqual(response.status_code, HTTP_201_CREATED)
 
         if with_checks:
-            self.assertEqual(response.status_code, HTTP_201_CREATED)
             task_id = response.json()['task_id']
 
             # Get the publishment that we sent to the router
@@ -32,16 +32,22 @@ class CreateDepositMixin():
             publishment = self.get_publishment_by_task_id(task_id=task_id)
             self.assertNotEqual(publishment, None)
 
-            self.assertEqual(publishment["status"], "SUCCESS")
-            deposit_pk = publishment["data"]["pk"]
+            incoming_status = publishment["data"]['status']
+            self.assertEqual(incoming_status, status)
 
-            # Check that deposit exist in db
-            try:
-                deposit = Deposit.objects.get(pk=deposit_pk)
-            except Deposit.DoesNotExist:
-                self.fail("Deposit object wasn't found in db")
+            if incoming_status == "COMPLETED":
+                deposit_pk = publishment["data"]["pk"]
 
-            # Check that deposit belongs to an account
-            self.assertEqual(deposit.account.pk, account_pk)
+                # Check that deposit exist in db
+                try:
+                    deposit = Deposit.objects.get(pk=deposit_pk)
+                except Deposit.DoesNotExist:
+                    self.fail("Deposit object wasn't found in db")
 
-            return deposit_pk, deposit
+                # Check that deposit belongs to an account
+                self.assertEqual(deposit.account.pk, account_pk)
+
+                return deposit_pk, deposit
+            elif incoming_status == "REJECTED":
+                # TODO: Add check that deposit object was not created
+                pass

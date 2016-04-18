@@ -210,7 +210,7 @@ class WithdrawViewSet(mixins.CreateModelMixin,
 class ExchangeViewSet(mixins.CreateModelMixin,
                       mixins.RetrieveModelMixin,
                       mixins.ListModelMixin,
-                      mixins.DestroyModelMixin,
+                      # mixins.DestroyModelMixin,
                       viewsets.GenericViewSet):
     serializer_class = ExchangeSerializer
 
@@ -221,10 +221,10 @@ class ExchangeViewSet(mixins.CreateModelMixin,
     def get_queryset(self):
         return self.request.account.ins.all() | self.request.account.outs.all()
 
-    @init_account()
-    def destroy(self, request, *args, **kwargs):
-        # TODO Celery queue
-        super().destroy(request, *args, **kwargs)
+    # @init_account()
+    # def destroy(self, request, *args, **kwargs):
+    #     # TODO Celery queue
+    #     super().destroy(request, *args, **kwargs)
 
     @init_account()
     def retrieve(self, request, *args, **kwargs):
@@ -247,8 +247,12 @@ class ExchangeViewSet(mixins.CreateModelMixin,
             raise ValidationError("Exchange on the same currency does not make sense")
 
         serializer.validated_data['from_account_id'] = request.account.pk
-        to_account = Account.objects.get(owner__pk=request.user.pk, currency=input_currency)
-        serializer.validated_data['to_account_id'] = to_account.pk
+        try:
+            to_account = Account.objects.values("pk").get(owner__pk=request.user.pk, currency=input_currency)
+        except Account.DoesNotExist:
+            raise ValidationError("Account with '{}' currency doesn't exist".format(input_currency))
+
+        serializer.validated_data['to_account_id'] = to_account['pk']
 
         info = self.perform_create(serializer)
         return Response(info, status=status.HTTP_201_CREATED)

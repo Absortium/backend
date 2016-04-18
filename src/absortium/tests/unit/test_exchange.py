@@ -1,7 +1,7 @@
 __author__ = "andrew.shvv@gmail.com"
 
 from django.contrib.auth import get_user_model
-from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN
+from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN, HTTP_405_METHOD_NOT_ALLOWED
 
 from absortium.tests.base import AbsoritumUnitTest
 from core.utils.logging import getLogger
@@ -71,7 +71,7 @@ class ExchangeTest(AbsoritumUnitTest):
         url = "/api/accounts/{account_pk}/exchanges/{exchange_pk}/".format(account_pk=self.primary_btc_account_pk,
                                                                            exchange_pk=exchange_pk)
         response = self.client.delete(url, format="json")
-        self.assertEqual(response.status_code, HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_malformed(self, *args, **kwargs):
         trash_account_pk = "129381728763"
@@ -90,8 +90,21 @@ class ExchangeTest(AbsoritumUnitTest):
         self.assertEqual(response.status_code, HTTP_404_NOT_FOUND)
 
     # TODO: Create test that checks incorrect primary, secondary currency, price, amount etc
-    def test_malformed_amount_price(self):
-        pass
+    def test_malformed_data(self):
+        malformed_amount = "(*YGV*T^C%D"
+        with self.assertRaises(AssertionError):
+            self.create_exchange(self.primary_btc_account_pk, currency="eth", price="2.0", amount=malformed_amount,
+                                 status="INIT")
+
+        malformed_currency = "(*YGV*T^C%D"
+        with self.assertRaises(AssertionError):
+            self.create_exchange(self.primary_btc_account_pk, currency=malformed_currency, price="2.0", amount="1.0",
+                                 status="INIT")
+
+        malformed_price = "(*YGV*T^C%D"
+        with self.assertRaises(AssertionError):
+            self.create_exchange(self.primary_btc_account_pk, currency="eth", price=malformed_price, amount="1.0",
+                                 status="INIT")
 
     def test_creation(self):
         self.create_exchange(self.primary_btc_account_pk, currency="eth", price="2.0", amount="3.0", status="INIT")

@@ -25,11 +25,14 @@ class OfferTest(AbsoritumUnitTest):
 
     def test_calculation_accuracy(self, *args, **kwargs):
         account_pk, _ = self.create_account('btc')
+        self.create_account("eth")
 
         n = 20
         amounts = [self.random_amount() for _ in range(0, n)]
+
         for amount in amounts:
-            self.create_exchange(account_pk=account_pk, currency="eth", amount=str(amount), price="0.1")
+            self.create_deposit(account_pk, amount=amount)
+            self.create_exchange(account_pk, currency="eth", amount=str(amount), price="0.1", status="INIT")
 
         data = {
             'primary_currency': 'btc',
@@ -43,9 +46,11 @@ class OfferTest(AbsoritumUnitTest):
 
     def test_different_price(self, *args, **kwargs):
         account_pk, _ = self.create_account('btc')
+        self.create_account("eth")
+        self.create_deposit(account_pk, amount="999999.0")
 
-        self.create_exchange(account_pk=account_pk, currency="eth", amount="1.0", price="1")
-        self.create_exchange(account_pk=account_pk, currency="eth", amount="1.0", price="2")
+        self.create_exchange(account_pk, currency="eth", amount="1.0", price="1", status="INIT")
+        self.create_exchange(account_pk, currency="eth", amount="1.0", price="2", status="INIT")
 
         data = {
             'primary_currency': 'btc',

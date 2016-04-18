@@ -8,7 +8,7 @@ logger = getLogger(__name__)
 
 
 class CreateWithdrawalMixin():
-    def create_withdrawal(self, account_pk, amount="0.00001", user=None, with_checks=True):
+    def create_withdrawal(self, account_pk, amount="0.00001", user=None, with_checks=True, status="COMPLETED"):
         data = {
             'amount': amount,
             'address': '1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX'
@@ -31,16 +31,27 @@ class CreateWithdrawalMixin():
             publishment = self.get_publishment_by_task_id(task_id=task_id)
             self.assertNotEqual(publishment, None)
 
-            self.assertEqual(publishment["status"], "SUCCESS")
-            withdrawal_pk = publishment["data"]["pk"]
+            incoming_status = publishment["data"]['status']
 
-            # Check that withdrawal exist in db
-            try:
-                withdrawal = Withdrawal.objects.get(pk=withdrawal_pk)
-            except Withdrawal.DoesNotExist:
-                self.fail("Withdrawal object wasn't found in db")
+            if type(status) != list:
+                status = [status]
 
-            # Check that withdrawal belongs to an account
-            self.assertEqual(withdrawal.account.pk, account_pk)
+            self.assertIn(incoming_status, status)
 
-            return withdrawal_pk, withdrawal
+            if incoming_status == "COMPLETED":
+                withdrawal_pk = publishment["data"]["pk"]
+
+                # Check that withdrawal exist in db
+                try:
+                    withdrawal = Withdrawal.objects.get(pk=withdrawal_pk)
+                except Withdrawal.DoesNotExist:
+                    self.fail("Withdrawal object wasn't found in db")
+
+                # Check that withdrawal belongs to an account
+                self.assertEqual(withdrawal.account.pk, account_pk)
+
+                return withdrawal_pk, withdrawal
+
+            elif incoming_status == "REJECTED":
+                # TODO: Add check that withdrawal object was not created
+                pass

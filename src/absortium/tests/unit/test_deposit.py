@@ -72,3 +72,7 @@ class DepositTest(AbsoritumUnitTest):
         # Create deposit should assert if deposit response code is not 200
         with self.assertRaises(AssertionError):
             self.create_deposit(account_pk=account_pk, amount=malformed_amount)
+
+        malformed_amount = "-1"
+        with self.assertRaises(AssertionError):
+            self.create_deposit(account_pk=account_pk, amount=malformed_amount)

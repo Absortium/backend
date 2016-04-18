@@ -21,6 +21,8 @@ class MyChoiceField(serializers.Field):
             raise serializers.ValidationError(msg % type(data).__name__)
 
         data = data.lower()
+        if data not in self.to_internal.keys():
+            raise serializers.ValidationError("Malformed data '{}'".format(data))
 
         return self.to_internal[data]
 

@@ -36,11 +36,12 @@ def do_deposit(self, *args, **kwargs):
         # instances, and so the pre_save and post_save signals aren't emitted.
         Account.objects.filter(pk=kwargs['account_pk']).update(amount=amount)
 
+    data = serializer.data
+    data['status'] = "COMPLETED"
     publishment = {
         "task_id": self.request.id,
-        "status": "SUCCESS",
         "action": "deposit",
-        "data": serializer.data,
+        "data": data,
     }
 
     client = get_crossbar_client()
@@ -69,16 +70,20 @@ def do_withdraw(self, *args, **kwargs):
             # instances, and so the pre_save and post_save signals aren't emitted.
             Account.objects.filter(pk=kwargs['account_pk']).update(amount=amount)
 
+            data = serializer.data
+            data['status'] = "COMPLETED"
             publishment.update({
-                "status": "SUCCESS",
-                "data": serializer.data,
+                "data": data,
             })
 
         else:
+            data = serializer.data
+            data['status'] = "REJECTED"
             publishment.update({
-                "status": "REJECTED",
+                "data": data,
                 "reason": "Not enough money for withdrawal",
             })
+            celery_logger.debug(publishment)
 
     client = get_crossbar_client()
     client.publish(kwargs['topic'], **publishment)
@@ -89,12 +94,16 @@ def do_exchange(self, *args, **kwargs):
     with transaction.atomic():
         serializer = ExchangeSerializer()
         serializer.populate_with_valid_data(kwargs['validated_data'])
+
+        # write to exchanges
         exchange_pk = serializer.save().pk
 
         with ExchangeLock(exchange_pk) as e1:
             try:
                 # Check that we have enough money
                 if e1.from_account.amount >= e1.amount:
+
+                    # Subtract money from account because it is locked by exchange
                     e1.from_account.amount -= e1.amount
                 else:
                     e1.status = constants.EXCHANGE_REJECTED
@@ -128,18 +137,18 @@ def do_exchange(self, *args, **kwargs):
                 elif e1.status == constants.EXCHANGE_INIT:
                     publishment.update({
                         "data": data,
-                        "reason": "There is no suitable exchanges right now waiting for incoming exchanges"
+                        "reason": "There is no suitable exchanges right now... Waiting for incoming exchanges"
                     })
                 elif e1.status == constants.EXCHANGE_PENDING:
                     publishment.update({
                         "data": data,
-                        "reason": "There is no enough suitable exchanges right now waiting for incoming exchanges"
+                        "reason": "There is not enough suitable exchanges right now... Waiting for incoming exchanges"
                     })
 
                 elif e1.status == constants.EXCHANGE_COMPLETED:
                     publishment.update({
                         "data": data,
-                        "reason": "Exchange completed successfully"
+                        "reason": "Exchange is completed successfully"
                     })
 
                 client = get_crossbar_client()

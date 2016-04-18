@@ -93,8 +93,7 @@ class AccountSerializer(serializers.ModelSerializer):
 
 class ExchangeSerializer(PrepopulateSerializer):
     currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
-    status = MyChoiceField(choices=constants.AVAILABLE_EXCHANGE_STATUS, default=constants.EXCHANGE_INIT)
-
+    status = MyChoiceField(choices=constants.AVAILABLE_TASK_STATUS, default=constants.EXCHANGE_INIT)
     amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                       decimal_places=constants.DECIMAL_PLACES,
                                       min_value=constants.AMOUNT_MIN_VALUE)
@@ -107,7 +106,7 @@ class ExchangeSerializer(PrepopulateSerializer):
 
     class Meta:
         model = Exchange
-        fields = ('pk', 'currency', 'amount', 'price', 'from_account','to_account', 'created', 'status')
+        fields = ('pk', 'currency', 'amount', 'price', 'from_account', 'to_account', 'created', 'status')
 
 
 class DepositSerializer(PrepopulateSerializer):
