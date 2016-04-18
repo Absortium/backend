@@ -90,6 +90,7 @@ class Exchange(models.Model):
 
     class Meta:
         ordering = ['-price', 'created']
+        select_on_save = True
 
     def converted_amount(self):
         return self.amount * self.price
