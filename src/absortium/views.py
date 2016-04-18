@@ -1,6 +1,7 @@
 __author__ = 'andrew.shvv@gmail.com'
 
 from django.contrib.auth.models import User, Group
+from django.db import transaction
 from rest_framework import generics, mixins, viewsets
 from rest_framework import status
 from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
@@ -133,8 +134,12 @@ class AccountViewSet(mixins.CreateModelMixin,
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(self, request, *args, **kwargs)
 
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        with transaction.atomic():
+            serializer.save(owner=self.request.user)
 
 
 class DepositViewSet(mixins.CreateModelMixin,
@@ -158,8 +163,9 @@ class DepositViewSet(mixins.CreateModelMixin,
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        data = self.perform_create(serializer)
-        return Response(data, status=status.HTTP_201_CREATED)
+        info = self.perform_create(serializer)
+
+        return Response(info, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
         # TODO: Change topik (pk) to some more secure and long number
@@ -193,8 +199,9 @@ class WithdrawViewSet(mixins.CreateModelMixin,
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        data = self.perform_create(serializer)
-        return Response(data, status=status.HTTP_201_CREATED)
+
+        info = self.perform_create(serializer)
+        return Response(info, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
         # TODO: Change topik (pk) to some more secure and long number
@@ -269,7 +276,6 @@ class ExchangeViewSet(mixins.CreateModelMixin,
 
 
 from absortium.serializer.serializers import TestSerializer
-from django.db import transaction
 
 
 class TestViewSet(mixins.CreateModelMixin,

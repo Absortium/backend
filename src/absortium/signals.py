@@ -4,6 +4,7 @@
 
 __author__ = 'andrew.shvv@gmail.com'
 
+from django.db import transaction
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch.dispatcher import receiver
 
@@ -38,28 +39,27 @@ def exchange_post_delete(sender, instance, *args, **kwargs):
     """
         Delete or change offer object if exchange object is removed.
     """
-    exchange = instance
-    offer = Offer.objects.filter(price=exchange.price,
-                                 primary_currency=exchange.from_account.currency,
-                                 secondary_currency=exchange.currency).first()
+    with transaction.atomic():
+        exchange = instance
+        offer = Offer.objects.select_for_update().filter(price=exchange.price,
+                                                         primary_currency=exchange.from_account.currency,
+                                                         secondary_currency=exchange.currency).first()
 
-    if offer is None:
-        # TODO: CHANGE EXCEPTION
-        raise Exception('There is no offer with such price {}'.format(exchange.price))
+        if offer is None:
+            # TODO: CHANGE EXCEPTION
+            raise Exception('There is no offer with such price {}'.format(exchange.price))
 
-    # TODO: Potential place for the error
-    # Example: Due to inaccuracies in the calculation of the float number offer.amount - order.amount
-    # could be great than zero but actually there is no orders with such price anymore.
-    if offer.amount - exchange.amount < 0:
-        raise Exception('offer.amount - order.amount < 0')
-    elif offer.amount - exchange.amount == 0:
-        offer.delete()
-    else:
-        amount = offer.amount - exchange.amount
+        # TODO: Potential place for the error
+        # Example: Due to inaccuracies in the calculation of the float number offer.amount - order.amount
+        # could be great than zero but actually there is no orders with such price anymore.
+        if offer.amount - exchange.amount < 0:
+            raise Exception('offer.amount - order.amount < 0')
+        elif offer.amount - exchange.amount == 0:
+            offer.delete()
+        else:
+            offer.amount -= exchange.amount
 
-        # update() is converted directly to an SQL statement; it doesn't call save() on the model
-        # instances, and so the pre_save and post_save signals aren't emitted.
-        Offer.objects.filter(pk=offer.pk).update(amount=amount)
+        offer.save()
 
 
 @receiver(pre_save, sender=Exchange, dispatch_uid="exchange_pre_save")
@@ -67,29 +67,30 @@ def exchange_pre_save(sender, instance, *args, **kwargs):
     """
         Create or change offer object if exchange object is received and saved.
     """
-    new_exchange = instance
+    with transaction.atomic():
+        new_exchange = instance
 
-    offer = Offer.objects.filter(price=new_exchange.price,
-                                 primary_currency=new_exchange.from_account.currency,
-                                 secondary_currency=new_exchange.currency).first()
+        offer = Offer.objects.select_for_update().filter(price=new_exchange.price,
+                                                         primary_currency=new_exchange.from_account.currency,
+                                                         secondary_currency=new_exchange.currency).first()
 
-    # if exchange is being updated, then we must remove substract previous amount and add new one
-    if new_exchange.id:
+        # if exchange is being updated, then we must remove substract previous amount and add new one
+        if new_exchange.id:
 
-        # if exchange is updating than offer should exist
-        old_exchange = Exchange.objects.get(pk=instance.id)
-        offer.amount -= old_exchange.amount
-        offer.amount += new_exchange.amount
-    else:
-        if offer is None:
-            offer = Offer(price=new_exchange.price,
-                          primary_currency=new_exchange.from_account.currency,
-                          secondary_currency=new_exchange.currency,
-                          amount=new_exchange.amount)
-        else:
+            # if exchange is updating than offer should exist
+            old_exchange = Exchange.objects.select_for_update().get(pk=instance.id)
+            offer.amount -= old_exchange.amount
             offer.amount += new_exchange.amount
+        else:
+            if offer is None:
+                offer = Offer(price=new_exchange.price,
+                              primary_currency=new_exchange.from_account.currency,
+                              secondary_currency=new_exchange.currency,
+                              amount=new_exchange.amount)
+            else:
+                offer.amount += new_exchange.amount
 
-    offer.save()
+        offer.save()
 
 
 @receiver(post_save, sender=Offer, dispatch_uid="offer_post_save")
@@ -126,33 +127,6 @@ def offer_post_delete(sender, instance, *args, **kwargs):
     client = get_crossbar_client()
     client.publish(topic, **publishment)
 
-
-# @receiver(pre_save, sender=Withdrawal, dispatch_uid="withdraw_pre_save")
-# def withdraw_pre_save(sender, instance, *args, **kwargs):
-#     withdraw = instance
-#     account = withdraw.account
-#
-#     if account.amount - withdraw.amount >= 0:
-#         amount = account.amount - withdraw.amount
-#         # update() is converted directly to an SQL statement; it doesn't call save() on the model
-#         # instances, and so the pre_save and post_save signals aren't emitted.
-#         Account.objects.filter(pk=account.pk).update(amount=amount)
-#     else:
-#         raise ValidationError("Withdrawal exceed amount of money on the account")
-
-
-# @receiver(pre_save, sender=Deposit, dispatch_uid="deposit_pre_save")
-# def deposit_pre_save(sender, instance, *args, **kwargs):
-#     deposit = instance
-#     account = deposit.account
-#
-#     # update() is converted directly to an SQL statement; it doesn't call save() on the model
-#     # instances, and so the pre_save and post_save signals aren't emitted.
-#     amount = account.amount + deposit.amount
-#     Account.objects.filter(pk=account.pk).update(amount=amount)
-#
-#     #TODO
-#     app.do_deposit.delay(deposit.pk)
 
 @receiver(post_save, sender=Test, dispatch_uid="test_post_save")
 def test_post_save(sender, instance, created, *args, **kwargs):

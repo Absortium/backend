@@ -45,83 +45,54 @@ class AccuracyTest(AbsoritumLiveTest):
 
         return contexts
 
-    def bombarding_deposit_withdrawal(self, contexts):
-        n = 5
-
-        for user, context in contexts.items():
-            self.client.force_authenticate(user)
-            random_deposits = [self.random_amount() for _ in range(n)]
-
-            start_deposit = 0
-            for deposit_amount in random_deposits:
-                # In order to ensure that withdraw task is not failing because of run out of money we should init deposit
-                self.create_deposit(context['btc_account_pk'], amount=deposit_amount, with_checks=False)
-                start_deposit += deposit_amount
-
-            random_withdrawals = random_deposits
-            for deposit_amount, withdraw_amount in zip(random_deposits, random_withdrawals):
-                self.create_deposit(context['btc_account_pk'], amount=deposit_amount, with_checks=False)
-                self.create_withdrawal(context['btc_account_pk'], amount=withdraw_amount, with_checks=False)
-
-            contexts[user].update({
-                "real_amount": sum(random_deposits) - sum(random_withdrawals) + start_deposit
-            })
-
-        return contexts
-
-    def bombarding_exchanges(self, contexts):
-        n = 10
-
-        for user, context in contexts.items():
-            self.client.force_authenticate(user)
-            random_deposits = [self.random_amount() for _ in range(n)]
-
-            start_deposit = 0
-            for deposit_amount in random_deposits:
-                # In order to ensure that exchange task is not failing because of run out of money we should init deposit
-                self.create_deposit(context['btc_account_pk'], amount=deposit_amount, with_checks=False)
-                start_deposit += deposit_amount
-
-            import time
-            time.sleep(3)
-
-            random_exchanges = random_deposits
-            for deposit_amount, exchange_amount in zip(random_deposits, random_exchanges):
-                self.create_exchange(context['btc_account_pk'], currency="eth", price="2.0", amount=exchange_amount,
-                                     with_checks=False)
-
-            contexts[user].update({
-                "real_amount": sum(random_deposits) - sum(random_exchanges) + start_deposit
-            })
-
-        return contexts
-
     def check_accuracy(self, contexts):
         for user, context in contexts.items():
-            account = Account.objects.get(pk=context['btc_account_pk'])
+            account = Account.objects.select_for_update().get(pk=context['btc_account_pk'])
             logger.debug(u"User pk: {} \nAccount amount: {} \nReal amount: {}\n".format(user.pk,
                                                                                         account.amount,
                                                                                         context['real_amount']))
             self.assertEqual(context['real_amount'], account.amount)
 
-    def test_withdraw_deposit(self, *args, **kwargs):
-        """
-            In order to execute this test celery worker should use django test db, for that set the CELERY_TEST=True
-            environment variable in the worker(celery) service. See docker-compose.yml
+    def bombarding_all(self, contexts):
+        n = 20
 
-        """
-        users_count = 10
+        progress_counter = 0
+        for user, context in contexts.items():
+            self.client.force_authenticate(user)
+            random_deposits = [self.random_amount() for _ in range(n)]
 
-        contexts = self.generate_users(users_count)
-        contexts = self.create_accounts(contexts)
-        contexts = self.bombarding_deposit_withdrawal(contexts)
+            deposits = 0
+            withdrawals = 0
+            exchanges = 0
+            for deposit_amount in random_deposits:
+                # In order to ensure that exchange task is not failing because of run out of money we should init deposit
+                self.create_deposit(context['btc_account_pk'], amount=deposit_amount, with_checks=False)
+                self.create_deposit(context['btc_account_pk'], amount=deposit_amount, with_checks=False)
+                deposits += 2 * deposit_amount
 
-        # Wait for celery process all tasks
-        # TODO: Use celery inspect module!
-        import time
-        time.sleep(4)
+            for deposit_amount in random_deposits:
+                withdrawal_amount = deposit_amount
+                exchange_amount = deposit_amount
 
-        self.check_accuracy(contexts)
+                self.create_deposit(context['btc_account_pk'], amount=deposit_amount, with_checks=False)
+                deposits += deposit_amount
+
+                self.create_withdrawal(context['btc_account_pk'], amount=withdrawal_amount, with_checks=False)
+                withdrawals += withdrawal_amount
+
+                self.create_exchange(context['btc_account_pk'], currency="eth", amount=exchange_amount,
+                                     with_checks=False)
+                exchanges += exchange_amount
+
+                progress_counter += 1
+
+            logger.debug("Bombarding: {}/{}".format(progress_counter, len(random_deposits) * len(contexts.items())))
+
+            contexts[user].update({
+                "real_amount": deposits - withdrawals - exchanges
+            })
+
+        return contexts
 
     def test_exchanges(self, *args, **kwargs):
         """
@@ -129,15 +100,12 @@ class AccuracyTest(AbsoritumLiveTest):
             environment variable in the worker(celery) service. See docker-compose.yml
         """
 
-        users_count = 2
+        users_count = 40
 
         contexts = self.generate_users(users_count)
         contexts = self.create_accounts(contexts)
-        contexts = self.bombarding_exchanges(contexts)
+        contexts = self.bombarding_all(contexts)
 
-        # Wait for celery process all tasks
-        # TODO: Use celery inspect module!
-        import time
-        time.sleep(20)
+        self.wait_celery(tag="Check accuracy")
 
         self.check_accuracy(contexts)

@@ -1,15 +1,17 @@
 __author__ = 'andrew.shvv@gmail.com'
 
+import time
+
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 from rest_framework.status import HTTP_200_OK
 from rest_framework.test import APITestCase, APIClient, APITransactionTestCase
 
+from absortium import celery_app
 from absortium.tests.mixins.account import CreateAccountMixin
 from absortium.tests.mixins.coinbase import CoinbaseMockMixin
 from absortium.tests.mixins.deposit import CreateDepositMixin
 from absortium.tests.mixins.exchange import CreateExchangeMixin
-from absortium.tests.mixins.lockmanager import LockManagerMockMixin
 from absortium.tests.mixins.router import RouterMockMixin
 from absortium.tests.mixins.withdrawal import CreateWithdrawalMixin
 from core.utils.logging import getLogger
@@ -46,6 +48,25 @@ class AbsoritumLiveTest(APITransactionTestCase,
         self.unmock_coinbase()
 
         super().tearDown()
+
+    def wait_celery(self, tag=None):
+        # WARNING: Sometime may skip the execution and I don't know why
+        i = celery_app.control.inspect()
+
+        def queue_not_empty():
+            result = i.active()
+
+            queues_empty = True
+            for k, v in result.items():
+                if v:
+                    queues_empty = False
+            if tag:
+                logger.debug("Tag {}:{}".format(tag, queues_empty))
+
+            return not queues_empty
+
+        while queue_not_empty():
+            time.sleep(0.5)
 
 
 @override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
