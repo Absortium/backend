@@ -44,8 +44,8 @@ def exchange_post_delete(sender, instance, *args, **kwargs):
     with transaction.atomic():
         exchange = instance
         offer = Offer.objects.select_for_update().filter(price=exchange.price,
-                                                         primary_currency=exchange.from_account.currency,
-                                                         secondary_currency=exchange.currency).first()
+                                                         primary_currency=exchange.from_currency,
+                                                         secondary_currency=exchange.to_currency).first()
 
         if offer is None:
             # TODO: CHANGE EXCEPTION
@@ -75,8 +75,8 @@ def exchange_pre_save(sender, instance, *args, **kwargs):
             new_exchange = instance
             try:
                 offer = Offer.objects.select_for_update().get(price=new_exchange.price,
-                                                              primary_currency=new_exchange.from_account.currency,
-                                                              secondary_currency=new_exchange.currency)
+                                                              primary_currency=new_exchange.from_currency,
+                                                              secondary_currency=new_exchange.to_currency)
             except Offer.DoesNotExist:
                 offer = None
 
@@ -91,8 +91,8 @@ def exchange_pre_save(sender, instance, *args, **kwargs):
             else:
                 if offer is None:
                     offer = Offer(price=new_exchange.price,
-                                  primary_currency=new_exchange.from_account.currency,
-                                  secondary_currency=new_exchange.currency,
+                                  primary_currency=new_exchange.from_currency,
+                                  secondary_currency=new_exchange.to_currency,
                                   amount=new_exchange.amount)
                 else:
                     offer.amount += new_exchange.amount

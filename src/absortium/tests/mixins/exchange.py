@@ -1,6 +1,6 @@
 __author__ = 'andrew.shvv@gmail.com'
 
-from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK
+from rest_framework.status import HTTP_201_CREATED
 
 from absortium.model.models import Exchange
 from core.utils.logging import getLogger
@@ -9,10 +9,11 @@ logger = getLogger(__name__)
 
 
 class CreateExchangeMixin():
-    def create_exchange(self, account_pk, amount="0.00001", currency="btc", price="0.001", expected_task_status="SUCCESS", expected_exchange_status="COMPLETED",
-                        user=None, with_checks=True):
+    def create_exchange(self, amount="0.00001", from_currency="btc", to_currency="eth", price="0.001",
+                        status="COMPLETED", user=None, with_checks=True):
         data = {
-            'currency': currency,
+            'to_currency': to_currency,
+            'from_currency': from_currency,
             'amount': amount,
             'price': price
         }
@@ -22,43 +23,28 @@ class CreateExchangeMixin():
             self.client.force_authenticate(user)
 
         # Create exchange
-        url = '/api/accounts/{account_pk}/exchanges/'.format(account_pk=account_pk)
+        url = '/api/exchanges/'.format()
         response = self.client.post(url, data=data, format='json')
-        self.assertEqual(response.status_code, HTTP_200_OK)
+
+        logger.debug(response.content)
+        self.assertEqual(response.status_code, HTTP_201_CREATED)
 
         if with_checks:
-            task_status = response.json()['status']
-            self.assertIn(expected_task_status, task_status)
+            exchange = response.json()
+            self.assertEqual(exchange['status'], status)
 
-            if expected_task_status == "SUCCESS":
-                self.assertIn("result", response.json().keys())
+            if exchange['status'] == "PENDING":
+                # Check that exchange exist in db
+                try:
+                    obj = Exchange.objects.get(pk=exchange["pk"])
+                except Exchange.DoesNotExist:
+                    self.fail("Exchange object wasn't found in db")
 
-                incoming_exchange = response.json()['result']
-                logger.debug(incoming_exchange)
+                # Check that exchange belongs to an user
+                self.assertNotEqual(obj.owner, None)
 
-                # Get the publishment that we sent to the router
-                # TODO: This is not good when one mixin depends of methods of another (RouterMixin)
+                return exchange["pk"], obj
 
-                exchange_status = incoming_exchange['status']
-                self.assertEqual(exchange_status, expected_exchange_status)
-
-                if exchange_status == "PENDING":
-                    exchange_pk = incoming_exchange["pk"]
-
-                    # Check that exchange exist in db
-                    try:
-                        exchange = Exchange.objects.get(pk=exchange_pk)
-                    except Exchange.DoesNotExist:
-                        self.fail("Exchange object wasn't found in db")
-
-                    # Check that exchange belongs to an account
-                    self.assertEqual(exchange.from_account.pk, account_pk)
-
-                    return exchange_pk, exchange
-
-                elif exchange_status == "COMPLETED":
-                    # TODO: Add check that exchange has status COMPLETED
-                    pass
-                elif exchange_status == "REJECTED":
-                    # TODO: Add check that exchange object was not created
-                    pass
+            elif exchange['status'] == "COMPLETED":
+                # TODO: Add check that exchange has status COMPLETED
+                pass

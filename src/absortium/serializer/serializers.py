@@ -2,6 +2,7 @@ __author__ = 'andrew.shvv@gmail.com'
 
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from absortium import constants
 from absortium.model.models import Account, Exchange, Offer, Deposit, Withdrawal, Test
@@ -92,8 +93,7 @@ class AccountSerializer(serializers.ModelSerializer):
 
 
 class ExchangeSerializer(PrepopulateSerializer):
-    currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
-    status = MyChoiceField(choices=constants.AVAILABLE_TASK_STATUS, default=constants.EXCHANGE_PENDING)
+    status = MyChoiceField(choices=constants.AVAILABLE_TASK_STATUS, default=constants.EXCHANGE_INIT)
     amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                       decimal_places=constants.DECIMAL_PLACES,
                                       min_value=constants.AMOUNT_MIN_VALUE)
@@ -101,12 +101,18 @@ class ExchangeSerializer(PrepopulateSerializer):
                                      decimal_places=constants.DECIMAL_PLACES,
                                      min_value=constants.PRICE_MIN_VALUE)
 
-    from_account = serializers.ReadOnlyField(source='from_account.username')
-    to_account = serializers.ReadOnlyField(source='to_account.username')
+    from_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
+    to_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
 
     class Meta:
         model = Exchange
-        fields = ('pk', 'currency', 'amount', 'price', 'from_account', 'to_account', 'created', 'status')
+        fields = ('pk', 'amount', 'price', 'from_currency', 'to_currency', 'created', 'status')
+
+    def validate(self, attrs):
+        if attrs['from_currency'] == attrs['to_currency']:
+            raise ValidationError("Exchange on the same currency")
+
+        return super().validate(attrs)
 
 
 class DepositSerializer(PrepopulateSerializer):

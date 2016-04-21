@@ -2,13 +2,14 @@ __author__ = 'andrew.shvv@gmail.com'
 
 from django.contrib.auth.models import User, Group
 from django.db import transaction
+from django.db.utils import OperationalError
 from rest_framework import generics, mixins, viewsets
-from rest_framework import status
 from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
 from rest_framework.response import Response
+from rest_framework.status import HTTP_201_CREATED
 
 from absortium import constants
-from absortium.celery import tasks
+from absortium.model.locks import LockedExchange
 from absortium.model.models import Offer, Account, Test
 from absortium.serializer.serializers import \
     UserSerializer, \
@@ -19,6 +20,7 @@ from absortium.serializer.serializers import \
     DepositSerializer, \
     WithdrawSerializer, \
     TestSerializer
+from absortium.utils import retry
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)
@@ -161,28 +163,46 @@ class DepositViewSet(mixins.CreateModelMixin,
         return super().list(request, *args, **kwargs)
 
     @init_account()
+    @retry(times=3, exceptions=(OperationalError,))
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        info = self.perform_create(serializer)
+        with transaction.atomic():
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
 
-        return Response(info, status=status.HTTP_201_CREATED)
+            # Lock row until the end of transaction
+            # https://docs.djangoproject.com/en/dev/ref/models/querysets/#select-for-update
+            account = Account.objects.select_for_update().get(pk=request.account.pk)
+            deposit = serializer.save(account=account)
 
-    def perform_create(self, serializer):
-        # TODO: Change topik (pk) to some more secure and long number
-        context = {
-            "validated_data": serializer.validated_data,
-            "topic": str(self.request.user.pk),
-            "account_pk": self.request.account.pk
-        }
-        task = tasks.do_deposit.delay(**context)
-        return {"task_id": task.id}
+            amount = account.amount + deposit.amount
+            account.update(amount=amount)
+
+            return Response(serializer.data, status=HTTP_201_CREATED)
 
 
-class WithdrawViewSet(mixins.CreateModelMixin,
-                      mixins.RetrieveModelMixin,
-                      mixins.ListModelMixin,
-                      viewsets.GenericViewSet):
+# @init_account()
+# def create(self, request, *args, **kwargs):
+#     serializer = self.get_serializer(data=request.data)
+#     serializer.is_valid(raise_exception=True)
+#     info = self.perform_create(serializer)
+#
+#     return Response(info, status=status.HTTP_201_CREATED)
+#
+# def perform_create(self, serializer):
+#     # TODO: Change topik (pk) to some more secure and long number
+#     context = {
+#         "validated_data": serializer.validated_data,
+#         "topic": str(self.request.user.pk),
+#         "account_pk": self.request.account.pk
+#     }
+#     task = tasks.do_deposit.delay(**context)
+#     return {"task_id": task.id}
+
+
+class WithdrawalViewSet(mixins.CreateModelMixin,
+                        mixins.RetrieveModelMixin,
+                        mixins.ListModelMixin,
+                        viewsets.GenericViewSet):
     serializer_class = WithdrawSerializer
 
     def get_queryset(self):
@@ -197,22 +217,45 @@ class WithdrawViewSet(mixins.CreateModelMixin,
         return super().list(request, *args, **kwargs)
 
     @init_account()
+    @retry(times=3, exceptions=(OperationalError,))
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
 
-        info = self.perform_create(serializer)
-        return Response(info, status=status.HTTP_201_CREATED)
+            # Lock row until the end of transaction
+            # https://docs.djangoproject.com/en/dev/ref/models/querysets/#select-for-update
+            account = Account.objects.select_for_update().get(pk=request.account.pk)
+            deposit = serializer.save(account=account)
 
-    def perform_create(self, serializer):
-        # TODO: Change topik (pk) to some more secure and long number
-        context = {
-            "validated_data": serializer.validated_data,
-            "topic": str(self.request.user.pk),
-            "account_pk": self.request.account.pk
-        }
-        task = tasks.do_withdraw.delay(**context)
-        return {"task_id": task.id}
+            if account.amount - deposit.amount >= 0:
+                amount = account.amount - deposit.amount
+                account.update(amount=amount)
+
+                data = serializer.data
+                return Response(data, status=HTTP_201_CREATED)
+
+            else:
+                raise ValidationError("Not enough money for withdrawal")
+
+
+# @init_account()
+# def create(self, request, *args, **kwargs):
+#     serializer = self.get_serializer(data=request.data)
+#     serializer.is_valid(raise_exception=True)
+#
+#     info = self.perform_create(serializer)
+#     return Response(info, status=status.HTTP_201_CREATED)
+#
+# def perform_create(self, serializer):
+#     # TODO: Change topik (pk) to some more secure and long number
+#     context = {
+#         "validated_data": serializer.validated_data,
+#         "topic": str(self.request.user.pk),
+#         "account_pk": self.request.account.pk
+#     }
+#     task = tasks.do_withdraw.delay(**context)
+#     return {"task_id": task.id}
 
 
 class ExchangeViewSet(mixins.CreateModelMixin,
@@ -227,71 +270,73 @@ class ExchangeViewSet(mixins.CreateModelMixin,
         super().__init__(*args, **kwargs)
 
     def get_queryset(self):
-        return self.request.account.ins.all() | self.request.account.outs.all()
+        return self.request.user.exchanges.all()
 
     # @init_account()
     # def destroy(self, request, *args, **kwargs):
     #     # TODO Celery queue
     #     super().destroy(request, *args, **kwargs)
 
-    @init_account()
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
 
-    @init_account()
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-    @init_account()
+    @retry(times=3, exceptions=(OperationalError,))
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        # with publishment.atomic():
+        with transaction.atomic():
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            exchange_pk = serializer.save(owner_id=request.user.pk).pk
 
-        # TODO: We should do it in some another place, or furthermore we should create special field for Exchange currency
-        account_currency = request.account.currency
-        input_currency = serializer.validated_data['currency']
+            with LockedExchange(exchange_pk) as e1:
+                # Check that we have enough money
+                if e1.from_account.amount >= e1.amount:
 
-        if input_currency == account_currency:
-            raise ValidationError("Exchange on the same currency does not make sense")
+                    # Subtract money from account because it is locked by exchange
+                    e1.from_account.amount -= e1.amount
+                else:
+                    raise ValidationError("Not enough money for exchange creation")
 
-        serializer.validated_data['from_account_id'] = request.account.pk
-        try:
-            to_account = Account.objects.values("pk").get(owner__pk=request.user.pk, currency=input_currency)
-        except Account.DoesNotExist:
-            raise ValidationError("Account with '{}' currency doesn't exist".format(input_currency))
+                opposite_exchange_pks = e1.find_opposite()
+                for opposite_exchange_pk in opposite_exchange_pks:
 
-        serializer.validated_data['to_account_id'] = to_account['pk']
+                    with LockedExchange(opposite_exchange_pk) as e2:
+                        if e1 >= e2:
+                            e1 -= e2
+                        else:
+                            e2 -= e1
 
-        context = {
-            "validated_data": serializer.validated_data,
-            "topic": str(self.request.user.pk),
-        }
+                data = ExchangeSerializer(e1).data
+                return Response(data, status=HTTP_201_CREATED)
 
-        async_result = tasks.do_exchange.delay(**context)
-        logger.debug(async_result)
-        try:
-            result = async_result.get(timeout=0.2, propagate=False)
-        except TimeoutError:
-            result = None
 
-        status = async_result.status
-
-        if isinstance(result, Exception):
-            traceback = async_result.traceback
-
-            logger.debug(status)
-            # Task was created and handled but some errors are happened
-            return Response({'status': status, 'error': str(result), 'traceback': traceback})
-
-        elif result is None:
-            id_ = async_result.id
-
-            # Task was created and but not yet handled
-            return Response({"id": id_, 'status': status})
-
-        else:
-            # Task was created and handled successfully
-            return Response({'result': result, 'status': status})
+# def create(self, request, *args, **kwargs):
+#     serializer = self.get_serializer(data=request.data)
+#     serializer.is_valid(raise_exception=True)
+#     exchange = serializer.save(owner_id=request.user.pk)
+#
+#     context = {
+#         "exchange_pk": exchange.pk,
+#     }
+#
+#
+#     async_result = tasks.do_exchange.delay(**context)
+#     logger.debug(async_result)
+#     try:
+#         exchange_data = async_result.get(timeout=0.2, propagate=False)
+#     except TimeoutError:
+#         return Response(serializer.validated_data)
+#
+#     if isinstance(exchange_data, ValidationError):
+#         pass
+#     elif isinstance(exchange_data, Exception):
+#         pass
+#     else:
+#         logger.debug(exchange_data)
+#         return Response(exchange_data)
 
 
 class TestViewSet(mixins.CreateModelMixin,

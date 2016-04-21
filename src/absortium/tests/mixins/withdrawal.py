@@ -8,7 +8,7 @@ logger = getLogger(__name__)
 
 
 class CreateWithdrawalMixin():
-    def create_withdrawal(self, account_pk, amount="0.00001", user=None, with_checks=True, status="COMPLETED"):
+    def create_withdrawal(self, account_pk, amount="0.00001", user=None, with_checks=True):
         data = {
             'amount': amount,
             'address': '1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX'
@@ -25,33 +25,15 @@ class CreateWithdrawalMixin():
 
         if with_checks:
             self.assertEqual(response.status_code, HTTP_201_CREATED)
-            task_id = response.json()['task_id']
+            withdrawal = response.json()
 
-            # Get the publishment that we sent to the router
-            publishment = self.get_publishment_by_task_id(task_id=task_id)
-            self.assertNotEqual(publishment, None)
+            # Check that withdrawal exist in db
+            try:
+                obj = Withdrawal.objects.get(pk=withdrawal['pk'])
+            except Withdrawal.DoesNotExist:
+                self.fail("Withdrawal object wasn't found in db")
 
-            incoming_status = publishment["data"]['status']
+            # Check that withdrawal belongs to an account
+            self.assertEqual(obj.account.pk, account_pk)
 
-            if type(status) != list:
-                status = [status]
-
-            self.assertIn(incoming_status, status)
-
-            if incoming_status == "COMPLETED":
-                withdrawal_pk = publishment["data"]["pk"]
-
-                # Check that withdrawal exist in db
-                try:
-                    withdrawal = Withdrawal.objects.get(pk=withdrawal_pk)
-                except Withdrawal.DoesNotExist:
-                    self.fail("Withdrawal object wasn't found in db")
-
-                # Check that withdrawal belongs to an account
-                self.assertEqual(withdrawal.account.pk, account_pk)
-
-                return withdrawal_pk, withdrawal
-
-            elif incoming_status == "REJECTED":
-                # TODO: Add check that withdrawal object was not created
-                pass
+            return withdrawal['pk'], obj

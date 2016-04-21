@@ -1,15 +1,17 @@
 __author__ = 'andrew.shvv@gmail.com'
 
-from absortium.model.models import Account, Exchange
+from absortium import constants
+from absortium.model.models import Exchange
 from core.utils.logging import getLogger
+
+from rest_framework.exceptions import ValidationError
 
 logger = getLogger(__name__)
 
 
 class LockedExchange():
     def __init__(self, exchange_pk):
-        self.exchange = Exchange.objects.select_for_update().get(pk=exchange_pk)
-        # self.primary_exchange = primary_exchange
+        self.exchange_pk = exchange_pk
 
     def __enter__(self):
         #
@@ -28,19 +30,16 @@ class LockedExchange():
         #         return self.exchange
 
         # Init '[from|to]_account' in locking manner
-        self.exchange.from_account = Account.objects.select_for_update().get(pk=self.exchange.from_account_id)
-        self.exchange.to_account = Account.objects.select_for_update().get(pk=self.exchange.to_account_id)
+
+        self.exchange = Exchange.objects.select_for_update().get(pk=self.exchange_pk)
+
+        logger.info("Exchange pk: {} amount: {} from: {} to:{}".format(self.exchange.pk, self.exchange.amount,
+                                                                       self.exchange.from_currency,
+                                                                       self.exchange.to_currency))
+
         return self.exchange
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        from_pk = self.exchange.from_account.pk
-        to_pk = self.exchange.to_account.pk
-
-        Account.objects.filter(pk=from_pk).update(amount=self.exchange.from_account.amount)
-        Account.objects.filter(pk=to_pk).update(amount=self.exchange.to_account.amount)
-
+        self.exchange.from_account.update(amount=self.exchange.from_account.amount)
+        self.exchange.to_account.update(amount=self.exchange.to_account.amount)
         self.exchange.save()
-
-
-class LockWithdrawal():
-    pass

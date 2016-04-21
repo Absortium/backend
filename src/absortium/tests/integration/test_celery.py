@@ -163,10 +163,8 @@ class AccuracyTest(AbsoritumLiveTest):
                 # self.create_withdrawal(context['btc_account_pk'], amount=w, with_checks=False)
                 # self.create_withdrawal(context['eth_account_pk'], amount=w, with_checks=False)
 
-                self.create_exchange(context['btc_account_pk'], price="1.0", amount=e, currency="eth",
-                                     with_checks=False)
-                self.create_exchange(context['eth_account_pk'], price="1.0", amount=e, currency="btc",
-                                     with_checks=False)
+                self.create_exchange(price="1.0", amount=e, with_checks=False)
+                self.create_exchange(price="1.0", amount=e, from_currency="eth", to_currency="btc", with_checks=False)
 
                 progress_counter += 1
 
@@ -183,7 +181,6 @@ class AccuracyTest(AbsoritumLiveTest):
             contexts[user] = context
 
         return contexts
-
 
     def test_withdrawal_deposit(self, *args, **kwargs):
         """

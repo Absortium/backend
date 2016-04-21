@@ -50,9 +50,10 @@ class WithdrawalTest(AbsoritumUnitTest):
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, HTTP_405_METHOD_NOT_ALLOWED)
 
-    def test_withdraw_without_money(self):
+    def test_withdrawal_without_money(self):
         account_pk, _ = self.create_account('btc')
-        self.create_withdrawal(account_pk=account_pk, status="REJECTED")
+        with self.assertRaises(AssertionError):
+            self.create_withdrawal(account_pk=account_pk)
 
     def test_malformed(self, *args, **kwargs):
         trash_account_pk = "129381728763"

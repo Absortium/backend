@@ -25,29 +25,15 @@ class CreateDepositMixin():
         self.assertEqual(response.status_code, HTTP_201_CREATED)
 
         if with_checks:
-            task_id = response.json()['task_id']
+            deposit = response.json()
 
-            # Get the publishment that we sent to the router
-            # TODO: This is not good when one mixin depends of methods of another (RouterMixin)
-            publishment = self.get_publishment_by_task_id(task_id=task_id)
-            self.assertNotEqual(publishment, None)
+            # Check that deposit exist in db
+            try:
+                obj = Deposit.objects.get(pk=deposit['pk'])
+            except Deposit.DoesNotExist:
+                self.fail("Deposit object wasn't found in db")
 
-            incoming_status = publishment["data"]['status']
-            self.assertEqual(incoming_status, status)
+            # Check that deposit belongs to an account
+            self.assertEqual(obj.account.pk, account_pk)
 
-            if incoming_status == "COMPLETED":
-                deposit_pk = publishment["data"]["pk"]
-
-                # Check that deposit exist in db
-                try:
-                    deposit = Deposit.objects.get(pk=deposit_pk)
-                except Deposit.DoesNotExist:
-                    self.fail("Deposit object wasn't found in db")
-
-                # Check that deposit belongs to an account
-                self.assertEqual(deposit.account.pk, account_pk)
-
-                return deposit_pk, deposit
-            elif incoming_status == "REJECTED":
-                # TODO: Add check that deposit object was not created
-                pass
+            return deposit['pk'], obj

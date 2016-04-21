@@ -5,6 +5,7 @@ import decimal
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models import Q
 
 from absortium import constants
 from core.utils.logging import getLogger
@@ -58,6 +59,11 @@ class Account(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="accounts")
 
+    def update(self, **kwargs):
+        # update() is converted directly to an SQL statement; it doesn't call save() on the model
+        # instances, and so the pre_save and post_save signals aren't emitted.
+        Account.objects.filter(pk=self.pk).update(**kwargs)
+
 
 class Exchange(models.Model):
     """
@@ -76,7 +82,6 @@ class Exchange(models.Model):
     account - account from which exchange is happening.
     """
 
-    currency = models.IntegerField()
     status = models.IntegerField()
 
     amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
@@ -85,15 +90,46 @@ class Exchange(models.Model):
                                 decimal_places=constants.DECIMAL_PLACES)
 
     created = models.DateTimeField(auto_now_add=True)
-    from_account = models.ForeignKey(Account, related_name="outs")
-    to_account = models.ForeignKey(Account, related_name="ins")
+
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="exchanges")
+
+    from_currency = models.IntegerField()
+    to_currency = models.IntegerField()
 
     class Meta:
         ordering = ['-price', 'created']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._from_account = None
+        self._to_account = None
         self.is_dirty = False
+
+    @property
+    def to_account(self):
+        if not self._to_account:
+            self._to_account = Account.objects.select_for_update().get(owner__pk=self.owner_id,
+                                                                       currency=self.to_currency)
+        return self._to_account
+
+    @to_account.setter
+    def to_account(self, account):
+        self._to_account = account
+
+    @property
+    def from_account(self):
+        if not self._from_account:
+            self._from_account = Account.objects.select_for_update().get(owner__pk=self.owner_id,
+                                                                         currency=self.from_currency)
+
+        return self._from_account
+
+    @from_account.setter
+    def from_account(self, account):
+        self._from_account = account
+
+    def update(self, **kwargs):
+        Account.objects.filter(pk=self.pk).update(**kwargs)
 
     def converted_amount(self):
         return self.amount * self.price
@@ -101,9 +137,9 @@ class Exchange(models.Model):
     def find_opposite(self):
         converted_price = decimal.Decimal("1.0") / self.price
         return Exchange.objects.filter(
-            status=constants.EXCHANGE_PENDING,
+            Q(status=constants.EXCHANGE_PENDING) | Q(status=constants.EXCHANGE_INIT),
             price__lte=converted_price,
-            from_account__currency=self.currency).values_list('pk', flat=True)
+            from_currency=self.to_currency).values_list('pk', flat=True)
 
     def save_fraction(self, converted_amount):
         """
@@ -126,8 +162,7 @@ class Exchange(models.Model):
 
     def __sub__(self, exchange):
         if isinstance(exchange, Exchange):
-            self.is_dirty = True
-            exchange.is_dirty = True
+            self.status = constants.EXCHANGE_PENDING
 
             exchange.status = constants.EXCHANGE_COMPLETED
 
