@@ -22,7 +22,8 @@ secret_settings = {
     'POSTGRES_PASSWORD': 'POSTGRES_PASSWORD',
     'COINBASE_API_KEY': 'COINBASE_API_KEY',
     'COINBASE_API_SECRET': 'COINBASE_API_SECRET',
-    'CELERY_TEST': 'CELERY_TEST'
+    'CELERY_TEST': 'CELERY_TEST',
+    'WHOAMI': 'WHOAMI',
 }
 
 settings_module = sys.modules[__name__]
@@ -139,6 +140,7 @@ DATABASES = {
 
 SILENCED_SYSTEM_CHECKS = ["models.W001"]
 
+
 # Password validation
 # # https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators
 #
@@ -157,6 +159,46 @@ SILENCED_SYSTEM_CHECKS = ["models.W001"]
 #     },
 # ]
 
+# CELERY_HIJACK_ROOT_LOGGER = False
+#
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': True,
+#     'handlers': {
+#         'console': {
+#             'level': 'DEBUG',
+#             'class': 'logging.StreamHandler',
+#             'formatter': 'verbose'
+#         },
+#     },
+#     'formatters': {
+#         'verbose': {
+#             'format': '%(asctime)s %(levelname)s module=%(module)s, '
+#                       'process_id=%(process)d, %(message)s'
+#         }
+#     },
+#     'loggers': {
+#         # 'absortium': {
+#         #     'handlers': ['console'],
+#         #     'level': 'INFO',
+#         #     'propagate': False #this will do the trick
+#         # },
+#         'celery': {
+#             'handlers': ["console"],
+#             'level': 'INFO',
+#             'propagate': True
+#         },
+#         'celery.task': {
+#             'handlers': ["console"],
+#             'level': 'DEBUG',
+#             'propagate': False
+#         },
+#     }
+# }
+#
+# from logging.config import dictConfig
+#
+# dictConfig(LOGGING)
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.9/topics/i18n/

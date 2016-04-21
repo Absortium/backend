@@ -1,22 +1,22 @@
 __author__ = 'andrew.shvv@gmail.com'
 
 from celery import shared_task
-from celery.utils.log import get_task_logger
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.utils import OperationalError
 
+from rest_framework.status import  HTTP_400_BAD_REQUEST
+
 from absortium import constants
 from absortium.crossbarhttp.client import get_crossbar_client
-from absortium.model.locks import ExchangeLock, NotEnoughMoney
+from absortium.exceptions import NotEnoughMoney
+from absortium.model.locks import LockedExchange
 from absortium.model.models import Account
+from absortium.crossbarhttp import publishment
 from absortium.serializer.serializers import DepositSerializer, WithdrawSerializer, ExchangeSerializer
+from core.utils.logging import getPrettyLogger
 
-celery_logger = get_task_logger(__name__)
-
-from core.utils.logging import getLogger
-
-django_logger = getLogger(__name__)
+logger = getPrettyLogger(__name__)
 
 
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES)
@@ -87,7 +87,8 @@ def do_withdraw(self, *args, **kwargs):
                     "data": data,
                     "reason": "Not enough money for withdrawal",
                 })
-                celery_logger.debug(publishment)
+
+                raise NotEnoughMoney()
 
         client = get_crossbar_client()
         client.publish(kwargs['topic'], **publishment)
@@ -97,70 +98,46 @@ def do_withdraw(self, *args, **kwargs):
 
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES)
 def do_exchange(self, *args, **kwargs):
+    exchange = None
+
     try:
+        # with publishment.atomic():
         with transaction.atomic():
+
             serializer = ExchangeSerializer()
             serializer.populate_with_valid_data(kwargs['validated_data'])
+            exchange = serializer.save()
+            exchange_pk = exchange.pk
 
-            # write to exchanges
-            exchange_pk = serializer.save().pk
+            logger.info("Exchange pk: {} amount: {} from: {} to:{}".format(exchange.pk, exchange.amount,
+                                                                           exchange.from_account.currency,
+                                                                           exchange.currency))
 
-            with ExchangeLock(exchange_pk) as e1:
-                try:
-                    # Check that we have enough money
-                    if e1.from_account.amount >= e1.amount:
+            with LockedExchange(exchange_pk) as e1:
+                # Check that we have enough money
+                if e1.from_account.amount >= e1.amount:
 
-                        # Subtract money from account because it is locked by exchange
-                        e1.from_account.amount -= e1.amount
-                    else:
-                        e1.status = constants.EXCHANGE_REJECTED
-                        raise NotEnoughMoney()
+                    # Subtract money from account because it is locked by exchange
+                    e1.from_account.amount -= e1.amount
+                else:
+                    raise NotEnoughMoney()
 
-                    opposite_exchange_pks = e1.find_opposite()
-                    for opposite_exchange_pk in opposite_exchange_pks:
-                        with ExchangeLock(opposite_exchange_pk) as e2:
-                            if e1 >= e2:
-                                e1 -= e2
-                            else:
-                                e2 -= e1
+                opposite_exchange_pks = e1.find_opposite()
+                for opposite_exchange_pk in opposite_exchange_pks:
 
-                except NotEnoughMoney:
-                    pass
+                    with LockedExchange(opposite_exchange_pk) as e2:
+                        if e1 >= e2:
+                            e1 -= e2
+                        else:
+                            e2 -= e1
 
-                finally:
-                    data = ExchangeSerializer(e1).data
+                return ExchangeSerializer(e1).data
 
-                    publishment = {
-                        "task_id": self.request.id,
-                        "action": "exchange"
-                    }
-
-                    if e1.status == constants.EXCHANGE_REJECTED:
-                        publishment.update({
-                            "data": data,
-                            "reason": "Not enough money on account"
-                        })
-
-                    elif e1.status == constants.EXCHANGE_INIT:
-                        publishment.update({
-                            "data": data,
-                            "reason": "There is no suitable exchanges right now... Waiting for incoming exchanges"
-                        })
-                    elif e1.status == constants.EXCHANGE_PENDING:
-                        publishment.update({
-                            "data": data,
-                            "reason": "There is not enough suitable exchanges right now... Waiting for incoming exchanges"
-                        })
-
-                    elif e1.status == constants.EXCHANGE_COMPLETED:
-                        publishment.update({
-                            "data": data,
-                            "reason": "Exchange is completed successfully"
-                        })
-
-                    client = get_crossbar_client()
-                    client.publish(kwargs['topic'], **publishment)
     except OperationalError:
+        if exchange:
+            logger.info("Discard exchange pk: {} amount: {} from: {} to:{}".format(exchange.pk, exchange.amount,
+                                                                                   exchange.from_account.currency,
+                                                                                   exchange.currency))
         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
 
 

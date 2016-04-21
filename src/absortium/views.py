@@ -9,7 +9,7 @@ from rest_framework.response import Response
 
 from absortium import constants
 from absortium.celery import tasks
-from absortium.model.models import Offer, Account
+from absortium.model.models import Offer, Account, Test
 from absortium.serializer.serializers import \
     UserSerializer, \
     GroupSerializer, \
@@ -17,10 +17,11 @@ from absortium.serializer.serializers import \
     AccountSerializer, \
     ExchangeSerializer, \
     DepositSerializer, \
-    WithdrawSerializer
-from core.utils.logging import getLogger
+    WithdrawSerializer, \
+    TestSerializer
+from core.utils.logging import getPrettyLogger
 
-logger = getLogger(__name__)
+logger = getPrettyLogger(__name__)
 
 
 class UserList(generics.ListAPIView):
@@ -261,21 +262,36 @@ class ExchangeViewSet(mixins.CreateModelMixin,
 
         serializer.validated_data['to_account_id'] = to_account['pk']
 
-        info = self.perform_create(serializer)
-        return Response(info, status=status.HTTP_201_CREATED)
-
-    def perform_create(self, serializer):
-        # TODO: Change topik (pk) to some more secure and long number
-
         context = {
             "validated_data": serializer.validated_data,
             "topic": str(self.request.user.pk),
         }
-        task = tasks.do_exchange.delay(**context)
-        return {"task_id": task.id}
 
+        async_result = tasks.do_exchange.delay(**context)
+        logger.debug(async_result)
+        try:
+            result = async_result.get(timeout=0.2, propagate=False)
+        except TimeoutError:
+            result = None
 
-from absortium.serializer.serializers import TestSerializer
+        status = async_result.status
+
+        if isinstance(result, Exception):
+            traceback = async_result.traceback
+
+            logger.debug(status)
+            # Task was created and handled but some errors are happened
+            return Response({'status': status, 'error': str(result), 'traceback': traceback})
+
+        elif result is None:
+            id_ = async_result.id
+
+            # Task was created and but not yet handled
+            return Response({"id": id_, 'status': status})
+
+        else:
+            # Task was created and handled successfully
+            return Response({'result': result, 'status': status})
 
 
 class TestViewSet(mixins.CreateModelMixin,
@@ -283,19 +299,10 @@ class TestViewSet(mixins.CreateModelMixin,
     serializer_class = TestSerializer
 
     def perform_create(self, serializer):
+        logger.debug("TEST PERFORM CREATE START")
         with transaction.atomic():
             instance = serializer.save(owner_id=self.request.user.pk)
+            instance = Test.objects.select_for_update().get(pk=instance.pk)
+            instance = Test.objects.select_for_update().get(pk=instance.pk)
 
-            instance.owner = User.objects.get(pk=self.request.user.pk)
-            o = instance.owner
-            logger.debug(o)
-            # Test.objects.filter(pk=instance.pk).update(amount=instance.amount + 1)
-            instance.delete()
-
-            # instance = Test.objects.select_for_update().get(pk=instance.pk)
-            # instance.amount += 1
-            # instance.save()
-
-
-            # # Test.objects.filter(pk=instance.pk).update(amount=instance.amount + 1)
-            # instance.delete()
+        logger.debug("TEST PERFORM CREATE FINISH")

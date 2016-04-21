@@ -1,5 +1,6 @@
 import inspect
 import logging
+from functools import wraps
 
 import pp
 
@@ -11,6 +12,7 @@ def get_prev_method_name():
 
 
 def pretty_wrapper(func):
+    @wraps(func)
     def decorator(msg, *args, **kwargs):
         pretty_msg = "Func:  %s\n" % get_prev_method_name()
 
@@ -18,7 +20,7 @@ def pretty_wrapper(func):
             pretty_msg += msg
         else:
             pretty_msg += pp.fmt(msg)
-        pretty_msg += "\n+ "+"- " * 30+"+\n"
+        pretty_msg += "\n+ " + "- " * 30 + "+\n"
 
         func(pretty_msg, *args, **kwargs)
 
@@ -42,7 +44,20 @@ def wrap_logger(logger):
     return logger
 
 
-def getLogger(name, level=logging.DEBUG):
+def getPrettyLogger(name, level=logging.DEBUG):
+    from django.conf import settings
+    from celery.utils.log import get_task_logger
+
+    if settings.WHOAMI == "DJANGO":
+        return getLogger(name, level)
+    elif settings.WHOAMI == "CELERY":
+
+        logger = get_task_logger(name)
+        logger.setLevel(level)
+        return wrap_logger(logger)
+
+
+def getLogger(name="", level=logging.DEBUG):
     # create logger
     logger = logging.getLogger(name)
     logger = wrap_logger(logger)
@@ -58,6 +73,8 @@ def getLogger(name, level=logging.DEBUG):
 
     # add ch to logger
     logger.addHandler(ch)
+
+
     logger.setLevel(level)
 
     return logger

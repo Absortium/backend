@@ -224,3 +224,10 @@ def get_crossbar_client(*args, **kwargs):
     if _client is None:
         _client = Client(url, *args, **kwargs)
     return _client
+
+
+def set_crossbar_client(client):
+    global _client
+    _client = client
+
+

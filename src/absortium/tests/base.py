@@ -54,23 +54,30 @@ class AbsoritumLiveTest(APITransactionTestCase,
         i = celery_app.control.inspect()
 
         def queue_not_empty():
-            result = i.active()
+            queues = i.active()
 
-            queues_empty = True
-            for k, v in result.items():
-                if v:
-                    queues_empty = False
+            if not queues:
+                raise Exception("Celery was stopped!")
+
+            queue_empty = True
+            for name, tasks in queues.items():
+                if tasks:
+                    queue_empty = False
+
             if tag:
-                logger.debug("Tag {}:{}".format(tag, queues_empty))
+                logger.debug("Wait for '{}'...".format(tag, queue_empty))
 
-            return not queues_empty
+            return not queue_empty
 
-        while queue_not_empty():
-            time.sleep(0.5)
+        # i.active() may return empty list but process is not over
+        # so lets check several times :)
+
+        times = 3
+        while all([queue_not_empty() for _ in range(times)]):
+            time.sleep(0.2)
 
 
-@override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
-                   CELERY_ALWAYS_EAGER=True)
+@override_settings(CELERY_ALWAYS_EAGER=True)
 class AbsoritumUnitTest(APITestCase,
                         AbsortiumTestMixin,
                         CreateAccountMixin,

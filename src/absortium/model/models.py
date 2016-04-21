@@ -5,7 +5,6 @@ import decimal
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models import Q
 
 from absortium import constants
 from core.utils.logging import getLogger
@@ -43,6 +42,7 @@ class Offer(models.Model):
 
     class Meta:
         ordering = ('price',)
+        unique_together = ('primary_currency', 'secondary_currency', 'price')
 
 
 class Account(models.Model):
@@ -90,7 +90,10 @@ class Exchange(models.Model):
 
     class Meta:
         ordering = ['-price', 'created']
-        select_on_save = True
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.is_dirty = False
 
     def converted_amount(self):
         return self.amount * self.price
@@ -98,7 +101,7 @@ class Exchange(models.Model):
     def find_opposite(self):
         converted_price = decimal.Decimal("1.0") / self.price
         return Exchange.objects.filter(
-            Q(status=constants.EXCHANGE_PENDING) | Q(status=constants.EXCHANGE_INIT),
+            status=constants.EXCHANGE_PENDING,
             price__lte=converted_price,
             from_account__currency=self.currency).values_list('pk', flat=True)
 
@@ -123,7 +126,9 @@ class Exchange(models.Model):
 
     def __sub__(self, exchange):
         if isinstance(exchange, Exchange):
-            self.status = constants.EXCHANGE_PENDING
+            self.is_dirty = True
+            exchange.is_dirty = True
+
             exchange.status = constants.EXCHANGE_COMPLETED
 
             # convert to currency of this exchange

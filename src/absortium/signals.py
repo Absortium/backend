@@ -6,15 +6,16 @@ __author__ = 'andrew.shvv@gmail.com'
 
 from django.db import transaction
 from django.db.models.signals import post_delete, post_save, pre_save
+from django.db.utils import IntegrityError
 from django.dispatch.dispatcher import receiver
 
 from absortium.crossbarhttp import get_crossbar_client
 from absortium.model.models import Account, Exchange, Offer, Test
 from absortium.serializer.serializers import OfferSerializer
 from absortium.wallet.base import get_client
-from core.utils.logging import getLogger
+from core.utils.logging import getPrettyLogger
 
-logger = getLogger(__name__)
+logger = getPrettyLogger(__name__)
 
 
 # @receiver(post_save, sender=get_user_model(), dispatch_uid="user_post_save")
@@ -39,6 +40,7 @@ def exchange_post_delete(sender, instance, *args, **kwargs):
     """
         Delete or change offer object if exchange object is removed.
     """
+
     with transaction.atomic():
         exchange = instance
         offer = Offer.objects.select_for_update().filter(price=exchange.price,
@@ -67,30 +69,45 @@ def exchange_pre_save(sender, instance, *args, **kwargs):
     """
         Create or change offer object if exchange object is received and saved.
     """
-    with transaction.atomic():
-        new_exchange = instance
 
-        offer = Offer.objects.select_for_update().filter(price=new_exchange.price,
-                                                         primary_currency=new_exchange.from_account.currency,
-                                                         secondary_currency=new_exchange.currency).first()
+    def try_to_create_offer():
+        with transaction.atomic():
+            new_exchange = instance
+            try:
+                offer = Offer.objects.select_for_update().get(price=new_exchange.price,
+                                                              primary_currency=new_exchange.from_account.currency,
+                                                              secondary_currency=new_exchange.currency)
+            except Offer.DoesNotExist:
+                offer = None
 
-        # if exchange is being updated, then we must remove substract previous amount and add new one
-        if new_exchange.id:
+            # if exchange is being updated, then we must remove subtract previous amount and add new one
+            if new_exchange.id:
+                # if exchange is updating than offer should exist
+                old_exchange = Exchange.objects.select_for_update().get(pk=instance.id)
 
-            # if exchange is updating than offer should exist
-            old_exchange = Exchange.objects.select_for_update().get(pk=instance.id)
-            offer.amount -= old_exchange.amount
-            offer.amount += new_exchange.amount
-        else:
-            if offer is None:
-                offer = Offer(price=new_exchange.price,
-                              primary_currency=new_exchange.from_account.currency,
-                              secondary_currency=new_exchange.currency,
-                              amount=new_exchange.amount)
-            else:
+                offer.amount -= old_exchange.amount
                 offer.amount += new_exchange.amount
 
-        offer.save()
+            else:
+                if offer is None:
+                    offer = Offer(price=new_exchange.price,
+                                  primary_currency=new_exchange.from_account.currency,
+                                  secondary_currency=new_exchange.currency,
+                                  amount=new_exchange.amount)
+                else:
+                    offer.amount += new_exchange.amount
+            offer.save()
+
+    try:
+        try_to_create_offer()
+    except IntegrityError:
+        """
+            Multiple offer with the same price might be created if celery tasks simultaneously trying to create
+            not existing offer object with similar price. If this happen, duplication integrity error will be thrown,
+            this means that celery task tried to find offer, didn't find it, and then create new one, but another celery
+            task do the same thing.
+        """
+        try_to_create_offer()
 
 
 @receiver(post_save, sender=Offer, dispatch_uid="offer_post_save")
@@ -130,7 +147,9 @@ def offer_post_delete(sender, instance, *args, **kwargs):
 
 @receiver(post_save, sender=Test, dispatch_uid="test_post_save")
 def test_post_save(sender, instance, created, *args, **kwargs):
-    if not created:
-        logger.debug(args)
-        logger.debug(kwargs)
-        logger.debug("21312312")
+    logger.info("TEST POST SIGNAL")
+    offer = Offer(price=1,
+                  primary_currency=0,
+                  secondary_currency=1,
+                  amount=2)
+    offer.save()

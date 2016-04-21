@@ -32,7 +32,7 @@ class OfferTest(AbsoritumUnitTest):
 
         for amount in amounts:
             self.create_deposit(account_pk, amount=amount)
-            self.create_exchange(account_pk, currency="eth", amount=str(amount), price="0.1", status="INIT")
+            self.create_exchange(account_pk, currency="eth", amount=str(amount), price="0.1", expected_exchange_status="INIT")
 
         data = {
             'primary_currency': 'btc',
@@ -49,8 +49,8 @@ class OfferTest(AbsoritumUnitTest):
         self.create_account("eth")
         self.create_deposit(account_pk, amount="999999.0")
 
-        self.create_exchange(account_pk, currency="eth", amount="1.0", price="1", status="INIT")
-        self.create_exchange(account_pk, currency="eth", amount="1.0", price="2", status="INIT")
+        self.create_exchange(account_pk, currency="eth", amount="1.0", price="1", expected_exchange_status="INIT")
+        self.create_exchange(account_pk, currency="eth", amount="1.0", price="2", expected_exchange_status="INIT")
 
         data = {
             'primary_currency': 'btc',

@@ -1,6 +1,6 @@
 __author__ = 'andrew.shvv@gmail.com'
 
-from rest_framework.status import HTTP_201_CREATED
+from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK
 
 from absortium.model.models import Exchange
 from core.utils.logging import getLogger
@@ -9,7 +9,7 @@ logger = getLogger(__name__)
 
 
 class CreateExchangeMixin():
-    def create_exchange(self, account_pk, amount="0.00001", currency="btc", price="0.001", status="COMPLETED",
+    def create_exchange(self, account_pk, amount="0.00001", currency="btc", price="0.001", expected_task_status="SUCCESS", expected_exchange_status="COMPLETED",
                         user=None, with_checks=True):
         data = {
             'currency': currency,
@@ -24,36 +24,41 @@ class CreateExchangeMixin():
         # Create exchange
         url = '/api/accounts/{account_pk}/exchanges/'.format(account_pk=account_pk)
         response = self.client.post(url, data=data, format='json')
-        self.assertEqual(response.status_code, HTTP_201_CREATED)
+        self.assertEqual(response.status_code, HTTP_200_OK)
 
         if with_checks:
-            task_id = response.json()['task_id']
+            task_status = response.json()['status']
+            self.assertIn(expected_task_status, task_status)
 
-            # Get the publishment that we sent to the router
-            # TODO: This is not good when one mixin depends of methods of another (RouterMixin)
-            publishment = self.get_publishment_by_task_id(task_id=task_id)
-            self.assertNotEqual(publishment, None)
+            if expected_task_status == "SUCCESS":
+                self.assertIn("result", response.json().keys())
 
-            incoming_status = publishment["data"]['status']
-            self.assertEqual(incoming_status, status)
+                incoming_exchange = response.json()['result']
+                logger.debug(incoming_exchange)
 
-            if incoming_status == "PENDING" or incoming_status == "INIT":
-                exchange_pk = publishment["data"]["pk"]
+                # Get the publishment that we sent to the router
+                # TODO: This is not good when one mixin depends of methods of another (RouterMixin)
 
-                # Check that exchange exist in db
-                try:
-                    exchange = Exchange.objects.get(pk=exchange_pk)
-                except Exchange.DoesNotExist:
-                    self.fail("Exchange object wasn't found in db")
+                exchange_status = incoming_exchange['status']
+                self.assertEqual(exchange_status, expected_exchange_status)
 
-                # Check that exchange belongs to an account
-                self.assertEqual(exchange.from_account.pk, account_pk)
+                if exchange_status == "PENDING":
+                    exchange_pk = incoming_exchange["pk"]
 
-                return exchange_pk, exchange
+                    # Check that exchange exist in db
+                    try:
+                        exchange = Exchange.objects.get(pk=exchange_pk)
+                    except Exchange.DoesNotExist:
+                        self.fail("Exchange object wasn't found in db")
 
-            elif incoming_status == "COMPLETED":
-                # TODO: Add check that exchange has status COMPLETED
-                pass
-            elif incoming_status == "REJECTED":
-                # TODO: Add check that exchange object was not created
-                pass
+                    # Check that exchange belongs to an account
+                    self.assertEqual(exchange.from_account.pk, account_pk)
+
+                    return exchange_pk, exchange
+
+                elif exchange_status == "COMPLETED":
+                    # TODO: Add check that exchange has status COMPLETED
+                    pass
+                elif exchange_status == "REJECTED":
+                    # TODO: Add check that exchange object was not created
+                    pass

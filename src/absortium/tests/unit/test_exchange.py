@@ -36,7 +36,7 @@ class ExchangeTest(AbsoritumUnitTest):
         self.client.force_authenticate(self.user)
 
     def test_permissions(self, *args, **kwargs):
-        exchange_pk, _ = self.create_exchange(self.primary_btc_account_pk, currency="eth", status="INIT")
+        exchange_pk, _ = self.create_exchange(self.primary_btc_account_pk, currency="eth", expected_exchange_status="PENDING")
 
         # Create hacker user
         User = get_user_model()
@@ -94,33 +94,39 @@ class ExchangeTest(AbsoritumUnitTest):
         malformed_amount = "(*YGV*T^C%D"
         with self.assertRaises(AssertionError):
             self.create_exchange(self.primary_btc_account_pk, currency="eth", price="2.0", amount=malformed_amount,
-                                 status="INIT")
+                                 expected_exchange_status="PENDING")
 
         malformed_currency = "(*YGV*T^C%D"
         with self.assertRaises(AssertionError):
             self.create_exchange(self.primary_btc_account_pk, currency=malformed_currency, price="2.0", amount="1.0",
-                                 status="INIT")
+                                 expected_exchange_status="PENDING")
 
         malformed_price = "(*YGV*T^C%D"
         with self.assertRaises(AssertionError):
             self.create_exchange(self.primary_btc_account_pk, currency="eth", price=malformed_price, amount="1.0",
-                                 status="INIT")
+                                 expected_exchange_status="PENDING")
 
     def test_creation(self):
-        self.create_exchange(self.primary_btc_account_pk, currency="eth", price="2.0", amount="3.0", status="INIT")
+        self.create_exchange(self.primary_btc_account_pk, currency="eth", price="2.0", amount="3.0", expected_exchange_status="PENDING")
 
         self.check_account_amount(self.primary_btc_account_pk, amount="7.0")
         self.check_account_amount(self.primary_eth_account_pk, amount="0.0")
 
     def test_run_out_deposit(self):
-        self.create_exchange(self.primary_btc_account_pk, currency="eth", price="2.0", amount="999", status="REJECTED")
+        """
+            Create exchanges without money
+        """
+        self.create_exchange(self.primary_btc_account_pk, currency="eth", price="2.0", amount="999", expected_task_status="FAILURE")
 
         self.check_account_amount(self.primary_btc_account_pk, amount="10.0")
         self.check_account_amount(self.primary_eth_account_pk, amount="0.0")
 
     def test_exchange_completed(self):
-        self.create_exchange(self.primary_btc_account_pk, currency="eth", price="2.0", amount="5.0", status="INIT")
-        self.create_exchange(self.primary_btc_account_pk, currency="eth", price="2.0", amount="5.0", status="INIT")
+        """
+            Create exchanges which will be processed fully
+        """
+        self.create_exchange(self.primary_btc_account_pk, currency="eth", price="2.0", amount="5.0", expected_exchange_status="PENDING")
+        self.create_exchange(self.primary_btc_account_pk, currency="eth", price="2.0", amount="5.0", expected_exchange_status="PENDING")
 
         self.client.force_authenticate(self.some_user)
         self.create_exchange(self.some_eth_account_pk, currency="btc", price="0.5", amount="20.0")
@@ -133,14 +139,37 @@ class ExchangeTest(AbsoritumUnitTest):
         self.check_account_amount(self.primary_eth_account_pk, amount="20.0")
 
     def test_exchange_pending(self):
-        self.create_exchange(self.primary_btc_account_pk, currency="eth", price="2.0", amount="8.0", status="INIT")
+        """
+            Create exchanges which will be processed not fully
+        """
+        self.create_exchange(self.primary_btc_account_pk, currency="eth", price="2.0", amount="8.0", expected_exchange_status="PENDING")
         self.check_account_amount(self.primary_btc_account_pk, amount="2.0")
 
         self.client.force_authenticate(self.some_user)
-        self.create_exchange(self.some_eth_account_pk, currency="btc", price="0.5", amount="20.0", status="PENDING")
+        self.create_exchange(self.some_eth_account_pk, currency="btc", price="0.5", amount="20.0", expected_exchange_status="PENDING")
         self.check_account_amount(self.some_eth_account_pk, amount="0.0")
         self.check_account_amount(self.some_btc_account_pk, amount="8.0")
 
         self.client.force_authenticate(self.user)
         self.check_account_amount(self.primary_btc_account_pk, amount="2.0")
         self.check_account_amount(self.primary_eth_account_pk, amount="16.0")
+
+    def test_create_opposite_exchanges(self):
+        """
+            Create opposite exchanges on the same account
+        """
+        self.create_deposit(self.primary_eth_account_pk, amount="20.0")
+
+        self.create_exchange(self.primary_btc_account_pk, currency="eth", price="2.0", amount="10.0", expected_exchange_status="PENDING")
+        self.check_account_amount(self.primary_btc_account_pk, amount="0.0")
+
+        self.create_exchange(self.primary_eth_account_pk, currency="btc", price="0.5", amount="20.0")
+
+        self.check_account_amount(self.primary_btc_account_pk, amount="10.0")
+        self.check_account_amount(self.primary_eth_account_pk, amount="20.0")
+
+    def test_ordering(self):
+        pass
+        # TODO check that exchanges are proceed in the same order as they were created.
+
+
