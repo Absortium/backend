@@ -32,11 +32,6 @@ class LockedExchange():
         # Init '[from|to]_account' in locking manner
 
         self.exchange = Exchange.objects.select_for_update().get(pk=self.exchange_pk)
-
-        logger.info("Exchange pk: {} amount: {} from: {} to:{}".format(self.exchange.pk, self.exchange.amount,
-                                                                       self.exchange.from_currency,
-                                                                       self.exchange.to_currency))
-
         return self.exchange
 
     def __exit__(self, exc_type, exc_val, exc_tb):

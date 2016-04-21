@@ -26,7 +26,6 @@ class CreateExchangeMixin():
         url = '/api/exchanges/'.format()
         response = self.client.post(url, data=data, format='json')
 
-        logger.debug(response.content)
         self.assertEqual(response.status_code, HTTP_201_CREATED)
 
         if with_checks:

@@ -344,10 +344,8 @@ class TestViewSet(mixins.CreateModelMixin,
     serializer_class = TestSerializer
 
     def perform_create(self, serializer):
-        logger.debug("TEST PERFORM CREATE START")
         with transaction.atomic():
             instance = serializer.save(owner_id=self.request.user.pk)
             instance = Test.objects.select_for_update().get(pk=instance.pk)
             instance = Test.objects.select_for_update().get(pk=instance.pk)
 
-        logger.debug("TEST PERFORM CREATE FINISH")

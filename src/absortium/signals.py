@@ -147,7 +147,6 @@ def offer_post_delete(sender, instance, *args, **kwargs):
 
 @receiver(post_save, sender=Test, dispatch_uid="test_post_save")
 def test_post_save(sender, instance, created, *args, **kwargs):
-    logger.info("TEST POST SIGNAL")
     offer = Offer(price=1,
                   primary_currency=0,
                   secondary_currency=1,

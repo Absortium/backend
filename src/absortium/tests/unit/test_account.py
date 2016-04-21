@@ -22,7 +22,7 @@ class AccountTest(AbsoritumUnitTest):
         self.assertEqual(account.owner, self.user)
 
     def test_serialization(self, *args, **kwargs):
-        account_pk,_ = self.create_account('btc')
+        account_pk, _ = self.create_account('btc')
         self.create_deposit(account_pk=account_pk)
 
         response = self.client.get('/api/accounts/', format='json')

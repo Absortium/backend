@@ -53,7 +53,6 @@ class LockingManager(models.Manager):
         """
         cursor = connection.cursor()
         table = self.model._meta.db_table
-        celery_logger.debug("Locking table %s" % table)
         cursor.execute("LOCK TABLES %s WRITE" % table)
         row = cursor.fetchone()
         return row
