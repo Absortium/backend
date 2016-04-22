@@ -5,7 +5,7 @@ import decimal
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models import Q
+from rest_framework.exceptions import ValidationError
 
 from absortium import constants
 from core.utils.logging import getLogger
@@ -110,6 +110,8 @@ class Exchange(models.Model):
         if not self._to_account:
             self._to_account = Account.objects.select_for_update().get(owner__pk=self.owner_id,
                                                                        currency=self.to_currency)
+            logger.debug("Lock account: {}".format(self._to_account.pk))
+
         return self._to_account
 
     @to_account.setter
@@ -128,6 +130,16 @@ class Exchange(models.Model):
     def from_account(self, account):
         self._from_account = account
 
+    def check_account(self):
+        # Check that we have enough money
+        if self.from_account.amount >= self.amount:
+
+            # Subtract money from account because it is locked by exchange
+            self.from_account.amount -= self.amount
+            self.status = constants.EXCHANGE_PENDING
+        else:
+            raise ValidationError("Not enough money for exchange creation")
+
     def update(self, **kwargs):
         Account.objects.filter(pk=self.pk).update(**kwargs)
 
@@ -137,7 +149,7 @@ class Exchange(models.Model):
     def find_opposite(self):
         converted_price = decimal.Decimal("1.0") / self.price
         return Exchange.objects.filter(
-            Q(status=constants.EXCHANGE_PENDING) | Q(status=constants.EXCHANGE_INIT),
+            status=constants.EXCHANGE_PENDING,
             price__lte=converted_price,
             from_currency=self.to_currency).values_list('pk', flat=True)
 
@@ -164,16 +176,20 @@ class Exchange(models.Model):
         if isinstance(exchange, Exchange):
             self.status = constants.EXCHANGE_PENDING
 
-            exchange.status = constants.EXCHANGE_COMPLETED
-
             # convert to currency of this exchange
             converted_amount = exchange.converted_amount()
 
             self.to_account.amount += exchange.amount  # ETH
             exchange.to_account.amount += converted_amount  # BTC
 
+            exchange.amount = 0
+            exchange.status = constants.EXCHANGE_COMPLETED
+
+            self.amount -= converted_amount
+            if self.amount == 0:
+                self.status = constants.EXCHANGE_COMPLETED
             # save fraction of exchange in order to store history of exchanges
-            self.save_fraction(converted_amount)
+            # self.save_fraction(converted_amount)
 
             return self
         else:
@@ -181,37 +197,37 @@ class Exchange(models.Model):
 
     def __lt__(self, exchange):
         if isinstance(exchange, Exchange):
-            return self.amount < exchange.amount
+            return self.amount < exchange.converted_amount()
         else:
             return NotImplemented
 
     def __le__(self, exchange):
         if isinstance(exchange, Exchange):
-            return self.amount <= exchange.amount
+            return self.amount <= exchange.converted_amount()
         else:
             return NotImplemented
 
     def __gt__(self, exchange):
         if isinstance(exchange, Exchange):
-            return self.amount > exchange.amount
+            return self.amount > exchange.converted_amount()
         else:
             return NotImplemented
 
     def __ge__(self, exchange):
         if isinstance(exchange, Exchange):
-            return self.amount >= exchange.amount
+            return self.amount >= exchange.converted_amount()
         else:
             return NotImplemented
 
     def __eq__(self, exchange):
         if isinstance(exchange, Exchange):
-            return self.amount == exchange.amount
+            return self.amount == exchange.converted_amount()
         else:
             return NotImplemented
 
     def __ne__(self, exchange):
         if isinstance(exchange, Exchange):
-            return self.amount != exchange.amount
+            return self.amount != exchange.converted_amount()
         else:
             return NotImplemented
 

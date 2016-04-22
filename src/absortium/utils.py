@@ -1,8 +1,13 @@
 __author__ = 'andrew.shvv@gmail.com'
 
+from core.utils.logging import getPrettyLogger
 
-def retry(times=1, exceptions=()):
+logger = getPrettyLogger(__name__)
+
+def retry(exceptions=(), times=1):
     assert(type(exceptions) == tuple)
+
+    logger.debug(exceptions)
 
     def wrapper(func):
         def decorator(*args, **kwargs):
@@ -10,8 +15,9 @@ def retry(times=1, exceptions=()):
             while times > t:
                 try:
                     return func(*args, **kwargs)
-                except exceptions:
+                except exceptions as e:
                     t += 1
+                    # logger.debug("RETRY: {}".format(t))
 
         return decorator
 

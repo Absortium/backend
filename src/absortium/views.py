@@ -1,8 +1,10 @@
 __author__ = 'andrew.shvv@gmail.com'
 
+import psycopg2
 from django.contrib.auth.models import User, Group
 from django.db import transaction
-from django.db.utils import OperationalError
+from django.db import utils
+from psycopg2 import extensions
 from rest_framework import generics, mixins, viewsets
 from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
 from rest_framework.response import Response
@@ -163,7 +165,10 @@ class DepositViewSet(mixins.CreateModelMixin,
         return super().list(request, *args, **kwargs)
 
     @init_account()
-    @retry(times=3, exceptions=(OperationalError,))
+    @retry(times=1000, exceptions=(utils.OperationalError,
+                                   extensions.TransactionRollbackError,
+                                   utils.InternalError,
+                                   psycopg2.OperationalError))
     def create(self, request, *args, **kwargs):
         with transaction.atomic():
             serializer = self.get_serializer(data=request.data)
@@ -217,7 +222,8 @@ class WithdrawalViewSet(mixins.CreateModelMixin,
         return super().list(request, *args, **kwargs)
 
     @init_account()
-    @retry(times=3, exceptions=(OperationalError,))
+    @retry(times=1000, exceptions=(
+    utils.OperationalError, extensions.TransactionRollbackError, utils.InternalError, psycopg2.OperationalError))
     def create(self, request, *args, **kwargs):
         with transaction.atomic():
             serializer = self.get_serializer(data=request.data)
@@ -283,31 +289,70 @@ class ExchangeViewSet(mixins.CreateModelMixin,
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-    @retry(times=3, exceptions=(OperationalError,))
+    @retry(times=1000, exceptions=(
+    utils.OperationalError, extensions.TransactionRollbackError, utils.InternalError, psycopg2.OperationalError))
     def create(self, request, *args, **kwargs):
         # with publishment.atomic():
+
         with transaction.atomic():
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            exchange_pk = serializer.save(owner_id=request.user.pk).pk
+            exchange = serializer.save(owner_id=request.user.pk)
 
-            with LockedExchange(exchange_pk) as e1:
-                # Check that we have enough money
-                if e1.from_account.amount >= e1.amount:
+            with LockedExchange(exchange.pk) as e1:
+                logger.debug("\nMinus before:"
+                             "\nExchange #2 ({}):"
+                             "\nFrom({}): {}"
+                             "\nTo({}): {}".format(e1.pk, e1.from_account.pk,
+                                                   e1.from_account.amount,
+                                                   e1.to_account.pk, e1.to_account.amount))
 
-                    # Subtract money from account because it is locked by exchange
-                    e1.from_account.amount -= e1.amount
-                else:
-                    raise ValidationError("Not enough money for exchange creation")
+                e1.check_account()
 
-                opposite_exchange_pks = e1.find_opposite()
+                logger.debug("\nMinus after:"
+                             "\nExchange #2 ({}):"
+                             "\nFrom({}): {}"
+                             "\nTo({}): {}".format(e1.pk, e1.from_account.pk,
+                                                   e1.from_account.amount,
+                                                   e1.to_account.pk, e1.to_account.amount))
+
+                opposite_exchange_pks = exchange.find_opposite()
                 for opposite_exchange_pk in opposite_exchange_pks:
+                    with LockedExchange(opposite_exchange_pk, e1) as e2:
+                        logger.debug("\nBefore:"
+                                     "\nExchange #1 ({}):"
+                                     "\nFrom({}): {}"
+                                     "\nTo({}): {}".format(e1.pk, e1.from_account.pk,
+                                                           e1.from_account.amount,
+                                                           e1.to_account.pk, e1.to_account.amount))
 
-                    with LockedExchange(opposite_exchange_pk) as e2:
-                        if e1 >= e2:
-                            e1 -= e2
-                        else:
-                            e2 -= e1
+                        logger.debug("\nBefore:"
+                                     "\nExchange #2 ({}):"
+                                     "\nFrom({}): {}"
+                                     "\nTo({}): {}".format(e2.pk, e2.from_account.pk,
+                                                           e2.from_account.amount,
+                                                           e2.to_account.pk, e2.to_account.amount))
+                        assert (e2.status == constants.EXCHANGE_COMPLETED)
+
+                        if e1.amount != 0:
+                            if e1 >= e2:
+                                e1 -= e2
+                            else:
+                                e2 -= e1
+
+                        logger.debug("\nAfter:"
+                                     "\nExchange #1 ({}):"
+                                     "\nFrom({}): {}"
+                                     "\nTo({}): {}".format(e1.pk, e1.from_account.pk,
+                                                           e1.from_account.amount,
+                                                           e1.to_account.pk, e1.to_account.amount))
+
+                        logger.debug("\nAfter:"
+                                     "\nExchange #2 ({}):"
+                                     "\nFrom({}): {}"
+                                     "\nTo({}): {}".format(e2.pk, e2.from_account.pk,
+                                                           e2.from_account.amount,
+                                                           e2.to_account.pk, e2.to_account.amount))
 
                 data = ExchangeSerializer(e1).data
                 return Response(data, status=HTTP_201_CREATED)
@@ -348,4 +393,3 @@ class TestViewSet(mixins.CreateModelMixin,
             instance = serializer.save(owner_id=self.request.user.pk)
             instance = Test.objects.select_for_update().get(pk=instance.pk)
             instance = Test.objects.select_for_update().get(pk=instance.pk)
-
