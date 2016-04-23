@@ -105,7 +105,7 @@ class Exchange(models.Model):
         self.to_account = None
         self.is_dirty = False
 
-    def check_account(self):
+    def process_account(self):
 
         # Check that we have enough money
         if self.from_account.amount >= self.amount:
@@ -214,6 +214,10 @@ class Deposit(models.Model):
     amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                  decimal_places=constants.DECIMAL_PLACES)
 
+    def process_account(self):
+        amount = self.account.amount + self.amount
+        self.account.update(amount=amount)
+
 
 class Withdrawal(models.Model):
     created = models.DateTimeField(auto_now_add=True)
@@ -222,6 +226,13 @@ class Withdrawal(models.Model):
                                  decimal_places=constants.DECIMAL_PLACES)
 
     address = models.CharField(max_length=50)
+
+    def process_account(self):
+        if self.account.amount - self.amount >= 0:
+            amount = self.account.amount - self.amount
+            self.account.update(amount=amount)
+        else:
+            raise ValidationError("Not enough money for withdrawal")
 
 
 class Test(models.Model):

@@ -206,21 +206,21 @@ class AccuracyTest(AbsoritumLiveTest):
 
     def init_deposits(self, contexts, n):
         """
-            In order to ensure that exchange,withdraw tasks ate not failing because
-            of run out of money we should firstly to deposit a lot of money on the accounts.
+            In order to ensure that exchange,withdraw tasks will not fail because
+            of run out of the money we should firstly to deposit a lot of money on the accounts.
         """
 
         for user, context in contexts.items():
             random_deposits = self.max_amounts(n)
 
             for deposit_amount in random_deposits:
-                self.create_deposit(context['btc_account_pk'], user=user, amount=deposit_amount, with_checks=False)
-                self.create_deposit(context['eth_account_pk'], user=user, amount=deposit_amount, with_checks=False)
-                self.create_deposit(context['btc_account_pk'], user=user, amount=deposit_amount, with_checks=False)
-                self.create_deposit(context['eth_account_pk'], user=user, amount=deposit_amount, with_checks=False)
+                self.create_deposit(context['btc_account_pk'], user=user, amount=deposit_amount,
+                                    with_checks=False)
+                self.create_deposit(context['eth_account_pk'], user=user, amount=deposit_amount,
+                                    with_checks=False)
 
-            context['btc']['deposits'] += 2 * random_deposits
-            context['eth']['deposits'] += 2 * random_deposits
+            context['btc']['deposits'] += random_deposits
+            context['eth']['deposits'] += random_deposits
             contexts[user] = context
         return contexts
 
@@ -228,7 +228,7 @@ class AccuracyTest(AbsoritumLiveTest):
     def threaded_create_deposit(self, *args, **kwargs):
         super().create_deposit(*args, **kwargs)
 
-    @django_thread_decorator(close_db=False)
+    @django_thread_decorator()
     def threaded_create_exchange(self, *args, **kwargs):
         super().create_exchange(*args, **kwargs)
 
@@ -244,8 +244,9 @@ class AccuracyTest(AbsoritumLiveTest):
 
             amounts = list(zip(deposits, withdrawals, exchanges))
             for (d, w, e) in amounts:
+                self.threaded_create_deposit(context['btc_account_pk'], user=user, amount=d, with_checks=False)
+                self.threaded_create_withdrawal(context['btc_account_pk'], user=user, amount=d, with_checks=False)
                 self.threaded_create_deposit(context['eth_account_pk'], user=user, amount=d, with_checks=False)
-
                 self.threaded_create_withdrawal(context['eth_account_pk'], user=user, amount=d, with_checks=False)
 
                 self.threaded_create_exchange(user=user,
@@ -281,8 +282,9 @@ class AccuracyTest(AbsoritumLiveTest):
         """
         global tm
         tm = ThreadManager()
+
         users_count = 10
-        n = 10
+        n = 5
 
         contexts = self.init_users(users_count)
         contexts = self.init_accounts(contexts)
@@ -299,52 +301,3 @@ class AccuracyTest(AbsoritumLiveTest):
         except AssertionError:
             logger.debug("AssertionError was raised!!!")
             input("Press Enter to continue...")
-
-    def test_multiprocess_withdrawal_deposit(self, *args, **kwargs):
-        """
-            In order to execute this test celery worker should use django test db, for that you shoukd set
-            the CELERY_TEST=True environment variable in the worker(celery) service. See docker-compose.yml
-        """
-
-        from multiprocessing import Pool
-
-        pool = Pool(processes=5)
-
-        users_count = 1
-        n = 1
-
-        contexts = self.init_users(users_count)
-        contexts = self.init_accounts(contexts)
-        contexts = self.init_deposits(contexts, n)
-
-        contexts = self.bombarding_withdrawal_deposit(contexts, n)
-        pool.join()
-
-        self.check_accuracy(contexts)
-        pool.close()
-
-        # def test_all(self, *args, **kwargs):
-        #     """
-        #         In order to execute this test celery worker should use django test db, for that you shoukd set
-        #         the CELERY_TEST=True environment variable in the worker(celery) service. See docker-compose.yml
-        #     """
-        #
-        #     users_count = 1
-        #     operations = 10
-        #     contexts = self.init_users(users_count)
-        #     contexts = self.init_accounts(contexts)
-        #     contexts = self.init_deposits(contexts, operations)
-        #
-        #     start = time.time()
-        #
-        #     contexts = self.bombarding_withdrawal_deposit_exchange(contexts, operations)
-        #     self.wait_celery(tag="Bombarding tasks")
-        #
-        #     end = time.time()
-        #     logger.debug("Info: {} seconds".format(end - start))
-        #
-        # try:
-        #     self.check_accuracy(contexts)
-        # except AssertionError:
-        #     logger.debug("AssertionError was raised!!!")
-        #     input("Press Enter to continue...")

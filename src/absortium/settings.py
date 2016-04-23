@@ -39,7 +39,6 @@ else:
 
 COINBASE_ACCOUNT_ID = '2bbf394c-193b-5b2a-9155-3b4732659ede'
 
-
 CELERY_BROKER = 'amqp://guest@docker.celery.broker//'
 CELERY_RESULT_BACKEND = 'redis://docker.celery.backend'
 

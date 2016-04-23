@@ -24,7 +24,8 @@ redlock-py
 drf-nested-routers
 django-extensions
 flower
-django-pglocks
+eventlet
+gevent
 
 # ======================================================================================
 # All other libraries that was installed during general libs installation
