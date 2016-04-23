@@ -21,30 +21,6 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'name')
 
 
-class PrepopulateSerializer(serializers.ModelSerializer):
-    def populate_with_valid_data(self, data):
-        self._validated_data = data
-
-    def save(self, **kwargs):
-        validated_data = dict(
-            list(self.validated_data.items()) +
-            list(kwargs.items())
-        )
-
-        if self.instance is not None:
-            self.instance = self.update(self.instance, validated_data)
-            assert self.instance is not None, (
-                '`update()` did not return an object instance.'
-            )
-        else:
-            self.instance = self.create(validated_data)
-            assert self.instance is not None, (
-                '`create()` did not return an object instance.'
-            )
-
-        return self.instance
-
-
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
     A ModelSerializer that takes an additional `exclude_fields` argument that
@@ -92,7 +68,7 @@ class AccountSerializer(serializers.ModelSerializer):
         read_only_fields = ('address', 'amount')
 
 
-class ExchangeSerializer(PrepopulateSerializer):
+class ExchangeSerializer(serializers.ModelSerializer):
     status = MyChoiceField(choices=constants.AVAILABLE_TASK_STATUS, default=constants.EXCHANGE_INIT)
     amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                       decimal_places=constants.DECIMAL_PLACES,
@@ -108,6 +84,20 @@ class ExchangeSerializer(PrepopulateSerializer):
         model = Exchange
         fields = ('pk', 'amount', 'price', 'from_currency', 'to_currency', 'created', 'status')
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._object = None
+
+    def object(self, **kwargs):
+        if not self._object:
+            validated_data = dict(
+                list(self.validated_data.items()) +
+                list(kwargs.items())
+            )
+
+            self._object = Exchange(**validated_data)
+        return self._object
+
     def validate(self, attrs):
         if attrs['from_currency'] == attrs['to_currency']:
             raise ValidationError("Exchange on the same currency")
@@ -115,7 +105,7 @@ class ExchangeSerializer(PrepopulateSerializer):
         return super().validate(attrs)
 
 
-class DepositSerializer(PrepopulateSerializer):
+class DepositSerializer(serializers.ModelSerializer):
     currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, read_only=True)
     address = serializers.ReadOnlyField(source='account.address')
 
@@ -128,7 +118,7 @@ class DepositSerializer(PrepopulateSerializer):
         fields = ('pk', 'currency', 'address', 'amount', 'created')
 
 
-class WithdrawSerializer(PrepopulateSerializer):
+class WithdrawSerializer(serializers.ModelSerializer):
     currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, read_only=True)
 
     address = serializers.CharField()

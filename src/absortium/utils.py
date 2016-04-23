@@ -16,8 +16,9 @@ def retry(exceptions=(), times=1):
                 try:
                     return func(*args, **kwargs)
                 except exceptions as e:
+                    logger.debug(str(e))
                     t += 1
-                    # logger.debug("RETRY: {}".format(t))
+
 
         return decorator
 

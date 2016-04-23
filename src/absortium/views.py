@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_201_CREATED
 
 from absortium import constants
-from absortium.model.locks import LockedExchange
+from absortium.model.locks import lockexchange, opposites
 from absortium.model.models import Offer, Account, Test
 from absortium.serializer.serializers import \
     UserSerializer, \
@@ -223,7 +223,8 @@ class WithdrawalViewSet(mixins.CreateModelMixin,
 
     @init_account()
     @retry(times=1000, exceptions=(
-    utils.OperationalError, extensions.TransactionRollbackError, utils.InternalError, psycopg2.OperationalError))
+            utils.OperationalError, extensions.TransactionRollbackError, utils.InternalError,
+            psycopg2.OperationalError))
     def create(self, request, *args, **kwargs):
         with transaction.atomic():
             serializer = self.get_serializer(data=request.data)
@@ -290,72 +291,32 @@ class ExchangeViewSet(mixins.CreateModelMixin,
         return super().list(request, *args, **kwargs)
 
     @retry(times=1000, exceptions=(
-    utils.OperationalError, extensions.TransactionRollbackError, utils.InternalError, psycopg2.OperationalError))
+            utils.OperationalError, extensions.TransactionRollbackError, utils.InternalError,
+            psycopg2.OperationalError))
     def create(self, request, *args, **kwargs):
         # with publishment.atomic():
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        exchange = serializer.object(owner_id=request.user.pk)
 
         with transaction.atomic():
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            exchange = serializer.save(owner_id=request.user.pk)
+            with lockexchange(exchange):
 
-            with LockedExchange(exchange.pk) as e1:
-                logger.debug("\nMinus before:"
-                             "\nExchange #2 ({}):"
-                             "\nFrom({}): {}"
-                             "\nTo({}): {}".format(e1.pk, e1.from_account.pk,
-                                                   e1.from_account.amount,
-                                                   e1.to_account.pk, e1.to_account.amount))
+                exchange.check_account()
 
-                e1.check_account()
+                for opposite in opposites(exchange):
 
-                logger.debug("\nMinus after:"
-                             "\nExchange #2 ({}):"
-                             "\nFrom({}): {}"
-                             "\nTo({}): {}".format(e1.pk, e1.from_account.pk,
-                                                   e1.from_account.amount,
-                                                   e1.to_account.pk, e1.to_account.amount))
+                    with lockexchange(opposite):
+                        if exchange >= opposite:
+                            exchange -= opposite
+                        else:
+                            opposite -= exchange
 
-                opposite_exchange_pks = exchange.find_opposite()
-                for opposite_exchange_pk in opposite_exchange_pks:
-                    with LockedExchange(opposite_exchange_pk, e1) as e2:
-                        logger.debug("\nBefore:"
-                                     "\nExchange #1 ({}):"
-                                     "\nFrom({}): {}"
-                                     "\nTo({}): {}".format(e1.pk, e1.from_account.pk,
-                                                           e1.from_account.amount,
-                                                           e1.to_account.pk, e1.to_account.amount))
+                    if exchange.amount == 0:
+                        break
 
-                        logger.debug("\nBefore:"
-                                     "\nExchange #2 ({}):"
-                                     "\nFrom({}): {}"
-                                     "\nTo({}): {}".format(e2.pk, e2.from_account.pk,
-                                                           e2.from_account.amount,
-                                                           e2.to_account.pk, e2.to_account.amount))
-                        assert (e2.status == constants.EXCHANGE_COMPLETED)
-
-                        if e1.amount != 0:
-                            if e1 >= e2:
-                                e1 -= e2
-                            else:
-                                e2 -= e1
-
-                        logger.debug("\nAfter:"
-                                     "\nExchange #1 ({}):"
-                                     "\nFrom({}): {}"
-                                     "\nTo({}): {}".format(e1.pk, e1.from_account.pk,
-                                                           e1.from_account.amount,
-                                                           e1.to_account.pk, e1.to_account.amount))
-
-                        logger.debug("\nAfter:"
-                                     "\nExchange #2 ({}):"
-                                     "\nFrom({}): {}"
-                                     "\nTo({}): {}".format(e2.pk, e2.from_account.pk,
-                                                           e2.from_account.amount,
-                                                           e2.to_account.pk, e2.to_account.amount))
-
-                data = ExchangeSerializer(e1).data
-                return Response(data, status=HTTP_201_CREATED)
+            data = ExchangeSerializer(exchange).data
+            return Response(data, status=HTTP_201_CREATED)
 
 
 # def create(self, request, *args, **kwargs):

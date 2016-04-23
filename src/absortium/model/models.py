@@ -101,36 +101,12 @@ class Exchange(models.Model):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._from_account = None
-        self._to_account = None
+        self.from_account = None
+        self.to_account = None
         self.is_dirty = False
 
-    @property
-    def to_account(self):
-        if not self._to_account:
-            self._to_account = Account.objects.select_for_update().get(owner__pk=self.owner_id,
-                                                                       currency=self.to_currency)
-            logger.debug("Lock account: {}".format(self._to_account.pk))
-
-        return self._to_account
-
-    @to_account.setter
-    def to_account(self, account):
-        self._to_account = account
-
-    @property
-    def from_account(self):
-        if not self._from_account:
-            self._from_account = Account.objects.select_for_update().get(owner__pk=self.owner_id,
-                                                                         currency=self.from_currency)
-
-        return self._from_account
-
-    @from_account.setter
-    def from_account(self, account):
-        self._from_account = account
-
     def check_account(self):
+        logger.debug("Check account")
         # Check that we have enough money
         if self.from_account.amount >= self.amount:
 

@@ -223,15 +223,15 @@ class AccuracyTest(AbsoritumLiveTest):
     #     tm.add(self.create_deposit, *args, **kwargs)
 
     @django_thread_decorator
-    def create_deposit(self, *args, **kwargs):
+    def threaded_create_deposit(self, *args, **kwargs):
         super().create_deposit(*args, **kwargs)
 
     @django_thread_decorator
-    def create_exchange(self, *args, **kwargs):
+    def threaded_create_exchange(self, *args, **kwargs):
         super().create_exchange(*args, **kwargs)
 
     @django_thread_decorator
-    def create_withdrawal(self, *args, **kwargs):
+    def threaded_create_withdrawal(self, *args, **kwargs):
         super().create_withdrawal(*args, **kwargs)
 
     def bombarding_withdrawal_deposit(self, contexts, n):
@@ -247,14 +247,14 @@ class AccuracyTest(AbsoritumLiveTest):
                 self.create_deposit(context['btc_account_pk'], user=user, amount=d, with_checks=False)
                 self.create_deposit(context['eth_account_pk'], user=user, amount=d, with_checks=False)
 
-                self.create_exchange(user=user,
+                self.threaded_create_exchange(user=user,
                                      amount=e,
                                      from_currency="btc",
                                      to_currency="eth",
                                      price="1",
                                      with_checks=False)
 
-                self.create_exchange(user=user,
+                self.threaded_create_exchange(user=user,
                                      amount=e,
                                      from_currency="eth",
                                      to_currency="btc",
@@ -279,11 +279,11 @@ class AccuracyTest(AbsoritumLiveTest):
 
             logger.debug("Bombarding: {}/{}".format(progress_counter, len(amounts) * len(contexts)))
 
-            context['btc']['deposits'] += deposits
+            # context['btc']['deposits'] += deposits
             # context['btc']['withdrawals'] += withdrawals
             # context['btc']['exchanges'] += exchanges
 
-            context['eth']['deposits'] += deposits
+            # context['eth']['deposits'] += deposits
             # context['eth']['withdrawals'] += withdrawals
             # context['eth']['exchanges'] += exchanges
 
@@ -298,8 +298,8 @@ class AccuracyTest(AbsoritumLiveTest):
         """
         global tm
         tm = ThreadManager()
-        users_count = 5
-        n = 3
+        users_count = 3
+        n = 10
 
         contexts = self.init_users(users_count)
         contexts = self.init_accounts(contexts)
@@ -313,7 +313,7 @@ class AccuracyTest(AbsoritumLiveTest):
             self.check_accuracy(contexts)
         except AssertionError:
             logger.debug("AssertionError was raised!!!")
-        input("Press Enter to continue...")
+            input("Press Enter to continue...")
 
     def test_multiprocess_withdrawal_deposit(self, *args, **kwargs):
         """
@@ -325,7 +325,7 @@ class AccuracyTest(AbsoritumLiveTest):
 
         pool = Pool(processes=5)
 
-        users_count = 2
+        users_count = 1
         n = 1
 
         contexts = self.init_users(users_count)
