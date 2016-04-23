@@ -212,15 +212,13 @@ class AccuracyTest(AbsoritumLiveTest):
             for deposit_amount in random_deposits:
                 self.create_deposit(context['btc_account_pk'], user=user, amount=deposit_amount, with_checks=False)
                 self.create_deposit(context['eth_account_pk'], user=user, amount=deposit_amount, with_checks=False)
+                self.create_deposit(context['btc_account_pk'], user=user, amount=deposit_amount, with_checks=False)
+                self.create_deposit(context['eth_account_pk'], user=user, amount=deposit_amount, with_checks=False)
 
-            context['btc']['deposits'] += random_deposits
-            context['eth']['deposits'] += random_deposits
+            context['btc']['deposits'] += 2 * random_deposits
+            context['eth']['deposits'] += 2 * random_deposits
             contexts[user] = context
         return contexts
-
-    # def threaded_create_deposit(self, *args, **kwargs):
-    #     global tm
-    #     tm.add(self.create_deposit, *args, **kwargs)
 
     @django_thread_decorator
     def threaded_create_deposit(self, *args, **kwargs):
@@ -235,8 +233,6 @@ class AccuracyTest(AbsoritumLiveTest):
         super().create_withdrawal(*args, **kwargs)
 
     def bombarding_withdrawal_deposit(self, contexts, n):
-
-        progress_counter = 0
         for user, context in contexts.items():
             deposits = self.random_amounts(n)
             withdrawals = deposits
@@ -244,48 +240,31 @@ class AccuracyTest(AbsoritumLiveTest):
 
             amounts = list(zip(deposits, withdrawals, exchanges))
             for (d, w, e) in amounts:
-                self.create_deposit(context['btc_account_pk'], user=user, amount=d, with_checks=False)
-                self.create_deposit(context['eth_account_pk'], user=user, amount=d, with_checks=False)
+                self.threaded_create_deposit(context['eth_account_pk'], user=user, amount=d, with_checks=False)
+
+                self.threaded_create_withdrawal(context['eth_account_pk'], user=user, amount=d, with_checks=False)
 
                 self.threaded_create_exchange(user=user,
-                                     amount=e,
-                                     from_currency="btc",
-                                     to_currency="eth",
-                                     price="1",
-                                     with_checks=False)
+                                              amount=e,
+                                              from_currency="btc",
+                                              to_currency="eth",
+                                              price="1",
+                                              with_checks=False)
 
                 self.threaded_create_exchange(user=user,
-                                     amount=e,
-                                     from_currency="eth",
-                                     to_currency="btc",
-                                     price="1",
-                                     with_checks=False)
+                                              amount=e,
+                                              from_currency="eth",
+                                              to_currency="btc",
+                                              price="1",
+                                              with_checks=False)
 
-                self.create_exchange(user=user,
-                                     amount=e,
-                                     from_currency="btc",
-                                     to_currency="eth",
-                                     price="1",
-                                     with_checks=False)
+            context['btc']['deposits'] += deposits
+            context['btc']['withdrawals'] += withdrawals
+            context['btc']['exchanges'] += exchanges
 
-                self.create_exchange(user=user,
-                                     amount=e,
-                                     from_currency="eth",
-                                     to_currency="btc",
-                                     price="1",
-                                     with_checks=False)
-
-                progress_counter += 1
-
-            logger.debug("Bombarding: {}/{}".format(progress_counter, len(amounts) * len(contexts)))
-
-            # context['btc']['deposits'] += deposits
-            # context['btc']['withdrawals'] += withdrawals
-            # context['btc']['exchanges'] += exchanges
-
-            # context['eth']['deposits'] += deposits
-            # context['eth']['withdrawals'] += withdrawals
-            # context['eth']['exchanges'] += exchanges
+            context['eth']['deposits'] += deposits
+            context['eth']['withdrawals'] += withdrawals
+            context['eth']['exchanges'] += exchanges
 
             contexts[user] = context
 
@@ -298,8 +277,8 @@ class AccuracyTest(AbsoritumLiveTest):
         """
         global tm
         tm = ThreadManager()
-        users_count = 3
-        n = 10
+        users_count = 20
+        n = 1
 
         contexts = self.init_users(users_count)
         contexts = self.init_accounts(contexts)
@@ -338,28 +317,28 @@ class AccuracyTest(AbsoritumLiveTest):
         self.check_accuracy(contexts)
         pool.close()
 
-# def test_all(self, *args, **kwargs):
-#     """
-#         In order to execute this test celery worker should use django test db, for that you shoukd set
-#         the CELERY_TEST=True environment variable in the worker(celery) service. See docker-compose.yml
-#     """
-#
-#     users_count = 1
-#     operations = 10
-#     contexts = self.init_users(users_count)
-#     contexts = self.init_accounts(contexts)
-#     contexts = self.init_deposits(contexts, operations)
-#
-#     start = time.time()
-#
-#     contexts = self.bombarding_withdrawal_deposit_exchange(contexts, operations)
-#     self.wait_celery(tag="Bombarding tasks")
-#
-#     end = time.time()
-#     logger.debug("Info: {} seconds".format(end - start))
-#
-    # try:
-    #     self.check_accuracy(contexts)
-    # except AssertionError:
-    #     logger.debug("AssertionError was raised!!!")
-    #     input("Press Enter to continue...")
+        # def test_all(self, *args, **kwargs):
+        #     """
+        #         In order to execute this test celery worker should use django test db, for that you shoukd set
+        #         the CELERY_TEST=True environment variable in the worker(celery) service. See docker-compose.yml
+        #     """
+        #
+        #     users_count = 1
+        #     operations = 10
+        #     contexts = self.init_users(users_count)
+        #     contexts = self.init_accounts(contexts)
+        #     contexts = self.init_deposits(contexts, operations)
+        #
+        #     start = time.time()
+        #
+        #     contexts = self.bombarding_withdrawal_deposit_exchange(contexts, operations)
+        #     self.wait_celery(tag="Bombarding tasks")
+        #
+        #     end = time.time()
+        #     logger.debug("Info: {} seconds".format(end - start))
+        #
+        # try:
+        #     self.check_accuracy(contexts)
+        # except AssertionError:
+        #     logger.debug("AssertionError was raised!!!")
+        #     input("Press Enter to continue...")

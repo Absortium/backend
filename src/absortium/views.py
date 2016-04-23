@@ -291,7 +291,9 @@ class ExchangeViewSet(mixins.CreateModelMixin,
         return super().list(request, *args, **kwargs)
 
     @retry(times=1000, exceptions=(
-            utils.OperationalError, extensions.TransactionRollbackError, utils.InternalError,
+            utils.OperationalError,
+            extensions.TransactionRollbackError,
+            utils.InternalError,
             psycopg2.OperationalError))
     def create(self, request, *args, **kwargs):
         # with publishment.atomic():
@@ -316,6 +318,7 @@ class ExchangeViewSet(mixins.CreateModelMixin,
                         break
 
             data = ExchangeSerializer(exchange).data
+            logger.debug(data)
             return Response(data, status=HTTP_201_CREATED)
 
 

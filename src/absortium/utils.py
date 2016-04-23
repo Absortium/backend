@@ -11,13 +11,20 @@ def retry(exceptions=(), times=1):
 
     def wrapper(func):
         def decorator(*args, **kwargs):
-            t = 0
-            while times > t:
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as e:
-                    logger.debug(str(e))
-                    t += 1
+            try:
+                t = 0
+                while times > t:
+                    try:
+                        return func(*args, **kwargs)
+                    except exceptions as e:
+
+                        t += 1
+            except Exception:
+                import traceback
+                traceback.print_exc()
+                logger.debug("{}\n{}".format(type(e), str(e)))
+                raise 
+
 
 
         return decorator

@@ -135,6 +135,7 @@ DATABASES = {
         'PASSWORD': getattr(settings_module, 'POSTGRES_PASSWORD'),
         'HOST': 'docker.postgres',
         'PORT': '5432',
+        'CONN_MAX_AGE': 500
     }
 }
 

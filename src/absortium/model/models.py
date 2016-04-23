@@ -106,7 +106,7 @@ class Exchange(models.Model):
         self.is_dirty = False
 
     def check_account(self):
-        logger.debug("Check account")
+
         # Check that we have enough money
         if self.from_account.amount >= self.amount:
 
