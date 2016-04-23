@@ -4,8 +4,9 @@ from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)
 
+
 def retry(exceptions=(), times=1):
-    assert(type(exceptions) == tuple)
+    assert (type(exceptions) == tuple)
 
     logger.debug(exceptions)
 
@@ -23,9 +24,7 @@ def retry(exceptions=(), times=1):
                 import traceback
                 traceback.print_exc()
                 logger.debug("{}\n{}".format(type(e), str(e)))
-                raise 
-
-
+                raise
 
         return decorator
 

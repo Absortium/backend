@@ -1,19 +1,16 @@
 __author__ = 'andrew.shvv@gmail.com'
 
-from celery import shared_task
-from django.contrib.auth import get_user_model
-from django.db import transaction
+from celery import shared_task, Task
+from django.db import transaction, connection
 from django.db.utils import OperationalError
-from rest_framework.exceptions import ValidationError
 
 from absortium import constants
-from absortium.crossbarhttp.client import get_crossbar_client
-from absortium.model.locks import LockedExchange
-from absortium.model.models import Account
-from absortium.serializer.serializers import DepositSerializer, WithdrawSerializer, ExchangeSerializer
+from absortium.model.locks import lockexchange, opposites
+from absortium.serializer.serializers import ExchangeSerializer
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)
+
 
 #
 # @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES)
@@ -93,41 +90,45 @@ logger = getPrettyLogger(__name__)
 #         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
 
 
-# @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES)
-# def do_exchange(self, *args, **kwargs):
-#     exchange = None
-#     exchange_pk = kwargs['exchange_pk']
-#     try:
-#         # with publishment.atomic():
-#         with transaction.atomic():
-#
-#             with LockedExchange(exchange_pk) as e1:
-#                 # Check that we have enough money
-#                 if e1.from_account.amount >= e1.amount:
-#
-#                     # Subtract money from account because it is locked by exchange
-#                     e1.from_account.amount -= e1.amount
-#                 else:
-#                     raise ValidationError("Not enough money for exchange creation")
-#
-#                 opposite_exchange_pks = e1.find_opposite()
-#                 for opposite_exchange_pk in opposite_exchange_pks:
-#
-#                     with LockedExchange(opposite_exchange_pk) as e2:
-#                         if e1 >= e2:
-#                             e1 -= e2
-#                         else:
-#                             e2 -= e1
-#
-#                 return ExchangeSerializer(e1).data
-#
-#     except OperationalError:
-#         if exchange:
-#             logger.info("Discard exchange pk: {} amount: {} from: {} to:{}".format(exchange.pk, exchange.amount,
-#                                                                                    exchange.from_currency,
-#                                                                                    exchange.to_currency))
-#         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
+class DBTask(Task):
+    abstract = True
 
+    def after_return(self, *args, **kwargs):
+        connection.close()
+
+
+@shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=DBTask)
+def do_exchange(self, *args, **kwargs):
+    exchange = None
+
+    data = kwargs['data']
+    user_pk = kwargs['user_pk']
+
+    try:
+        serializer = ExchangeSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        exchange = serializer.object(owner_id=user_pk)
+
+        with transaction.atomic():
+            with lockexchange(exchange):
+
+                exchange.check_account()
+
+                for opposite in opposites(exchange):
+
+                    with lockexchange(opposite):
+                        if exchange >= opposite:
+                            exchange -= opposite
+                        else:
+                            opposite -= exchange
+
+                    if exchange.amount == 0:
+                        break
+
+            return ExchangeSerializer(exchange).data
+
+    except OperationalError:
+        raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
 
 # @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES)
 # def do_check_users(self, *args, **kwargs):

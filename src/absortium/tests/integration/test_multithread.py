@@ -78,25 +78,29 @@ class ThreadQueue():
 progress_counter = 0
 
 
-def django_thread_decorator(func):
+def django_thread_decorator(close_db=True):
     global tm
 
-    def threaded_func(*args, **kwargs):
-        global progress_counter
-        try:
-            func(*args, **kwargs)
+    def wrapper(func):
+        def threaded_func(*args, **kwargs):
+            global progress_counter
+            try:
+                func(*args, **kwargs)
 
-            progress_counter += 1
-            # logger.debug("Progress: {}".format(progress_counter))
-        finally:
-            from django.db import connection
-            connection.close()
+                progress_counter += 1
+                # logger.debug("Progress: {}".format(progress_counter))
+            finally:
+                if close_db:
+                    from django.db import connection
+                    connection.close()
 
-    def decorator(*args, **kwargs):
-        global tm
-        tm.add(threaded_func, *args, **kwargs)
+        def decorator(*args, **kwargs):
+            global tm
+            tm.add(threaded_func, *args, **kwargs)
 
-    return decorator
+        return decorator
+
+    return wrapper
 
 
 class ThreadManager():
@@ -220,15 +224,15 @@ class AccuracyTest(AbsoritumLiveTest):
             contexts[user] = context
         return contexts
 
-    @django_thread_decorator
+    @django_thread_decorator()
     def threaded_create_deposit(self, *args, **kwargs):
         super().create_deposit(*args, **kwargs)
 
-    @django_thread_decorator
+    @django_thread_decorator(close_db=False)
     def threaded_create_exchange(self, *args, **kwargs):
         super().create_exchange(*args, **kwargs)
 
-    @django_thread_decorator
+    @django_thread_decorator()
     def threaded_create_withdrawal(self, *args, **kwargs):
         super().create_withdrawal(*args, **kwargs)
 
@@ -277,8 +281,8 @@ class AccuracyTest(AbsoritumLiveTest):
         """
         global tm
         tm = ThreadManager()
-        users_count = 20
-        n = 1
+        users_count = 10
+        n = 10
 
         contexts = self.init_users(users_count)
         contexts = self.init_accounts(contexts)
@@ -287,6 +291,8 @@ class AccuracyTest(AbsoritumLiveTest):
         contexts = self.bombarding_withdrawal_deposit(contexts, n)
         tm.start()
         tm.stop()
+
+        self.wait_celery()
 
         try:
             self.check_accuracy(contexts)

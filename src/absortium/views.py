@@ -9,9 +9,10 @@ from rest_framework import generics, mixins, viewsets
 from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
 from rest_framework.response import Response
 from rest_framework.status import HTTP_201_CREATED
+from absortium.celery import tasks
+
 
 from absortium import constants
-from absortium.model.locks import lockexchange, opposites
 from absortium.model.models import Offer, Account, Test
 from absortium.serializer.serializers import \
     UserSerializer, \
@@ -290,62 +291,42 @@ class ExchangeViewSet(mixins.CreateModelMixin,
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-    @retry(times=1000, exceptions=(
-            utils.OperationalError,
-            extensions.TransactionRollbackError,
-            utils.InternalError,
-            psycopg2.OperationalError))
     def create(self, request, *args, **kwargs):
-        # with publishment.atomic():
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        exchange = serializer.object(owner_id=request.user.pk)
+        context = {
+            "data": request.data,
+            "user_pk": request.user.pk,
+        }
 
-        with transaction.atomic():
-            with lockexchange(exchange):
-
-                exchange.check_account()
-
-                for opposite in opposites(exchange):
-
-                    with lockexchange(opposite):
-                        if exchange >= opposite:
-                            exchange -= opposite
-                        else:
-                            opposite -= exchange
-
-                    if exchange.amount == 0:
-                        break
-
-            data = ExchangeSerializer(exchange).data
-            logger.debug(data)
-            return Response(data, status=HTTP_201_CREATED)
+        async_result = tasks.do_exchange.delay(**context)
+        exchange = async_result.get(propagate=True)
+        logger.debug(exchange)
+        return Response(exchange, status=HTTP_201_CREATED)
 
 
-# def create(self, request, *args, **kwargs):
-#     serializer = self.get_serializer(data=request.data)
-#     serializer.is_valid(raise_exception=True)
-#     exchange = serializer.save(owner_id=request.user.pk)
-#
-#     context = {
-#         "exchange_pk": exchange.pk,
-#     }
-#
-#
-#     async_result = tasks.do_exchange.delay(**context)
-#     logger.debug(async_result)
-#     try:
-#         exchange_data = async_result.get(timeout=0.2, propagate=False)
-#     except TimeoutError:
-#         return Response(serializer.validated_data)
-#
-#     if isinstance(exchange_data, ValidationError):
-#         pass
-#     elif isinstance(exchange_data, Exception):
-#         pass
-#     else:
-#         logger.debug(exchange_data)
-#         return Response(exchange_data)
+        # def create(self, request, *args, **kwargs):
+        #     serializer = self.get_serializer(data=request.data)
+        #     serializer.is_valid(raise_exception=True)
+        #     exchange = serializer.save(owner_id=request.user.pk)
+        #
+        # context = {
+        #     "exchange_pk": exchange.pk,
+        # }
+        #
+        #
+        # async_result = tasks.do_exchange.delay(**context)
+        # logger.debug(async_result)
+        # try:
+        #     exchange_data = async_result.get(timeout=0.2, propagate=False)
+        # except TimeoutError:
+        #     return Response(serializer.validated_data)
+        #
+        # if isinstance(exchange_data, ValidationError):
+        #     pass
+        # elif isinstance(exchange_data, Exception):
+        #     pass
+        # else:
+        #     logger.debug(exchange_data)
+        #     return Response(exchange_data)
 
 
 class TestViewSet(mixins.CreateModelMixin,
