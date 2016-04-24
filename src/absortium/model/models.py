@@ -65,6 +65,20 @@ class Account(models.Model):
         Account.objects.filter(pk=self.pk).update(**kwargs)
 
 
+def operation_wrapper(func):
+    def decorator(self, obj):
+        if isinstance(obj, Exchange):
+            value = obj.converted_amount()
+        elif isinstance(obj, (int, float)):
+            value = obj
+        else:
+            return NotImplemented
+
+        return func(self, value)
+
+    return decorator
+
+
 class Exchange(models.Model):
     """
         Exchange model represent order for exchange primary currency determined as account currency
@@ -129,83 +143,70 @@ class Exchange(models.Model):
             price__lte=converted_price,
             from_currency=self.to_currency).values_list('pk', flat=True)
 
-    def save_fraction(self, converted_amount):
+    def split(self, converted_amount):
         """
-            In case of self.amount > converted_amount create history exchange fraction, in order to track
-            for which price and amount our money was exchanged
+            Divide exchange on two parts completed part and remain
         """
-        if self.amount > converted_amount:
-            from copy import deepcopy
-            fraction_exchange = deepcopy(self)
-            fraction_exchange.amount = converted_amount
-            fraction_exchange.pk = None
-            fraction_exchange.status = constants.EXCHANGE_COMPLETED
-            fraction_exchange.save()
+        remaining = self
 
-            self.amount -= converted_amount
+        if remaining.amount == converted_amount:
+            remaining.status = constants.EXCHANGE_COMPLETED
+            completed = remaining
         else:
-            self.status = constants.EXCHANGE_COMPLETED
+            from copy import deepcopy
+            completed = deepcopy(remaining)
+            completed.amount = converted_amount
+            completed.pk = None
+            completed.status = constants.EXCHANGE_COMPLETED
+            completed.save()
 
-        return self
+            remaining.amount -= converted_amount
 
-    def __sub__(self, exchange):
-        if isinstance(exchange, Exchange):
+        return completed, remaining
+
+    def __sub__(self, obj):
+        if isinstance(obj, Exchange):
+            opposite = obj
+
             self.status = constants.EXCHANGE_PENDING
+            opposite.status = constants.EXCHANGE_COMPLETED
 
             # convert to currency of this exchange
-            converted_amount = exchange.converted_amount()
+            converted_amount = opposite.converted_amount()
 
-            self.to_account.amount += exchange.amount  # ETH
-            exchange.to_account.amount += converted_amount  # BTC
+            self.to_account.amount += opposite.amount  # ETH
+            opposite.to_account.amount += converted_amount  # BTC
 
-            exchange.amount = 0
-            exchange.status = constants.EXCHANGE_COMPLETED
-
-            self.amount -= converted_amount
-            if self.amount == 0:
-                self.status = constants.EXCHANGE_COMPLETED
             # save fraction of exchange in order to store history of exchanges
-            # self.save_fraction(converted_amount)
+            (completed, remaining) = self.split(converted_amount)
 
-            return self
+            return completed, remaining
         else:
             return NotImplemented
 
-    def __lt__(self, exchange):
-        if isinstance(exchange, Exchange):
-            return self.amount < exchange.converted_amount()
-        else:
-            return NotImplemented
+    @operation_wrapper
+    def __lt__(self, value):
+        return self.amount < value
 
-    def __le__(self, exchange):
-        if isinstance(exchange, Exchange):
-            return self.amount <= exchange.converted_amount()
-        else:
-            return NotImplemented
+    @operation_wrapper
+    def __gt__(self, value):
+        return self.amount > value
 
-    def __gt__(self, exchange):
-        if isinstance(exchange, Exchange):
-            return self.amount > exchange.converted_amount()
-        else:
-            return NotImplemented
+    @operation_wrapper
+    def __le__(self, value):
+        return self.amount <= value
 
-    def __ge__(self, exchange):
-        if isinstance(exchange, Exchange):
-            return self.amount >= exchange.converted_amount()
-        else:
-            return NotImplemented
+    @operation_wrapper
+    def __ge__(self, value):
+        return self.amount >= value
 
-    def __eq__(self, exchange):
-        if isinstance(exchange, Exchange):
-            return self.amount == exchange.converted_amount()
-        else:
-            return NotImplemented
+    @operation_wrapper
+    def __eq__(self, value):
+        return self.amount == value
 
-    def __ne__(self, exchange):
-        if isinstance(exchange, Exchange):
-            return self.amount != exchange.converted_amount()
-        else:
-            return NotImplemented
+    @operation_wrapper
+    def __ne__(self, value):
+        return self.amount != value
 
 
 class Deposit(models.Model):

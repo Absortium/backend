@@ -1,6 +1,6 @@
 __author__ = 'andrew.shvv@gmail.com'
 
-from rest_framework.status import HTTP_201_CREATED
+from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 from absortium.model.models import Exchange
 from core.utils.logging import getLogger
@@ -26,7 +26,7 @@ class CreateExchangeMixin():
         url = '/api/exchanges/'.format()
         response = self.client.post(url, data=data, format='json')
 
-        self.assertEqual(response.status_code, HTTP_201_CREATED)
+        self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_204_NO_CONTENT])
 
         if with_checks:
             exchange = response.json()

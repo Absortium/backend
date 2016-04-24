@@ -16,7 +16,7 @@ class lockexchange:
     def __enter__(self):
         if not self.exchange.from_account and not self.exchange.to_account:
             """
-                Such strange select was done in order to prevent deadlocks.
+                Such strange select was done in order to prevent deadlocks. Example:
 
                 Thread #1 (Exchange #1)             Thread #2 (Exchange #2) - opposite exchange
                 Lock ETC account (from_account)
@@ -46,48 +46,55 @@ class lockexchange:
 
 
 class opposites:
+    """
+        1. Search for opposite exchanges.
+        2. Block exchange with pg_try_advisory_xact_lock postgres lock.
+
+        Example:
+            Exchange: BTC->ETH Price: 2.0 ETH for 1 BTC
+            Opposite exchange: ETH->BTC Price: 0.5 BTC for 1 ETH
+    """
+
     def __init__(self, exchange):
         self.exchange = exchange
         self.converted_price = decimal.Decimal("1.0") / self.exchange.price
-        self.opposites = []
+        self.times = 3
 
     def __iter__(self):
         return self
 
-    def get_opposite(self):
-        opposite = self.opposites.pop()
-
-        if self.exchange.owner_id == opposite.owner_id:
-            """
-                If we process the same users that means that exchanges are opposite
-                and we should not block the same accounts twice.
-            """
-            opposite.from_account = self.exchange.to_account
-            opposite.to_account = self.exchange.from_account
-        return opposite
-
     def __next__(self):
-        try:
-            """
-                Get first non-blocked exchange which suit out conditions (price, status, currency)
-            """
-            opposite = Exchange.objects.raw(' SELECT *'
-                                            ' FROM absortium_exchange'
-                                            ' WHERE status = %s AND pg_try_advisory_xact_lock(id) AND price <= %s AND from_currency = %s'
-                                            ' FOR UPDATE'
-                                            ' LIMIT 1', [constants.EXCHANGE_PENDING,
-                                                         self.converted_price,
-                                                         self.exchange.to_currency])[0]
+        while True:
+            try:
+                """
+                    Get first non-blocked exchange which suit out conditions (price, status, currency) anf block it.
+                """
+                opposite = Exchange.objects.raw(' SELECT *'
+                                                ' FROM absortium_exchange'
+                                                ' WHERE status = %s AND pg_try_advisory_xact_lock(id) AND price <= %s AND from_currency = %s'
+                                                ' FOR UPDATE'
+                                                ' LIMIT 1', [constants.EXCHANGE_PENDING,
+                                                             self.converted_price,
+                                                             self.exchange.to_currency])[0]
 
-        except IndexError:
-            raise StopIteration()
+            except IndexError:
+                """
+                    Very dirty hack; When we SELECT exchanges situation may arise when all exchanges are locked
+                    and we skip the exchanges processing, so in order to low the likelihood of such situation, do it
+                    3 times.
+                """
+                self.times -= 1
+                if self.times > 0:
+                    continue
+                else:
+                    raise StopIteration()
 
-        if self.exchange.owner_id == opposite.owner_id:
-            """
-                If we process the same users that means that exchanges are opposite
-                and we should not block the same accounts twice.
-            """
-            opposite.from_account = self.exchange.to_account
-            opposite.to_account = self.exchange.from_account
+            if self.exchange.owner_id == opposite.owner_id:
+                """
+                    If we process the same users that means that exchanges are opposite
+                    and we should not block the same accounts twice.
+                """
+                opposite.from_account = self.exchange.to_account
+                opposite.to_account = self.exchange.from_account
 
-        return opposite
+            return opposite

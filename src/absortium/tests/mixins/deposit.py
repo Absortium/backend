@@ -1,6 +1,6 @@
 __author__ = 'andrew.shvv@gmail.com'
 
-from rest_framework.status import HTTP_201_CREATED
+from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 from absortium.model.models import Deposit
 from core.utils.logging import getLogger
@@ -22,7 +22,7 @@ class CreateDepositMixin():
         # Create deposit
         url = '/api/accounts/{account_pk}/deposits/'.format(account_pk=account_pk)
         response = self.client.post(url, data=data, format='json')
-        self.assertEqual(response.status_code, HTTP_201_CREATED)
+        self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_204_NO_CONTENT])
 
         if with_checks:
             deposit = response.json()

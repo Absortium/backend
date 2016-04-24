@@ -1,5 +1,5 @@
 __author__ = 'andrew.shvv@gmail.com'
-from rest_framework.status import HTTP_201_CREATED
+from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 from absortium.model.models import Withdrawal
 from core.utils.logging import getLogger
@@ -24,7 +24,7 @@ class CreateWithdrawalMixin():
         response = self.client.post(url, data=data, format='json')
 
         if with_checks:
-            self.assertEqual(response.status_code, HTTP_201_CREATED)
+            self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_204_NO_CONTENT])
             withdrawal = response.json()
 
             # Check that withdrawal exist in db

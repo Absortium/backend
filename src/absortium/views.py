@@ -4,11 +4,10 @@ from django.contrib.auth.models import User, Group
 from django.db import transaction
 from rest_framework import generics, mixins, viewsets
 from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
-from rest_framework.response import Response
-from rest_framework.status import HTTP_201_CREATED
 
 from absortium import constants
 from absortium.celery import tasks
+from absortium.mixins import CeleryMixin
 from absortium.model.models import Offer, Account, Test
 from absortium.serializer.serializers import \
     UserSerializer, \
@@ -143,10 +142,10 @@ class AccountViewSet(mixins.CreateModelMixin,
             serializer.save(owner=self.request.user)
 
 
-class DepositViewSet(mixins.CreateModelMixin,
-                     mixins.RetrieveModelMixin,
+class DepositViewSet(mixins.RetrieveModelMixin,
                      mixins.ListModelMixin,
-                     viewsets.GenericViewSet):
+                     viewsets.GenericViewSet,
+                     CeleryMixin):
     serializer_class = DepositSerializer
 
     def get_queryset(self):
@@ -161,19 +160,16 @@ class DepositViewSet(mixins.CreateModelMixin,
         return super().list(request, *args, **kwargs)
 
     @init_account()
-    def create(self, request, *args, **kwargs):
+    def create_celery(self, request, *args, **kwargs):
         context = {
             "data": request.data,
             "account_pk": request.account.pk,
         }
 
-        async_result = tasks.do_deposit.delay(**context)
-        deposit = async_result.get(propagate=True)
-        logger.debug(deposit)
-        return Response(deposit, status=HTTP_201_CREATED)
+        return tasks.do_deposit.delay(**context)
 
 
-class WithdrawalViewSet(mixins.CreateModelMixin,
+class WithdrawalViewSet(CeleryMixin,
                         mixins.RetrieveModelMixin,
                         mixins.ListModelMixin,
                         viewsets.GenericViewSet):
@@ -191,19 +187,16 @@ class WithdrawalViewSet(mixins.CreateModelMixin,
         return super().list(request, *args, **kwargs)
 
     @init_account()
-    def create(self, request, *args, **kwargs):
+    def create_celery(self, request, *args, **kwargs):
         context = {
             "data": request.data,
             "account_pk": request.account.pk,
         }
 
-        async_result = tasks.do_withdrawal.delay(**context)
-        withdrawal = async_result.get(propagate=True)
-        logger.debug(withdrawal)
-        return Response(withdrawal, status=HTTP_201_CREATED)
+        return tasks.do_withdrawal.delay(**context)
 
 
-class ExchangeViewSet(mixins.CreateModelMixin,
+class ExchangeViewSet(CeleryMixin,
                       mixins.RetrieveModelMixin,
                       mixins.ListModelMixin,
                       viewsets.GenericViewSet):
@@ -222,16 +215,13 @@ class ExchangeViewSet(mixins.CreateModelMixin,
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-    def create(self, request, *args, **kwargs):
+    def create_celery(self, request, *args, **kwargs):
         context = {
             "data": request.data,
             "user_pk": request.user.pk,
         }
 
-        async_result = tasks.do_exchange.delay(**context)
-        exchange = async_result.get(propagate=True)
-        logger.debug(exchange)
-        return Response(exchange, status=HTTP_201_CREATED)
+        return tasks.do_exchange.delay(**context)
 
 
 class TestViewSet(mixins.CreateModelMixin,

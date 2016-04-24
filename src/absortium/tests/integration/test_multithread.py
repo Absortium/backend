@@ -284,7 +284,7 @@ class AccuracyTest(AbsoritumLiveTest):
         tm = ThreadManager()
 
         users_count = 10
-        n = 5
+        n = 2
 
         contexts = self.init_users(users_count)
         contexts = self.init_accounts(contexts)
