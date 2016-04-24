@@ -29,7 +29,8 @@ class CreateExchangeMixin():
         self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_204_NO_CONTENT])
 
         if with_checks:
-            exchange = response.json()
+            history = response.json()
+            exchange = history[-1]
             self.assertEqual(exchange['status'], status)
 
             if exchange['status'] == "PENDING":

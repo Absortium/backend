@@ -46,12 +46,12 @@ def wrap_logger(logger):
 
 def getPrettyLogger(name, level=logging.DEBUG):
     from django.conf import settings
-    from celery.utils.log import get_task_logger
 
     if settings.WHOAMI == "DJANGO":
         return getLogger(name, level)
-    elif settings.WHOAMI == "CELERY":
 
+    elif settings.WHOAMI == "CELERY":
+        from celery.utils.log import get_task_logger
         logger = get_task_logger(name)
         logger.setLevel(level)
         return wrap_logger(logger)
@@ -73,7 +73,6 @@ def getLogger(name="", level=logging.DEBUG):
 
     # add ch to logger
     logger.addHandler(ch)
-
 
     logger.setLevel(level)
 

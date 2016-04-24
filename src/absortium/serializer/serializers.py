@@ -67,6 +67,20 @@ class AccountSerializer(serializers.ModelSerializer):
         fields = ('pk', 'address', 'currency', 'amount')
         read_only_fields = ('address', 'amount')
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._object = None
+
+    def object(self, **kwargs):
+        if not self._object:
+            validated_data = dict(
+                list(self.validated_data.items()) +
+                list(kwargs.items())
+            )
+
+            self._object = Account(**validated_data)
+        return self._object
+
 
 class ExchangeSerializer(serializers.ModelSerializer):
     status = MyChoiceField(choices=constants.AVAILABLE_TASK_STATUS, default=constants.EXCHANGE_INIT)

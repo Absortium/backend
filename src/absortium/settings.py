@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 import os
 import sys
 
-secret_settings = {
+docker_environments = {
     'SECRET_KEY': 'DJANGO_SECRET_KEY',
     'SOCIAL_AUTH_GITHUB_OAUTH2_SECRET': 'SOCIAL_AUTH_GITHUB_OAUTH2_SECRET',
     'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET': 'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET',
@@ -27,7 +27,7 @@ secret_settings = {
 }
 
 settings_module = sys.modules[__name__]
-for name, env_name in secret_settings.items():
+for name, env_name in docker_environments.items():
     value = os.environ[env_name] if env_name in os.environ else None
     setattr(settings_module, name, value)
 
@@ -135,7 +135,6 @@ DATABASES = {
 }
 
 SILENCED_SYSTEM_CHECKS = ["models.W001"]
-
 
 # Password validation
 # # https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators

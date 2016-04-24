@@ -71,9 +71,9 @@ class opposites:
                 """
                 opposite = Exchange.objects.raw(' SELECT *'
                                                 ' FROM absortium_exchange'
-                                                ' WHERE status = %s AND pg_try_advisory_xact_lock(id) AND price <= %s AND from_currency = %s'
+                                                ' WHERE (status = %s OR status = %s) AND pg_try_advisory_xact_lock(id) AND price <= %s AND from_currency = %s'
                                                 ' FOR UPDATE'
-                                                ' LIMIT 1', [constants.EXCHANGE_PENDING,
+                                                ' LIMIT 1', [constants.EXCHANGE_PENDING, constants.EXCHANGE_INIT,
                                                              self.converted_price,
                                                              self.exchange.to_currency])[0]
 

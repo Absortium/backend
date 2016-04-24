@@ -7,11 +7,12 @@ from django.conf import settings
 from django.contrib.auth import authenticate
 from requests_oauthlib import OAuth1
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_jwt.settings import api_settings
 from rest_framework_jwt.views import ObtainJSONWebToken, VerifyJSONWebToken, RefreshJSONWebToken
-from rest_framework.exceptions import ValidationError
+
 from core.utils.logging import getLogger
 from jwtauth.serializers import BasicJWTSerializer, OAuth2Serializer, OAuth1Serializer
 
@@ -30,13 +31,9 @@ class ViewObtainSocialOAuth2(APIView):
 
     permission_classes = ()
     authentication_classes = ()
-    serializer_class = OAuth2Serializer
-
-    def get_serializer(self, data, *args, **kwargs):
-        return OAuth2Serializer(data=data, *args, **kwargs)
 
     def post(self, request, provider, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        serializer = OAuth2Serializer(data=request.data)
 
         if serializer.is_valid():
             params = serializer.object
@@ -66,7 +63,6 @@ class ViewObtainSocialOAuth1(APIView):
     """
     permission_classes = ()
     authentication_classes = ()
-    serializer_class = OAuth1Serializer
 
     def get_oauth_token(self):
         request_token_url = 'https://api.twitter.com/oauth/request_token'
@@ -82,7 +78,7 @@ class ViewObtainSocialOAuth1(APIView):
         return oauth_token
 
     def post(self, request, provider, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data)
+        serializer = OAuth1Serializer(data=request.data)
 
         if serializer.is_valid():
             params = serializer.object

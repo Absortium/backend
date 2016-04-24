@@ -11,7 +11,7 @@ logger = getLogger(__name__)
 
 class WithdrawalTest(AbsoritumUnitTest):
     def test_permissions(self, *args, **kwargs):
-        account_pk, _ = self.create_account('btc')
+        account_pk, _ = self.get_account('btc')
         self.create_deposit(account_pk=account_pk)
         withdrawal_pk, _ = self.create_withdrawal(account_pk=account_pk)
 
@@ -51,7 +51,7 @@ class WithdrawalTest(AbsoritumUnitTest):
         self.assertEqual(response.status_code, HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_withdrawal_without_money(self):
-        account_pk, _ = self.create_account('btc')
+        account_pk, _ = self.get_account('btc')
         with self.assertRaises(AssertionError):
             self.create_withdrawal(account_pk=account_pk)
 
@@ -64,7 +64,7 @@ class WithdrawalTest(AbsoritumUnitTest):
                                                                                withdrawal_pk=trash_withdrawal_pk)
 
         # Create an account and try to get uncreated withdrawal
-        account_pk, _ = self.create_account('btc')
+        account_pk, _ = self.get_account('btc')
         url = '/api/accounts/{account_pk}/withdrawals/{withdrawal_pk}/'.format(account_pk=account_pk,
                                                                                withdrawal_pk=trash_withdrawal_pk)
 

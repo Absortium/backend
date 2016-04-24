@@ -1,7 +1,5 @@
 __author__ = 'andrew.shvv@gmail.com'
 
-import decimal
-
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
@@ -58,6 +56,9 @@ class Account(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="accounts")
+
+    class Meta:
+        unique_together = ('currency', 'owner')
 
     def update(self, **kwargs):
         # update() is converted directly to an SQL statement; it doesn't call save() on the model
@@ -126,7 +127,6 @@ class Exchange(models.Model):
 
             # Subtract money from account because it is locked by exchange
             self.from_account.amount -= self.amount
-            self.status = constants.EXCHANGE_PENDING
         else:
             raise ValidationError("Not enough money for exchange creation")
 
@@ -136,16 +136,9 @@ class Exchange(models.Model):
     def converted_amount(self):
         return self.amount * self.price
 
-    def find_opposite(self):
-        converted_price = decimal.Decimal("1.0") / self.price
-        return Exchange.objects.filter(
-            status=constants.EXCHANGE_PENDING,
-            price__lte=converted_price,
-            from_currency=self.to_currency).values_list('pk', flat=True)
-
     def split(self, converted_amount):
         """
-            Divide exchange on two parts completed part and remain
+            Divide exchange on two parts - completed part and remain part
         """
         remaining = self
 

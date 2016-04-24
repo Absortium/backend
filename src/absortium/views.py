@@ -7,7 +7,7 @@ from rest_framework.exceptions import ValidationError, PermissionDenied, NotFoun
 
 from absortium import constants
 from absortium.celery import tasks
-from absortium.mixins import CeleryMixin
+from absortium.mixins import CreateCeleryMixin
 from absortium.model.models import Offer, Account, Test
 from absortium.serializer.serializers import \
     UserSerializer, \
@@ -121,7 +121,7 @@ def init_account(pk_name="accounts_pk"):
     return wrapper
 
 
-class AccountViewSet(mixins.CreateModelMixin,
+class AccountViewSet(CreateCeleryMixin,
                      mixins.RetrieveModelMixin,
                      mixins.ListModelMixin,
                      viewsets.GenericViewSet):
@@ -134,18 +134,23 @@ class AccountViewSet(mixins.CreateModelMixin,
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(self, request, *args, **kwargs)
 
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+    def create_celery(self, request, *args, **kwargs):
+        context = {
+            "data": request.data,
+            "user_pk": request.user.pk,
+        }
+
+        return tasks.create_account.delay(**context)
 
     def perform_create(self, serializer):
         with transaction.atomic():
             serializer.save(owner=self.request.user)
 
 
-class DepositViewSet(mixins.RetrieveModelMixin,
+class DepositViewSet(CreateCeleryMixin,
+                     mixins.RetrieveModelMixin,
                      mixins.ListModelMixin,
-                     viewsets.GenericViewSet,
-                     CeleryMixin):
+                     viewsets.GenericViewSet):
     serializer_class = DepositSerializer
 
     def get_queryset(self):
@@ -169,7 +174,7 @@ class DepositViewSet(mixins.RetrieveModelMixin,
         return tasks.do_deposit.delay(**context)
 
 
-class WithdrawalViewSet(CeleryMixin,
+class WithdrawalViewSet(CreateCeleryMixin,
                         mixins.RetrieveModelMixin,
                         mixins.ListModelMixin,
                         viewsets.GenericViewSet):
@@ -196,7 +201,7 @@ class WithdrawalViewSet(CeleryMixin,
         return tasks.do_withdrawal.delay(**context)
 
 
-class ExchangeViewSet(CeleryMixin,
+class ExchangeViewSet(CreateCeleryMixin,
                       mixins.RetrieveModelMixin,
                       mixins.ListModelMixin,
                       viewsets.GenericViewSet):

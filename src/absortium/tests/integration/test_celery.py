@@ -45,8 +45,8 @@ class AccuracyTest(AbsoritumLiveTest):
     def init_accounts(self, contexts):
         for user, context in contexts.items():
             self.client.force_authenticate(user)
-            btc_account_pk, _ = self.create_account('btc')
-            eth_account_pk, _ = self.create_account('eth')
+            btc_account_pk, _ = self.get_account('btc')
+            eth_account_pk, _ = self.get_account('eth')
             context['btc_account_pk'] = btc_account_pk
             context['eth_account_pk'] = eth_account_pk
 

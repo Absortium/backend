@@ -1,8 +1,12 @@
 __author__ = 'andrew.shvv@gmail.com'
 
 from coinbase.wallet.client import Client
+from coinbase.wallet.error import NotFoundError
 from django.contrib.auth import settings
 
+from core.utils.logging import getPrettyLogger
+
+logger = getPrettyLogger(__name__)
 _client = None
 
 
@@ -33,9 +37,17 @@ def get_primary_account():
 
 
 class BitcoinClient():
-    def create_address(self):
-        client = get_coinbase_client()
-        response = client.create_address(account_id=settings.COINBASE_ACCOUNT_ID)
-        coinbase_data = response['data']
+    @property
+    def client(self):
+        return get_coinbase_client()
 
-        return coinbase_data['address']
+    def create_address(self):
+        try:
+            logger.debug(self.client)
+            logger.debug(self.client.create_address(account_id=settings.COINBASE_ACCOUNT_ID))
+            logger.debug("AFTER")
+            response = self.client.create_address(account_id=settings.COINBASE_ACCOUNT_ID)
+            coinbase_data = response['data']
+            return coinbase_data['address']
+        except NotFoundError as e:
+            logger.debug(e)

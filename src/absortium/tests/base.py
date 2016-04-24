@@ -77,7 +77,8 @@ class AbsoritumLiveTest(APITransactionTestCase,
             time.sleep(0.2)
 
 
-@override_settings(CELERY_ALWAYS_EAGER=True)
+@override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
+                   CELERY_ALWAYS_EAGER=True)
 class AbsoritumUnitTest(APITestCase,
                         AbsortiumTestMixin,
                         CreateAccountMixin,
@@ -87,6 +88,11 @@ class AbsoritumUnitTest(APITestCase,
                         RouterMockMixin,
                         CoinbaseMockMixin):
     def setUp(self):
+        super().setUp()
+        self.mock_router()
+        self.mock_coinbase()
+
+        # WARNING: User creation should be after mocking the coinbase, because there is user signal which creates the accounts.
         User = get_user_model()
         user = User(username="primary")
         user.save()
@@ -95,16 +101,10 @@ class AbsoritumUnitTest(APITestCase,
         self.client = APIClient()
         self.client.force_authenticate(user)
 
-        self.mock_router()
-        self.mock_coinbase()
-
-        super().setUp()
-
     def tearDown(self):
-        super().tearDown()
-
         self.unmock_router()
         self.unmock_coinbase()
+        super().tearDown()
 
 
 import threading

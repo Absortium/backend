@@ -1,14 +1,17 @@
 """
-    In order to avoid cycle import problem we should separate models.py and signals.py
+    In order to avoid cycle import problem we should separate models and signals
 """
 
 __author__ = 'andrew.shvv@gmail.com'
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.db.utils import IntegrityError
 from django.dispatch.dispatcher import receiver
 
+from absortium import constants
+from absortium.celery import tasks
 from absortium.crossbarhttp import get_crossbar_client
 from absortium.model.models import Account, Exchange, Offer, Test
 from absortium.serializer.serializers import OfferSerializer
@@ -18,21 +21,26 @@ from core.utils.logging import getPrettyLogger
 logger = getPrettyLogger(__name__)
 
 
-# @receiver(post_save, sender=get_user_model(), dispatch_uid="user_post_save")
-# def user_post_save(sender, instance, *args, **kwargs):
-#     user = instance
-#
-#     for currency in [constants.BTC, constants.ETH]:
-#         account = Account(currency=currency)
-#         account.owner = user
-#         account.save()
+@receiver(post_save, sender=get_user_model(), dispatch_uid="user_post_save")
+def user_post_save(sender, instance, *args, **kwargs):
+    user = instance
+
+    for currency in constants.AVAILABLE_CURRENCIES.keys():
+        context = {
+            'data': {
+                'currency': currency
+            },
+            'user_pk': user.pk
+        }
+
+        tasks.create_account.delay(**context)
 
 
-@receiver(pre_save, sender=Account, dispatch_uid="account_pre_save")
-def account_pre_save(sender, instance, *args, **kwargs):
-    account = instance
-    client = get_client(currency=account.currency)
-    account.address = client.create_address()
+# @receiver(pre_save, sender=Account, dispatch_uid="account_pre_save")
+# def account_pre_save(sender, instance, *args, **kwargs):
+#     account = instance
+#     client = get_client(currency=account.currency)
+#     account.address = client.create_address()
 
 
 @receiver(post_delete, sender=Exchange, dispatch_uid="exchange_post_delete")

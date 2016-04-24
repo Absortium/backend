@@ -24,8 +24,8 @@ class OfferTest(AbsoritumUnitTest):
         return amount
 
     def test_calculation_accuracy(self, *args, **kwargs):
-        account_pk, _ = self.create_account('btc')
-        self.create_account("eth")
+        account_pk, _ = self.get_account('btc')
+        self.get_account("eth")
 
         n = 20
         amounts = [self.random_amount() for _ in range(0, n)]
@@ -45,8 +45,8 @@ class OfferTest(AbsoritumUnitTest):
         self.assertEqual(decimal.Decimal(offer['amount']), sum(amounts))
 
     def test_different_price(self, *args, **kwargs):
-        account_pk, _ = self.create_account('btc')
-        self.create_account("eth")
+        account_pk, _ = self.get_account('btc')
+        self.get_account("eth")
         self.create_deposit(account_pk, amount="999999.0")
 
         self.create_exchange(amount="1.0", price="1", status="INIT")

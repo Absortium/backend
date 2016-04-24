@@ -13,8 +13,8 @@ class ExchangeTest(AbsoritumUnitTest):
     def setUp(self):
         super().setUp()
 
-        self.primary_btc_account_pk, _ = self.create_account("btc")
-        self.primary_eth_account_pk, _ = self.create_account("eth")
+        self.primary_btc_account_pk, _ = self.get_account("btc")
+        self.primary_eth_account_pk, _ = self.get_account("eth")
 
         self.create_deposit(self.primary_btc_account_pk, amount="10.0")
 
@@ -28,8 +28,8 @@ class ExchangeTest(AbsoritumUnitTest):
         # Authenticate some another user
         self.client.force_authenticate(self.some_user)
 
-        self.some_eth_account_pk, _ = self.create_account("eth")
-        self.some_btc_account_pk, _ = self.create_account("btc")
+        self.some_eth_account_pk, _ = self.get_account("eth")
+        self.some_btc_account_pk, _ = self.get_account("btc")
 
         self.create_deposit(self.some_eth_account_pk, amount="20.0")
 
@@ -44,7 +44,7 @@ class ExchangeTest(AbsoritumUnitTest):
                                                                            exchange_pk=trash_exchange_pk)
 
         # Create an account and try to get uncreated exchange
-        account_pk, _ = self.create_account("btc")
+        account_pk, _ = self.get_account("btc")
         url = "/api/accounts/{account_pk}/exchanges/{exchange_pk}/".format(account_pk=account_pk,
                                                                            exchange_pk=trash_exchange_pk)
 
@@ -122,19 +122,19 @@ class ExchangeTest(AbsoritumUnitTest):
         self.check_account_amount(self.primary_btc_account_pk, amount="2.0")
         self.check_account_amount(self.primary_eth_account_pk, amount="16.0")
 
-    # def test_create_opposite_exchanges(self):
-    #     """
-    #         Create opposite exchanges on the same account
-    #     """
-    #     self.create_deposit(self.primary_eth_account_pk, amount="20.0")
-    #
-    #     self.create_exchange(price="2.0", amount="10.0", expected_exchange_status="PENDING")
-    #     self.check_account_amount(self.primary_btc_account_pk, amount="0.0")
-    #
-    #     self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", amount="20.0")
-    #
-    #     self.check_account_amount(self.primary_btc_account_pk, amount="10.0")
-    #     self.check_account_amount(self.primary_eth_account_pk, amount="20.0")
+    def test_create_opposite_exchanges(self):
+        """
+            Create opposite exchanges on the same account
+        """
+        self.create_deposit(self.primary_eth_account_pk, amount="20.0")
+
+        self.create_exchange(price="2.0", amount="10.0", status="INIT")
+        self.check_account_amount(self.primary_btc_account_pk, amount="0.0")
+
+        self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", amount="20.0")
+
+        self.check_account_amount(self.primary_btc_account_pk, amount="10.0")
+        self.check_account_amount(self.primary_eth_account_pk, amount="20.0")
 
     def test_ordering(self):
         pass

@@ -14,7 +14,7 @@ from core.utils.logging import getPrettyLogger
 logger = getPrettyLogger(__name__)
 
 
-class CeleryMixin():
+class CreateCeleryMixin():
     @detail_route()
     def check(self, request, *args, **kwargs):
 
@@ -53,14 +53,12 @@ class CeleryMixin():
         async_result = self.create_celery(request, *args, **kwargs)
 
         try:
-            obj = async_result.get(timeout=1.0, propagate=True)
-            logger.debug(obj)
+            obj = async_result.get(timeout=0.5, propagate=True)
             return Response(obj, status=HTTP_201_CREATED)
         except TimeoutError:
             data = {
                 "id": async_result.id
             }
-            logger.debug(data)
             return Response(data, status=HTTP_204_NO_CONTENT)
 
     def create_celery(self, request, *args, **kwargs):

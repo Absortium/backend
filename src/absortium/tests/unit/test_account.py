@@ -10,30 +10,26 @@ from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
+from absortium import constants
+
 
 class AccountTest(AbsoritumUnitTest):
     def test_creation_mixin(self):
-        account_pk, _ = self.create_account('btc')
-
         accounts = Account.objects.all()
-        self.assertEqual(len(accounts), 1)
-
+        self.assertEqual(len(accounts), len(constants.AVAILABLE_CURRENCIES.keys()))
         account = accounts[0]
         self.assertEqual(account.owner, self.user)
 
     def test_serialization(self, *args, **kwargs):
-        account_pk, _ = self.create_account('btc')
+        account_pk, account = self.get_account('btc')
         self.create_deposit(account_pk=account_pk)
-
-        response = self.client.get('/api/accounts/', format='json')
-        account = self.get_first(response)
 
         # Check that 'address' and 'btc' serialized properly
         self.assertEqual(account['address'], address)
         self.assertEqual(account['currency'], 'btc')
 
     def test_permissions(self, *args, **kwargs):
-        account_pk, _ = self.create_account('btc')
+        account_pk, _ = self.get_account('btc')
 
         # User trying to delete account
         response = self.client.delete('/api/accounts/{pk}/'.format(pk=account_pk), format='json')
@@ -46,11 +42,6 @@ class AccountTest(AbsoritumUnitTest):
 
         # Authenticate hacker
         self.client.force_authenticate(hacker)
-
-        # List all his accounts
-        response = self.client.get('/api/accounts/', format='json')
-        self.assertEqual(response.status_code, HTTP_200_OK)
-        self.assertEqual(response.json()['count'], 0)
 
         # Hacker trying access info of normal user account
         response = self.client.get('/api/accounts/{pk}/'.format(pk=account_pk), format='json')
