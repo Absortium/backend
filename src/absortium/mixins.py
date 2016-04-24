@@ -2,11 +2,16 @@ __author__ = 'andrew.shvv@gmail.com'
 
 import uuid
 
+from celery.exceptions import TimeoutError
 from celery.result import AsyncResult
 from rest_framework.decorators import detail_route
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK, HTTP_204_NO_CONTENT, HTTP_201_CREATED
+
+from core.utils.logging import getPrettyLogger
+
+logger = getPrettyLogger(__name__)
 
 
 class CeleryMixin():
@@ -49,6 +54,7 @@ class CeleryMixin():
 
         try:
             obj = async_result.get(timeout=1.0, propagate=True)
+            logger.debug(obj)
             return Response(obj, status=HTTP_201_CREATED)
         except TimeoutError:
             data = {
