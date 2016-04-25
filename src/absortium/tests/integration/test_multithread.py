@@ -214,9 +214,9 @@ class AccuracyTest(AbsoritumLiveTest):
             random_deposits = self.max_amounts(n)
 
             for deposit_amount in random_deposits:
-                self.create_deposit(context['btc_account_pk'], user=user, amount=deposit_amount,
+                self.threaded_create_deposit(context['btc_account_pk'], user=user, amount=deposit_amount,
                                     with_checks=False)
-                self.create_deposit(context['eth_account_pk'], user=user, amount=deposit_amount,
+                self.threaded_create_deposit(context['eth_account_pk'], user=user, amount=deposit_amount,
                                     with_checks=False)
 
             context['btc']['deposits'] += random_deposits
@@ -287,7 +287,13 @@ class AccuracyTest(AbsoritumLiveTest):
         n = 3
 
         contexts = self.init_users(users_count)
+        # We should wait until all users account are created (they are creating in celery)
+        self.wait_celery()
+
         contexts = self.init_accounts(contexts)
+        # Wait until we deposit money
+        self.wait_celery()
+        
         contexts = self.init_deposits(contexts, n)
 
         contexts = self.bombarding_withdrawal_deposit(contexts, n)
@@ -300,4 +306,4 @@ class AccuracyTest(AbsoritumLiveTest):
             self.check_accuracy(contexts)
         except AssertionError:
             logger.debug("AssertionError was raised!!!")
-            input("Press Enter to continue...")
+        input("Press Enter to continue...")

@@ -13,9 +13,8 @@ from django.dispatch.dispatcher import receiver
 from absortium import constants
 from absortium.celery import tasks
 from absortium.crossbarhttp import get_crossbar_client
-from absortium.model.models import Account, Exchange, Offer, Test
+from absortium.model.models import Exchange, Offer, Test
 from absortium.serializer.serializers import OfferSerializer
-from absortium.wallet.base import get_client
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)
@@ -43,44 +42,16 @@ def user_post_save(sender, instance, *args, **kwargs):
 #     account.address = client.create_address()
 
 
-@receiver(post_delete, sender=Exchange, dispatch_uid="exchange_post_delete")
-def exchange_post_delete(sender, instance, *args, **kwargs):
-    """
-        Delete or change offer object if exchange object is removed.
-    """
-
-    with transaction.atomic():
-        exchange = instance
-        offer = Offer.objects.select_for_update().filter(price=exchange.price,
-                                                         primary_currency=exchange.from_currency,
-                                                         secondary_currency=exchange.to_currency).first()
-
-        if offer is None:
-            # TODO: CHANGE EXCEPTION
-            raise Exception('There is no offer with such price {}'.format(exchange.price))
-
-        # TODO: Potential place for the error
-        # Example: Due to inaccuracies in the calculation of the float number offer.amount - order.amount
-        # could be great than zero but actually there is no orders with such price anymore.
-        if offer.amount - exchange.amount < 0:
-            raise Exception('offer.amount - order.amount < 0')
-        elif offer.amount - exchange.amount == 0:
-            offer.delete()
-        else:
-            offer.amount -= exchange.amount
-
-        offer.save()
-
 
 @receiver(pre_save, sender=Exchange, dispatch_uid="exchange_pre_save")
 def exchange_pre_save(sender, instance, *args, **kwargs):
     """
         Create or change offer object if exchange object is received and saved.
     """
+    new_exchange = instance
 
     def try_to_create_offer():
         with transaction.atomic():
-            new_exchange = instance
             try:
                 offer = Offer.objects.select_for_update().get(price=new_exchange.price,
                                                               primary_currency=new_exchange.from_currency,
@@ -102,20 +73,45 @@ def exchange_pre_save(sender, instance, *args, **kwargs):
                                   primary_currency=new_exchange.from_currency,
                                   secondary_currency=new_exchange.to_currency,
                                   amount=new_exchange.amount)
+                    print("CREATE OFFER price:{}".format(offer.price))
                 else:
+                    print("UPDATE OFFER price:{}".format(offer.price))
                     offer.amount += new_exchange.amount
             offer.save()
 
-    try:
-        try_to_create_offer()
-    except IntegrityError:
-        """
-            Multiple offer with the same price might be created if celery tasks simultaneously trying to create
-            not existing offer object with similar price. If this happen, duplication integrity error will be thrown,
-            this means that celery task tried to find offer, didn't find it, and then create new one, but another celery
-            task do the same thing.
-        """
-        try_to_create_offer()
+    if new_exchange.status == constants.EXCHANGE_INIT:
+        try:
+            try_to_create_offer()
+        except IntegrityError:
+            """
+                Multiple offer with the same price might be created if celery tasks simultaneously trying to create
+                not existing offer object with similar price. If this happen, duplication integrity error will be thrown,
+                this means that celery task tried to find offer, didn't find it, and then create new one, but another celery
+                task do the same thing.
+            """
+            try_to_create_offer()
+
+    elif new_exchange.status == constants.EXCHANGE_COMPLETED:
+        with transaction.atomic():
+            offer = Offer.objects.select_for_update().filter(price=new_exchange.price,
+                                                             primary_currency=new_exchange.from_currency,
+                                                             secondary_currency=new_exchange.to_currency).first()
+
+            if offer is None:
+                # TODO: CHANGE EXCEPTION
+                raise Exception('There is no offer with such price {}'.format(new_exchange.price))
+
+            # TODO: Potential place for the error
+            # Example: Due to inaccuracies in the calculation of the float number offer.amount - order.amount
+            # could be great than zero but actually there is no orders with such price anymore.
+            if offer.amount - new_exchange.amount < 0:
+                raise Exception('offer.amount - order.amount < 0')
+            elif offer.amount - new_exchange.amount == 0:
+                offer.delete()
+            else:
+                print("SUB OFFER price:{}".format(offer.price))
+                offer.amount -= new_exchange.amount
+                offer.save()
 
 
 @receiver(post_save, sender=Offer, dispatch_uid="offer_post_save")

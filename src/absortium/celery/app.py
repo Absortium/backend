@@ -18,8 +18,14 @@ app = Celery('absortium',
              backend=settings.CELERY_RESULT_BACKEND)
 
 if settings.CELERY_TEST:
+    """
+        Because celery run in another process we should manually mock
+        what we need when we test celery in integrity tests.
+    """
     from absortium.tests.mixins.celery import CeleryMockMixin
+    from absortium.tests.mixins.coinbase import CoinbaseMockMixin
     CeleryMockMixin().mock_celery()
+    CoinbaseMockMixin().mock_coinbase()
 
 # Using a string here means the worker will not have to
 # pickle the object when using Windows.

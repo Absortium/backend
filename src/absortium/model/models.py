@@ -127,6 +127,7 @@ class Exchange(models.Model):
 
             # Subtract money from account because it is locked by exchange
             self.from_account.amount -= self.amount
+            self.save()
         else:
             raise ValidationError("Not enough money for exchange creation")
 
@@ -201,6 +202,8 @@ class Exchange(models.Model):
     def __ne__(self, value):
         return self.amount != value
 
+class ExchangesHistory(Exchange):
+    pass
 
 class Deposit(models.Model):
     created = models.DateTimeField(auto_now_add=True)
