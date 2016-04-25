@@ -4,7 +4,6 @@ from celery import shared_task
 from django.db import transaction
 from django.db.utils import OperationalError, IntegrityError
 
-from absortium.wallet.base import get_client
 from absortium import constants
 from absortium.celery.base import get_base_class
 from absortium.exceptions import AlreadyExistError
@@ -15,6 +14,7 @@ from absortium.serializer.serializers import \
     WithdrawSerializer, \
     DepositSerializer, \
     AccountSerializer
+from absortium.wallet.base import get_client
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)
@@ -76,22 +76,27 @@ def do_exchange(self, *args, **kwargs):
             history = []
             for opposite in opposites(exchange):
                 with lockexchange(opposite):
-                    if exchange >= opposite:
+                    if exchange > opposite:
                         (completed, exchange) = exchange - opposite
                         history.append(completed)
-                    else:
+
+                    elif exchange < opposite:
+                        """
+                            In this case exchange will be in the EXCHANGE_COMPLETED status, so just break loop and
+                            than add exchange to the history
+                        """
                         (_, opposite) = opposite - exchange
-                        history.append(exchange)
+                        break
 
-                if exchange.status == constants.EXCHANGE_COMPLETED:
-                    return history
+                    else:
+                        """
+                            In this case exchange will be in the EXCHANGE_COMPLETED status, so just break loop and
+                            than add exchange to the history
+                        """
+                        (_, exchange) = exchange - opposite
+                        break
 
-            if exchange.status == constants.EXCHANGE_INIT:
-                return [exchange]
-
-            elif exchange.status == constants.EXCHANGE_PENDING:
-                history += [exchange]
-                return history
+            return history + [exchange]
 
         with transaction.atomic():
             with lockexchange(exchange):

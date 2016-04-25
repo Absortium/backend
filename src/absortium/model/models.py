@@ -1,5 +1,7 @@
 __author__ = 'andrew.shvv@gmail.com'
 
+import decimal
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
@@ -35,7 +37,7 @@ class Offer(models.Model):
     primary_currency = models.IntegerField()
     secondary_currency = models.IntegerField()
     amount = models.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
-                                 decimal_places=constants.DECIMAL_PLACES)
+                                 decimal_places=constants.DECIMAL_PLACES, default=decimal.Decimal("0.0"))
     price = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                 decimal_places=constants.DECIMAL_PLACES)
 
@@ -141,40 +143,41 @@ class Exchange(models.Model):
         """
             Divide exchange on two parts - completed part and remain part
         """
-        remaining = self
 
-        if remaining.amount == converted_amount:
-            remaining.status = constants.EXCHANGE_COMPLETED
-            completed = remaining
+        if self.amount == converted_amount:
+            self.status = constants.EXCHANGE_COMPLETED
+            completed = self
         else:
             from copy import deepcopy
-            completed = deepcopy(remaining)
+            completed = deepcopy(self)
             completed.amount = converted_amount
             completed.pk = None
             completed.status = constants.EXCHANGE_COMPLETED
             completed.save()
 
-            remaining.amount -= converted_amount
+            self.amount -= converted_amount
 
-        return completed, remaining
+        return completed, self
 
     def __sub__(self, obj):
         if isinstance(obj, Exchange):
             opposite = obj
+            exchange = self
 
-            self.status = constants.EXCHANGE_PENDING
+            exchange.status = constants.EXCHANGE_PENDING
             opposite.status = constants.EXCHANGE_COMPLETED
 
             # convert to currency of this exchange
             converted_amount = opposite.converted_amount()
+            amount = opposite.amount
 
-            self.to_account.amount += opposite.amount  # ETH
+            exchange.to_account.amount += amount  # ETH
             opposite.to_account.amount += converted_amount  # BTC
 
             # save fraction of exchange in order to store history of exchanges
-            (completed, remaining) = self.split(converted_amount)
+            (completed, exchange) = exchange.split(converted_amount)
 
-            return completed, remaining
+            return completed, exchange
         else:
             return NotImplemented
 
@@ -202,8 +205,6 @@ class Exchange(models.Model):
     def __ne__(self, value):
         return self.amount != value
 
-class ExchangesHistory(Exchange):
-    pass
 
 class Deposit(models.Model):
     created = models.DateTimeField(auto_now_add=True)

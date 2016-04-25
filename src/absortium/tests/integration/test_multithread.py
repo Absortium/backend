@@ -6,7 +6,7 @@ from string import ascii_letters
 from django.contrib.auth import get_user_model
 
 from absortium import constants
-from absortium.model.models import Account
+from absortium.model.models import Account, Offer
 from absortium.tests.base import AbsoritumLiveTest
 from core.utils.logging import getLogger
 
@@ -175,7 +175,7 @@ class AccuracyTest(AbsoritumLiveTest):
 
         return contexts
 
-    def check_accuracy(self, contexts):
+    def check_accounts(self, contexts):
         for user, context in contexts.items():
             btc_deposits = context['btc']['deposits']
             btc_withdrawals = context['btc']['withdrawals']
@@ -203,6 +203,10 @@ class AccuracyTest(AbsoritumLiveTest):
 
             self.assertEqual(eth_real_amount, eth_account_amount)
             self.assertEqual(btc_real_amount, btc_account_amount)
+
+    def check_offers(self):
+        offers = Offer.objects.all()
+        self.assertEqual(len(offers), 0)
 
     def init_deposits(self, contexts, n):
         """
@@ -284,6 +288,7 @@ class AccuracyTest(AbsoritumLiveTest):
             In order to execute this test celery worker should use django test db, for that you shoukd set
             the CELERY_TEST=True environment variable in the worker(celery) service. See docker-compose.yml
         """
+
         global tm
         tm = ThreadManager()
 
@@ -295,10 +300,9 @@ class AccuracyTest(AbsoritumLiveTest):
         self.wait_celery()
 
         contexts = self.init_accounts(contexts)
-        # Wait until we deposit money
-        self.wait_celery()
 
         contexts = self.init_deposits(contexts, n)
+        self.wait_celery()
 
         contexts = self.bombarding_withdrawal_deposit(contexts, n)
         tm.start()
@@ -307,7 +311,8 @@ class AccuracyTest(AbsoritumLiveTest):
         self.wait_celery()
 
         try:
-            self.check_accuracy(contexts)
+            self.check_accounts(contexts)
+            self.check_offers()
         except AssertionError:
             logger.debug("AssertionError was raised!!!")
-        input("Press Enter to continue...")
+            input("Press Enter to continue...")

@@ -40,9 +40,15 @@ class lockexchange:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not exc_val:
+
+            """
+                Account should be always updated even if exchange in init state, because we subtract exchange amount from account.
+            """
             self.exchange.from_account.update(amount=self.exchange.from_account.amount)
             self.exchange.to_account.update(amount=self.exchange.to_account.amount)
-            self.exchange.save()
+
+            if self.exchange.status != constants.EXCHANGE_INIT:
+                self.exchange.save()
 
 
 class opposites:
