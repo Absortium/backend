@@ -59,7 +59,7 @@ def exchange_pre_save(sender, instance, *args, **kwargs):
             except Offer.DoesNotExist:
                 offer = None
 
-            # if exchange is being updated, then we must remove subtract previous amount and add new one
+            # if exchange is being updated, then we must subtract previous amount and add new one
             if new_exchange.id:
                 # if exchange is updating than offer should exist
                 old_exchange = Exchange.objects.select_for_update().get(pk=instance.id)
@@ -73,13 +73,11 @@ def exchange_pre_save(sender, instance, *args, **kwargs):
                                   primary_currency=new_exchange.from_currency,
                                   secondary_currency=new_exchange.to_currency,
                                   amount=new_exchange.amount)
-                    print("CREATE OFFER price:{}".format(offer.price))
                 else:
-                    print("UPDATE OFFER price:{}".format(offer.price))
                     offer.amount += new_exchange.amount
             offer.save()
 
-    if new_exchange.status == constants.EXCHANGE_INIT:
+    if new_exchange.status == constants.EXCHANGE_INIT or new_exchange.status == constants.EXCHANGE_PENDING:
         try:
             try_to_create_offer()
         except IntegrityError:
@@ -109,7 +107,6 @@ def exchange_pre_save(sender, instance, *args, **kwargs):
             elif offer.amount - new_exchange.amount == 0:
                 offer.delete()
             else:
-                print("SUB OFFER price:{}".format(offer.price))
                 offer.amount -= new_exchange.amount
                 offer.save()
 

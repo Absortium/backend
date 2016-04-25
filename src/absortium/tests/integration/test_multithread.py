@@ -215,12 +215,16 @@ class AccuracyTest(AbsoritumLiveTest):
 
             for deposit_amount in random_deposits:
                 self.threaded_create_deposit(context['btc_account_pk'], user=user, amount=deposit_amount,
-                                    with_checks=False)
+                                             with_checks=False)
                 self.threaded_create_deposit(context['eth_account_pk'], user=user, amount=deposit_amount,
-                                    with_checks=False)
+                                             with_checks=False)
+                self.threaded_create_deposit(context['btc_account_pk'], user=user, amount=deposit_amount,
+                                             with_checks=False)
+                self.threaded_create_deposit(context['eth_account_pk'], user=user, amount=deposit_amount,
+                                             with_checks=False)
 
-            context['btc']['deposits'] += random_deposits
-            context['eth']['deposits'] += random_deposits
+            context['btc']['deposits'] += 2 * random_deposits
+            context['eth']['deposits'] += 2 * random_deposits
             contexts[user] = context
         return contexts
 
@@ -293,7 +297,7 @@ class AccuracyTest(AbsoritumLiveTest):
         contexts = self.init_accounts(contexts)
         # Wait until we deposit money
         self.wait_celery()
-        
+
         contexts = self.init_deposits(contexts, n)
 
         contexts = self.bombarding_withdrawal_deposit(contexts, n)
