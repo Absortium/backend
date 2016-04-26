@@ -1,7 +1,5 @@
 __author__ = 'andrew.shvv@gmail.com'
 
-import decimal
-
 from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 from absortium.model.models import Withdrawal
@@ -26,8 +24,6 @@ class CreateWithdrawalMixin():
         url = '/api/accounts/{account_pk}/withdrawals/'.format(account_pk=account['pk'])
         response = self.client.post(url, data=data, format='json')
         self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_204_NO_CONTENT])
-
-        account['amount'] -= decimal.Decimal(amount)
 
         if with_checks:
             withdrawal = response.json()

@@ -5,13 +5,13 @@ __author__ = 'andrew.shvv@gmail.com'
 from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 from absortium.model.models import Deposit
-from core.utils.logging import getLogger
+from core.utils.logging import getPrettyLogger
 
-logger = getLogger(__name__)
+logger = getPrettyLogger(__name__)
 
 
 class CreateDepositMixin():
-    def make_deposit(self, account, amount="0.00001", with_checks=True, user=None, status="COMPLETED"):
+    def make_deposit(self, account, amount="0.00001", with_checks=True, user=None, debug=False):
         data = {
             'amount': amount
         }
@@ -24,9 +24,11 @@ class CreateDepositMixin():
         # Create deposit
         url = '/api/accounts/{account_pk}/deposits/'.format(account_pk=account['pk'])
         response = self.client.post(url, data=data, format='json')
+
         self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_204_NO_CONTENT])
 
-        account['amount'] += decimal.Decimal(amount)
+        if debug:
+            logger.info(response.content)
 
         if with_checks:
             deposit = response.json()
