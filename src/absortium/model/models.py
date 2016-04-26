@@ -34,8 +34,8 @@ class Offer(models.Model):
     price - represent the price for the 1 amount of primary currency represented in secondary currency.
     """
 
-    primary_currency = models.IntegerField()
-    secondary_currency = models.IntegerField()
+    from_currency = models.IntegerField()
+    to_currency = models.IntegerField()
     amount = models.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
                                  decimal_places=constants.DECIMAL_PLACES, default=decimal.Decimal("0.0"))
     price = models.DecimalField(max_digits=constants.MAX_DIGITS,
@@ -43,7 +43,7 @@ class Offer(models.Model):
 
     class Meta:
         ordering = ('price',)
-        unique_together = ('primary_currency', 'secondary_currency', 'price')
+        unique_together = ('to_currency', 'from_currency', 'price')
 
 
 class Account(models.Model):

@@ -12,6 +12,7 @@ from absortium.tests.mixins.account import CreateAccountMixin
 from absortium.tests.mixins.coinbase import CoinbaseMockMixin
 from absortium.tests.mixins.deposit import CreateDepositMixin
 from absortium.tests.mixins.exchange import CreateExchangeMixin
+from absortium.tests.mixins.offer import CheckOfferMixin
 from absortium.tests.mixins.router import RouterMockMixin
 from absortium.tests.mixins.withdrawal import CreateWithdrawalMixin
 from core.utils.logging import getLogger
@@ -37,7 +38,8 @@ class AbsoritumLiveTest(APITransactionTestCase,
                         CreateDepositMixin,
                         CreateExchangeMixin,
                         CoinbaseMockMixin,
-                        CreateWithdrawalMixin):
+                        CreateWithdrawalMixin,
+                        CheckOfferMixin):
     def setUp(self):
         super().setUp()
 
@@ -85,6 +87,7 @@ class AbsoritumUnitTest(APITestCase,
                         CreateDepositMixin,
                         CreateExchangeMixin,
                         CreateWithdrawalMixin,
+                        CheckOfferMixin,
                         RouterMockMixin,
                         CoinbaseMockMixin):
     def setUp(self):

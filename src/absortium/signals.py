@@ -48,15 +48,15 @@ def exchange_pre_save(sender, instance, *args, **kwargs):
         try:
             with transaction.atomic():
                 offer = Offer.objects.select_for_update().get(price=new_exchange.price,
-                                                              primary_currency=new_exchange.from_currency,
-                                                              secondary_currency=new_exchange.to_currency)
+                                                              from_currency=new_exchange.from_currency,
+                                                              to_currency=new_exchange.to_currency)
         except Offer.DoesNotExist:
             if should_exist:
                 raise
             else:
                 offer = Offer(price=new_exchange.price,
-                              primary_currency=new_exchange.from_currency,
-                              secondary_currency=new_exchange.to_currency)
+                              from_currency=new_exchange.from_currency,
+                              to_currency=new_exchange.to_currency)
 
         return offer
 
@@ -104,9 +104,8 @@ def offer_post_save(sender, instance, *args, **kwargs):
     serializer = OfferSerializer(offer)
 
     publishment = serializer.data
-    topic = "{primary_currency}_{secondary_currency}".format(**publishment)
-    del publishment['primary_currency']
-    del publishment['secondary_currency']
+    topic = "{from_currency}_{to_currency}".format(from_currency=offer.from_currency,
+                                                   to_currency=offer.to_currency)
 
     client = get_crossbar_client()
     client.publish(topic, **publishment)
@@ -121,9 +120,8 @@ def offer_post_delete(sender, instance, *args, **kwargs):
     serializer = OfferSerializer(offer)
 
     publishment = serializer.data
-    topic = "{primary_currency}_{secondary_currency}".format(**publishment)
-    del publishment['primary_currency']
-    del publishment['secondary_currency']
+    topic = "{from_currency}_{to_currency}".format(from_currency=offer.from_currency,
+                                                   to_currency=offer.to_currency)
 
     publishment['amount'] = 0
     client = get_crossbar_client()
@@ -133,7 +131,7 @@ def offer_post_delete(sender, instance, *args, **kwargs):
 @receiver(post_save, sender=Test, dispatch_uid="test_post_save")
 def test_post_save(sender, instance, created, *args, **kwargs):
     offer = Offer(price=1,
-                  primary_currency=0,
-                  secondary_currency=1,
+                  from_currency=0,
+                  to_currency=1,
                   amount=2)
     offer.save()

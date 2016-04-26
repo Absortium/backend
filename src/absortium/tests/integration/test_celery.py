@@ -45,22 +45,8 @@ class AccuracyTest(AbsoritumLiveTest):
     def init_accounts(self, contexts):
         for user, context in contexts.items():
             self.client.force_authenticate(user)
-            btc_account_pk, _ = self.get_account('btc')
-            eth_account_pk, _ = self.get_account('eth')
-            context['btc_account_pk'] = btc_account_pk
-            context['eth_account_pk'] = eth_account_pk
-
-            context['btc'] = {}
-            context['eth'] = {}
-
-            context['btc']['deposits'] = []
-            context['eth']['deposits'] = []
-
-            context['btc']['withdrawals'] = []
-            context['eth']['withdrawals'] = []
-
-            context['btc']['exchanges'] = []
-            context['eth']['exchanges'] = []
+            context['btc'] = self.get_account('btc')
+            context['eth'] = self.get_account('eth')
 
             contexts[user] = context
 
@@ -68,17 +54,6 @@ class AccuracyTest(AbsoritumLiveTest):
 
     def check_accuracy(self, contexts):
         for user, context in contexts.items():
-            btc_deposits = context['btc']['deposits']
-            btc_withdrawals = context['btc']['withdrawals']
-            btc_exchanges = context['btc']['exchanges']
-
-            eth_deposits = context['eth']['deposits']
-            eth_withdrawals = context['eth']['withdrawals']
-            eth_exchanges = context['eth']['exchanges']
-
-            btc_real_amount = sum(btc_deposits) - sum(btc_withdrawals) - sum(btc_exchanges)
-            eth_real_amount = sum(eth_deposits) - sum(eth_withdrawals) - sum(eth_exchanges)
-
             btc_account_amount = Account.objects.get(pk=context['btc_account_pk']).amount
             eth_account_amount = Account.objects.get(pk=context['eth_account_pk']).amount
 
@@ -88,12 +63,12 @@ class AccuracyTest(AbsoritumLiveTest):
                          u"Account amount : {} ETH\n"
                          u"Real amount: {} ETH\n".format(user.pk,
                                                          btc_account_amount,
-                                                         btc_real_amount,
+                                                         context['btc']['amount'],
                                                          eth_account_amount,
-                                                         eth_real_amount))
+                                                         context['eth']['amount']))
 
-            self.assertEqual(eth_real_amount, eth_account_amount)
-            self.assertEqual(btc_real_amount, btc_account_amount)
+            self.assertEqual(context['btc']['amount'], eth_account_amount)
+            self.assertEqual(context['eth']['amount'], btc_account_amount)
 
     def init_deposits(self, contexts, n):
         """
@@ -106,11 +81,11 @@ class AccuracyTest(AbsoritumLiveTest):
             random_deposits = self.max_amounts(n)
 
             for deposit_amount in random_deposits:
-                self.create_deposit(context['btc_account_pk'], amount=deposit_amount, with_checks=False)
-                self.create_deposit(context['eth_account_pk'], amount=deposit_amount, with_checks=False)
+                self.make_deposit(context['btc'], amount=deposit_amount, with_checks=False)
+                self.make_deposit(context['eth'], amount=deposit_amount, with_checks=False)
 
-            context['btc']['deposits'] += random_deposits
-            context['eth']['deposits'] += random_deposits
+            context['btc']['amount'] += random_deposits
+            context['eth']['amount'] += random_deposits
             contexts[user] = context
         return contexts
 
@@ -125,21 +100,21 @@ class AccuracyTest(AbsoritumLiveTest):
 
             amounts = list(zip(deposits, withdrawals))
             for (d, w) in amounts:
-                self.create_deposit(context['btc_account_pk'], amount=d, with_checks=False)
-                self.create_deposit(context['eth_account_pk'], amount=d, with_checks=False)
+                self.make_deposit(context['btc'], amount=d, with_checks=False)
+                self.make_deposit(context['eth'], amount=d, with_checks=False)
 
-                self.create_withdrawal(context['btc_account_pk'], amount=w, with_checks=False)
-                self.create_withdrawal(context['eth_account_pk'], amount=w, with_checks=False)
+                self.make_withdrawal(context['btc'], amount=w, with_checks=False)
+                self.make_withdrawal(context['eth'], amount=w, with_checks=False)
 
                 progress_counter += 1
 
             logger.debug("Bombarding: {}/{}".format(progress_counter, len(amounts) * len(contexts)))
 
-            context['btc']['deposits'] += deposits
-            context['btc']['withdrawals'] += withdrawals
+            context['btc']['amount'] += deposits
+            context['btc']['amount'] -= withdrawals
 
-            context['eth']['deposits'] += deposits
-            context['eth']['withdrawals'] += withdrawals
+            context['eth']['amount'] += deposits
+            context['eth']['amount'] -= withdrawals
 
             contexts[user] = context
 
@@ -157,11 +132,11 @@ class AccuracyTest(AbsoritumLiveTest):
 
             amounts = list(zip(deposits, withdrawals, exchanges))
             for (d, w, e) in amounts:
-                # self.create_deposit(context['btc_account_pk'], amount=d, with_checks=False)
-                # self.create_deposit(context['eth_account_pk'], amount=d, with_checks=False)
+                # self.make_deposit(context['btc_account_pk'], amount=d, with_checks=False)
+                # self.make_deposit(context['eth_account_pk'], amount=d, with_checks=False)
                 #
-                # self.create_withdrawal(context['btc_account_pk'], amount=w, with_checks=False)
-                # self.create_withdrawal(context['eth_account_pk'], amount=w, with_checks=False)
+                # self.make_withdrawal(context['btc_account_pk'], amount=w, with_checks=False)
+                # self.make_withdrawal(context['eth_account_pk'], amount=w, with_checks=False)
 
                 self.create_exchange(price="1.0", amount=e, with_checks=False)
                 self.create_exchange(price="1.0", amount=e, from_currency="eth", to_currency="btc", with_checks=False)

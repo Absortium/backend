@@ -1,11 +1,12 @@
+from absortium import constants
+
 __author__ = 'andrew.shvv@gmail.com'
 
 from django.contrib.auth.models import User, Group
 from django.db import transaction
 from rest_framework import generics, mixins, viewsets
-from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
+from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
 
-from absortium import constants
 from absortium.celery import tasks
 from absortium.mixins import CreateCeleryMixin
 from absortium.model.models import Offer, Account, Test
@@ -45,11 +46,11 @@ class OfferListView(mixins.ListModelMixin,
                     generics.GenericAPIView):
     """
     This view should return a list of all offers
-    by the given order type and currency pair value.
+    by the given currencies.
     """
 
     serializer_class = OfferSerializer
-
+    queryset = Offer.objects.all()
     permission_classes = ()
     authentication_classes = ()
 
@@ -57,44 +58,44 @@ class OfferListView(mixins.ListModelMixin,
         super().__init__(*args, **kwargs)
         self.exclude_fields = []
 
-    def get_queryset(self):
+    def filter_queryset(self, queryset):
         """
-            This method used for filter origin offers queryset by the given order type and
-            pair values that usually are coming from the url. See urls.py
+            This method used for filter origin offers queryset by the given from/to currency.
         """
-        filter = {}
-        self.exclude_fields = []
+        fields = {}
 
-        primary_currency = self.request.data['primary_currency']
-        if primary_currency:
-            primary_currency = primary_currency.lower()
+        to_currency = self.request.data['to_currency']
+        if to_currency:
+            to_currency = to_currency.lower()
 
-            if primary_currency in constants.AVAILABLE_CURRENCIES.keys():
-                primary_currency = constants.AVAILABLE_CURRENCIES[primary_currency]
-                filter.update(primary_currency=primary_currency)
-                self.exclude_fields.append('primary_currency')
+            if to_currency in constants.AVAILABLE_CURRENCIES.keys():
+                to_currency = constants.AVAILABLE_CURRENCIES[to_currency]
+                fields.update(to_currency=to_currency)
+            else:
+                raise ValidationError("Not available currency '{}'".format(to_currency))
         else:
-            raise ValidationError("Not available currency type '{}'".format(primary_currency))
+            raise ValidationError("You should specify 'to_currency' field'")
 
-        secondary_currency = self.request.data['secondary_currency']
-        if secondary_currency:
-            secondary_currency = secondary_currency.lower()
+        from_currency = self.request.data['from_currency']
+        if from_currency:
+            from_currency = from_currency.lower()
 
-            if secondary_currency in constants.AVAILABLE_CURRENCIES.keys():
-                secondary_currency = constants.AVAILABLE_CURRENCIES[secondary_currency]
-                filter.update(secondary_currency=secondary_currency)
-                self.exclude_fields.append('secondary_currency')
+            if from_currency in constants.AVAILABLE_CURRENCIES.keys():
+                from_currency = constants.AVAILABLE_CURRENCIES[from_currency]
+                fields.update(from_currency=from_currency)
+            else:
+                raise ValidationError("Not available currency '{}'".format(from_currency))
         else:
-            raise ValidationError("Not available currency '{}'".format(secondary_currency))
+            raise ValidationError("You should specify 'from_currency' field'")
 
-        return Offer.objects.filter(**filter).all()
+        return queryset.filter(**fields)
 
     def get_serializer(self, *args, **kwargs):
         """
             This method used setting 'exclude_fields' parameter
             that was constructed in the 'get_queryset' method
         """
-        return super().get_serializer(exclude_fields=self.exclude_fields, *args, **kwargs)
+        return super().get_serializer(*args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)

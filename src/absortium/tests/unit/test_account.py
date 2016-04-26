@@ -21,18 +21,17 @@ class AccountTest(AbsoritumUnitTest):
         self.assertEqual(account.owner, self.user)
 
     def test_serialization(self, *args, **kwargs):
-        account_pk, account = self.get_account('btc')
-        self.create_deposit(account_pk=account_pk)
+        account = self.get_account('btc')
+        self.make_deposit(account)
 
         # Check that 'address' and 'btc' serialized properly
         self.assertEqual(account['address'], address)
         self.assertEqual(account['currency'], 'btc')
 
     def test_permissions(self, *args, **kwargs):
-        account_pk, _ = self.get_account('btc')
-
+        account = self.get_account('btc')
         # User trying to delete account
-        response = self.client.delete('/api/accounts/{pk}/'.format(pk=account_pk), format='json')
+        response = self.client.delete('/api/accounts/{pk}/'.format(pk=account['pk']), format='json')
         self.assertEqual(response.status_code, HTTP_405_METHOD_NOT_ALLOWED)
 
         # Create hacker user
@@ -44,7 +43,7 @@ class AccountTest(AbsoritumUnitTest):
         self.client.force_authenticate(hacker)
 
         # Hacker trying access info of normal user account
-        response = self.client.get('/api/accounts/{pk}/'.format(pk=account_pk), format='json')
+        response = self.client.get('/api/accounts/{pk}/'.format(pk=account['pk']), format='json')
         self.assertEqual(response.status_code, HTTP_403_FORBIDDEN)
 
     def test_malformed(self):

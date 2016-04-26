@@ -43,8 +43,8 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
 
 
 class OfferSerializer(DynamicFieldsModelSerializer):
-    primary_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
-    secondary_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
+    from_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, write_only=True)
+    to_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, write_only=True)
 
     amount = serializers.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
                                       decimal_places=constants.DECIMAL_PLACES,
@@ -55,7 +55,7 @@ class OfferSerializer(DynamicFieldsModelSerializer):
 
     class Meta:
         model = Offer
-        fields = ('primary_currency', 'secondary_currency', 'amount', 'price')
+        fields = ('from_currency', 'to_currency', 'amount', 'price')
         read_only_fields = ('amount', 'price')
 
 
@@ -83,7 +83,10 @@ class AccountSerializer(serializers.ModelSerializer):
 
 
 class ExchangeSerializer(serializers.ModelSerializer):
-    status = MyChoiceField(choices=constants.AVAILABLE_TASK_STATUS, default=constants.EXCHANGE_INIT)
+    """
+        WARNING: STATUS FIELD ALWAYS SHOULD BE READ ONLY!
+    """
+    status = MyChoiceField(choices=constants.AVAILABLE_TASK_STATUS,default=constants.EXCHANGE_INIT, read_only=True)
     amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                       decimal_places=constants.DECIMAL_PLACES,
                                       min_value=constants.AMOUNT_MIN_VALUE)
@@ -114,7 +117,7 @@ class ExchangeSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         if attrs['from_currency'] == attrs['to_currency']:
-            raise ValidationError("Exchange on the same currency")
+            raise ValidationError("Exchange on the same currency not make sense")
 
         return super().validate(attrs)
 

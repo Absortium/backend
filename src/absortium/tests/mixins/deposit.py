@@ -1,3 +1,5 @@
+import decimal
+
 __author__ = 'andrew.shvv@gmail.com'
 
 from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
@@ -9,7 +11,7 @@ logger = getLogger(__name__)
 
 
 class CreateDepositMixin():
-    def create_deposit(self, account_pk, amount="0.00001", with_checks=True, user=None, status="COMPLETED"):
+    def make_deposit(self, account, amount="0.00001", with_checks=True, user=None, status="COMPLETED"):
         data = {
             'amount': amount
         }
@@ -20,9 +22,11 @@ class CreateDepositMixin():
             self.client.force_authenticate(user)
 
         # Create deposit
-        url = '/api/accounts/{account_pk}/deposits/'.format(account_pk=account_pk)
+        url = '/api/accounts/{account_pk}/deposits/'.format(account_pk=account['pk'])
         response = self.client.post(url, data=data, format='json')
         self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_204_NO_CONTENT])
+
+        account['amount'] += decimal.Decimal(amount)
 
         if with_checks:
             deposit = response.json()
@@ -34,6 +38,6 @@ class CreateDepositMixin():
                 self.fail("Deposit object wasn't found in db")
 
             # Check that deposit belongs to an account
-            self.assertEqual(obj.account.pk, account_pk)
+            self.assertEqual(obj.account.pk, account['pk'])
 
             return deposit['pk'], obj

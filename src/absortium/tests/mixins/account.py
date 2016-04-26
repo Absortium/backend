@@ -35,15 +35,16 @@ class CreateAccountMixin():
         accounts = response.json()['results']
         for account in accounts:
             if account['currency'] == currency:
-                return account['pk'], account
+                account['amount'] = decimal.Decimal(account['amount'])
+                return account
 
-    def check_account_amount(self, account_pk, amount, user=None):
+    def check_account_amount(self, account, amount, user=None):
         if user:
             # Authenticate normal user
             self.client.force_authenticate(user)
 
         # Create account
-        response = self.client.get('/api/accounts/{account_pk}/'.format(account_pk=account_pk), format='json')
+        response = self.client.get('/api/accounts/{account_pk}/'.format(account_pk=account['pk']), format='json')
         self.assertEqual(response.status_code, HTTP_200_OK)
 
         account = response.json()

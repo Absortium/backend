@@ -10,13 +10,16 @@ logger = getLogger(__name__)
 
 class CreateExchangeMixin():
     def create_exchange(self, amount="0.00001", from_currency="btc", to_currency="eth", price="0.001",
-                        status="COMPLETED", user=None, with_checks=True):
+                        status="completed", user=None, with_checks=True, debug=False, extra_data={}):
         data = {
             'to_currency': to_currency,
             'from_currency': from_currency,
             'amount': amount,
             'price': price
         }
+
+        for k, v in extra_data.items():
+            data[k] = v
 
         # Authenticate normal user
         if user:
@@ -25,6 +28,9 @@ class CreateExchangeMixin():
         # Create exchange
         url = '/api/exchanges/'.format()
         response = self.client.post(url, data=data, format='json')
+
+        if debug:
+            logger.debug(response.content)
 
         self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_204_NO_CONTENT])
 

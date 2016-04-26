@@ -11,9 +11,9 @@ logger = getLogger(__name__)
 
 class WithdrawalTest(AbsoritumUnitTest):
     def test_permissions(self, *args, **kwargs):
-        account_pk, _ = self.get_account('btc')
-        self.create_deposit(account_pk=account_pk)
-        withdrawal_pk, _ = self.create_withdrawal(account_pk=account_pk)
+        account = self.get_account('btc')
+        self.make_deposit(account)
+        withdrawal_pk, _ = self.make_withdrawal(account)
 
         # Create hacker user
         User = get_user_model()
@@ -24,7 +24,7 @@ class WithdrawalTest(AbsoritumUnitTest):
         self.client.force_authenticate(hacker)
 
         # Try to get withdrawals from another account
-        url = '/api/accounts/{account_pk}/withdrawals/'.format(account_pk=account_pk)
+        url = '/api/accounts/{account_pk}/withdrawals/'.format(account_pk=account['pk'])
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, HTTP_403_FORBIDDEN)
 
@@ -33,27 +33,27 @@ class WithdrawalTest(AbsoritumUnitTest):
         data = {
             'amount': '0.0111',
         }
-        url = '/api/accounts/{account_pk}/withdrawals/'.format(account_pk=account_pk)
+        url = '/api/accounts/{account_pk}/withdrawals/'.format(account_pk=account['pk'])
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, HTTP_403_FORBIDDEN)
 
         # Try to get withdrawal info from another account
-        url = '/api/accounts/{account_pk}/withdrawals/{withdrawal_pk}/'.format(account_pk=account_pk,
+        url = '/api/accounts/{account_pk}/withdrawals/{withdrawal_pk}/'.format(account_pk=account['pk'],
                                                                                withdrawal_pk=withdrawal_pk)
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, HTTP_403_FORBIDDEN)
 
         # Try to delete withdrawal from another account
         # TODO: this operation should be granted at all
-        url = '/api/accounts/{account_pk}/withdrawals/{withdrawal_pk}/'.format(account_pk=account_pk,
+        url = '/api/accounts/{account_pk}/withdrawals/{withdrawal_pk}/'.format(account_pk=account['pk'],
                                                                                withdrawal_pk=withdrawal_pk)
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_withdrawal_without_money(self):
-        account_pk, _ = self.get_account('btc')
+        account = self.get_account('btc')
         with self.assertRaises(AssertionError):
-            self.create_withdrawal(account_pk=account_pk)
+            self.make_withdrawal(account)
 
     def test_malformed(self, *args, **kwargs):
         trash_account_pk = "129381728763"
@@ -64,8 +64,8 @@ class WithdrawalTest(AbsoritumUnitTest):
                                                                                withdrawal_pk=trash_withdrawal_pk)
 
         # Create an account and try to get uncreated withdrawal
-        account_pk, _ = self.get_account('btc')
-        url = '/api/accounts/{account_pk}/withdrawals/{withdrawal_pk}/'.format(account_pk=account_pk,
+        account = self.get_account('btc')
+        url = '/api/accounts/{account_pk}/withdrawals/{withdrawal_pk}/'.format(account_pk=account['pk'],
                                                                                withdrawal_pk=trash_withdrawal_pk)
 
         response = self.client.get(url, format='json')
@@ -73,8 +73,8 @@ class WithdrawalTest(AbsoritumUnitTest):
 
         malformed_amount = "asdmnajsid"
         with self.assertRaises(AssertionError):
-            self.create_withdrawal(account_pk=account_pk, amount=malformed_amount)
+            self.make_withdrawal(account, amount=malformed_amount)
 
         malformed_amount = "-1"
         with self.assertRaises(AssertionError):
-            self.create_withdrawal(account_pk=account_pk, amount=malformed_amount)
+            self.make_withdrawal(account, amount=malformed_amount)

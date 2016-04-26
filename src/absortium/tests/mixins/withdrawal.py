@@ -1,4 +1,7 @@
 __author__ = 'andrew.shvv@gmail.com'
+
+import decimal
+
 from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 from absortium.model.models import Withdrawal
@@ -8,7 +11,7 @@ logger = getLogger(__name__)
 
 
 class CreateWithdrawalMixin():
-    def create_withdrawal(self, account_pk, amount="0.00001", user=None, with_checks=True):
+    def make_withdrawal(self, account, amount="0.00001", user=None, with_checks=True):
         data = {
             'amount': amount,
             'address': '1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX'
@@ -20,11 +23,13 @@ class CreateWithdrawalMixin():
             self.client.force_authenticate(user)
 
         # Create withdrawal
-        url = '/api/accounts/{account_pk}/withdrawals/'.format(account_pk=account_pk)
+        url = '/api/accounts/{account_pk}/withdrawals/'.format(account_pk=account['pk'])
         response = self.client.post(url, data=data, format='json')
+        self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_204_NO_CONTENT])
+
+        account['amount'] -= decimal.Decimal(amount)
 
         if with_checks:
-            self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_204_NO_CONTENT])
             withdrawal = response.json()
 
             # Check that withdrawal exist in db
@@ -34,6 +39,6 @@ class CreateWithdrawalMixin():
                 self.fail("Withdrawal object wasn't found in db")
 
             # Check that withdrawal belongs to an account
-            self.assertEqual(obj.account.pk, account_pk)
+            self.assertEqual(obj.account.pk, account['pk'])
 
             return withdrawal['pk'], obj

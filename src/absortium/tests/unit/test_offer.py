@@ -3,7 +3,7 @@ __author__ = 'andrew.shvv@gmail.com'
 import decimal
 import random
 
-from rest_framework.status import HTTP_200_OK
+from django.contrib.auth import get_user_model
 
 from absortium import constants
 from absortium.tests.base import AbsoritumUnitTest
@@ -24,47 +24,80 @@ class OfferTest(AbsoritumUnitTest):
         return amount
 
     def test_calculation_accuracy(self, *args, **kwargs):
-        account_pk, _ = self.get_account('btc')
-        self.get_account("eth")
-
+        account = self.get_account('btc')
         n = 20
         amounts = [self.random_amount() for _ in range(0, n)]
 
         for amount in amounts:
-            self.create_deposit(account_pk, amount=amount)
-            self.create_exchange(amount=str(amount), price="0.1", status="INIT")
+            self.make_deposit(account, amount=amount)
+            self.create_exchange(amount=str(amount), price="0.1", status="init")
 
-        data = {
-            'primary_currency': 'btc',
-            'secondary_currency': 'eth',
-        }
-
-        response = self.client.post('/api/offers/', data=data, format='json')
-        offer = self.get_first(response)
-
-        self.assertEqual(decimal.Decimal(offer['amount']), sum(amounts))
+        self.check_offer(amount=sum(amounts), price="0.1")
 
     def test_different_price(self, *args, **kwargs):
-        account_pk, _ = self.get_account('btc')
-        self.get_account("eth")
-        self.create_deposit(account_pk, amount="999999.0")
+        self.make_deposit(self.get_account('btc'), amount="999999.0")
 
-        self.create_exchange(amount="1.0", price="1", status="INIT")
-        self.create_exchange(amount="1.0", price="2", status="INIT")
+        self.create_exchange(amount="1.0", price="1", status="init")
+        self.create_exchange(amount="1.0", price="2", status="init")
 
-        data = {
-            'primary_currency': 'btc',
-            'secondary_currency': 'eth',
-        }
+        self.check_offer(amount="1.0", price="1.0")
+        self.check_offer(amount="1.0", price="2.0")
 
-        response = self.client.post('/api/offers/', data=data, format='json')
-        self.assertEqual(response.status_code, HTTP_200_OK)
+    def test_offer_deletion(self, *args, **kwargs):
+        self.make_deposit(self.get_account('btc'), amount="999999.0")
+        self.make_deposit(self.get_account('eth'), amount="999999.0")
+        self.create_exchange(amount="1.0", price="1.0", status="init")
+        self.check_offer(amount="1.0", price="1.0")
 
-        json = response.json()
-        results = json['results']
+        # Create some another user
+        User = get_user_model()
+        some_user = User(username="some_user")
+        some_user.save()
 
-        self.assertEqual(len(results), 2)
+        self.client.force_authenticate(some_user)
+        self.make_deposit(self.get_account('btc'), amount="999999.0")
+        self.make_deposit(self.get_account('eth'), amount="999999.0")
 
-    # TODO: Create test that checks incorrect primary, secondary currency
+        self.create_exchange(from_currency="eth", to_currency="btc", amount="1.0", price="3.0", status="init")
+        self.check_offer(from_currency="eth", to_currency="btc", amount="1.0", price="3.0")
+
+        self.create_exchange(from_currency="eth", to_currency="btc", amount="1.0", price="1.0", status="completed")
+        self.check_offer(amount="1.0", price="1.0", should_exist=False)
+
+    def test_offer_deletion_complex(self, *args, **kwargs):
+        self.make_deposit(self.get_account('btc'), amount="999999.0")
+        self.make_deposit(self.get_account('eth'), amount="999999.0")
+
+        self.create_exchange(amount="1.0", price="2.0", status="init")
+        self.create_exchange(amount="1.0", price="2.0", status="init")
+        self.create_exchange(amount="1.0", price="2.0", status="init")
+
+        self.check_offer(amount="3.0", price="2.0")
+
+        # Create some another user
+        User = get_user_model()
+        some_user = User(username="some_user")
+        some_user.save()
+
+        self.client.force_authenticate(some_user)
+        self.make_deposit(self.get_account('btc'), amount="999999.0")
+        self.make_deposit(self.get_account('eth'), amount="999999.0")
+
+        self.create_exchange(from_currency="eth", to_currency="btc", amount="2.0", price="0.5", status="completed")
+        self.create_exchange(from_currency="eth", to_currency="btc", amount="2.0", price="0.5", status="completed")
+        self.create_exchange(from_currency="eth", to_currency="btc", amount="1.0", price="0.5", status="completed")
+
+        self.check_offer(amount="0.5", price="2.0")
+
+        self.create_exchange(from_currency="eth", to_currency="btc", amount="1.0", price="0.5", status="completed")
+
+        self.check_offer(amount="0.5", price="2.0", should_exist=False)
+
     def test_malformed(self):
-        pass
+        malformed_from_currency = "asdasd907867t67g"
+        with self.assertRaises(AssertionError):
+            self.check_offer(from_currency=malformed_from_currency, amount="1.0", price="2.0")
+
+        malformed_to_currency = "asdasd907867t67g"
+        with self.assertRaises(AssertionError):
+            self.check_offer(to_currency=malformed_to_currency, amount="1.0", price="2.0")
