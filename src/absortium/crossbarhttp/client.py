@@ -229,5 +229,3 @@ def get_crossbar_client(*args, **kwargs):
 def set_crossbar_client(client):
     global _client
     _client = client
-
-
