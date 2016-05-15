@@ -53,7 +53,7 @@ class ClientSignatureError(ClientBaseException):
 
 class ClientCallRuntimeError(ClientBaseException):
     """
-    Exception thrown when a call generated an exception
+    Exception thrown when a exec generated an exception
     """
     pass
 
@@ -188,7 +188,7 @@ class Client(object):
                 print("crossbarhttp: Signature Params: " + params)
             url += "?" + params
 
-        # TODO: I can't figure out what this is.  Guessing it is a number you increment on every call
+        # TODO: I can't figure out what this is.  Guessing it is a number you increment on every exec
         self.sequence += 1
 
         try:

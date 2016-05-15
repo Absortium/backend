@@ -1,7 +1,7 @@
 __author__ = 'andrew.shvv@gmail.com'
 
 from django.contrib.auth import get_user_model
-from rest_framework.status import HTTP_200_OK, HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN, HTTP_405_METHOD_NOT_ALLOWED
+from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN, HTTP_405_METHOD_NOT_ALLOWED
 
 from absortium.model.models import Account
 from absortium.tests.base import AbsoritumUnitTest

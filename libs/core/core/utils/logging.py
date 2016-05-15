@@ -56,6 +56,9 @@ def getPrettyLogger(name, level=logging.DEBUG):
         logger.setLevel(level)
         return wrap_logger(logger)
 
+    else:
+        return getLogger(name, level)
+
 
 def getLogger(name="", level=logging.DEBUG):
     # create logger

@@ -11,7 +11,7 @@ logger = getPrettyLogger(__name__)
 
 
 class CreateDepositMixin():
-    def make_deposit(self, account, amount="0.00001", with_checks=True, user=None, debug=False):
+    def make_deposit(self, account, amount="99999", with_checks=True, user=None, debug=False):
         data = {
             'amount': amount
         }

@@ -13,7 +13,7 @@ setup(
     version='0.1',
     packages=[
         'core',
-        'core.db'
+        'core.utils',
     ],
     include_package_data=True,
     description='Deluge Core module',
@@ -22,8 +22,6 @@ setup(
     author='Andrey Samokhvalov',
     author_email='andrew.shvv@gmail.com',
     install_requires=[
-        'asyncio',
-        'aiohttp',
         'pp-ez'
     ],
     classifiers=[

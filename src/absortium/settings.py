@@ -42,20 +42,6 @@ COINBASE_ACCOUNT_ID = '2bbf394c-193b-5b2a-9155-3b4732659ede'
 CELERY_BROKER = 'amqp://guest@docker.celery.broker//'
 CELERY_RESULT_BACKEND = 'redis://docker.celery.backend'
 
-# SOCIAL_AUTH_PIPELINE = (
-#     'users.social_pipeline.auto_logout',  # custom action
-#     'social.pipeline.social_auth.social_details',
-#     'social.pipeline.social_auth.social_uid',
-#     'social.pipeline.social_auth.auth_allowed',
-#     'social.pipeline.social_auth.social_user',
-#     'social.pipeline.user.get_username',
-#     'social.pipeline.user.create_user',
-#     'social.pipeline.social_auth.associate_user',
-#     'social.pipeline.social_auth.load_extra_data',
-#     'social.pipeline.user.user_details',
-#     'users.social_pipeline.save_avatar',  # custom action
-# )
-
 ROUTER_URL = "http://docker.router:8080/publish"
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -98,17 +84,6 @@ REST_FRAMEWORK = {
     )
 }
 
-MIDDLEWARE_CLASSES = [
-    # 'django.middleware.security.SecurityMiddleware',
-    # 'django.contrib.sessions.middleware.SessionMiddleware',
-    # 'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',
-    # 'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # 'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
-    # 'django.contrib.messages.middleware.MessageMiddleware',
-    # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
-
 ROOT_URLCONF = 'absortium.urls'
 
 JWT_AUTH = {
@@ -135,68 +110,6 @@ DATABASES = {
 }
 
 SILENCED_SYSTEM_CHECKS = ["models.W001"]
-
-# Password validation
-# # https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators
-#
-# AUTH_PASSWORD_VALIDATORS = [
-#     {
-#         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-#     },
-#     {
-#         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-#     },
-#     {
-#         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-#     },
-#     {
-#         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-#     },
-# ]
-
-# CELERY_HIJACK_ROOT_LOGGER = False
-#
-# LOGGING = {
-#     'version': 1,
-#     'disable_existing_loggers': True,
-#     'handlers': {
-#         'console': {
-#             'level': 'DEBUG',
-#             'class': 'logging.StreamHandler',
-#             'formatter': 'verbose'
-#         },
-#     },
-#     'formatters': {
-#         'verbose': {
-#             'format': '%(asctime)s %(levelname)s module=%(module)s, '
-#                       'process_id=%(process)d, %(message)s'
-#         }
-#     },
-#     'loggers': {
-#         # 'absortium': {
-#         #     'handlers': ['console'],
-#         #     'level': 'INFO',
-#         #     'propagate': False #this will do the trick
-#         # },
-#         'celery': {
-#             'handlers': ["console"],
-#             'level': 'INFO',
-#             'propagate': True
-#         },
-#         'celery.task': {
-#             'handlers': ["console"],
-#             'level': 'DEBUG',
-#             'propagate': False
-#         },
-#     }
-# }
-#
-# from logging.config import dictConfig
-#
-# dictConfig(LOGGING)
-
-# Internationalization
-# https://docs.djangoproject.com/en/1.9/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
 

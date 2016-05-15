@@ -3,7 +3,6 @@ __author__ = 'andrew.shvv@gmail.com'
 import decimal
 
 from django.conf import settings
-from django.contrib.auth.models import User
 from django.db import models
 from rest_framework.exceptions import ValidationError
 
@@ -11,10 +10,6 @@ from absortium import constants
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
-
-
-class AbsortiumUser(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
 
 
 class Offer(models.Model):
@@ -63,7 +58,7 @@ class Account(models.Model):
         unique_together = ('currency', 'owner')
 
     def update(self, **kwargs):
-        # update() is converted directly to an SQL statement; it doesn't call save() on the model
+        # update() is converted directly to an SQL statement; it doesn't exec save() on the model
         # instances, and so the pre_save and post_save signals aren't emitted.
         Account.objects.filter(pk=self.pk).update(**kwargs)
 

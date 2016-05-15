@@ -10,7 +10,7 @@ logger = getLogger(__name__)
 class RouterMockMixin():
     """
         RouterMockMixin substitute original crossbarhttp client and save all publishments in local variable,
-        after that you can check is publishment was made and is publishment data is valid.
+        after that you can check- is publishment was made and is publishment data is valid.
     """
 
     def __init__(self):
@@ -28,11 +28,17 @@ class RouterMockMixin():
 
     def get_publishments(self, topic):
         topics = self._router_client.topics
-        return topics[topic]
+        try:
+            return topics[topic]
+        except KeyError:
+            return None
 
     def get_publishment(self, topic):
         publishments = self.get_publishments(topic)
-        return publishments[0]
+        if publishments:
+            return publishments[0]
+        else:
+            return None
 
     def get_publishment_by_task_id(self, task_id):
         self.assertTrue(type(task_id) == str)

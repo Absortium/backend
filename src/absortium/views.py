@@ -133,7 +133,7 @@ class AccountViewSet(CreateCeleryMixin,
 
     @init_account(pk_name="pk")
     def retrieve(self, request, *args, **kwargs):
-        return super().retrieve(self, request, *args, **kwargs)
+        return super().retrieve(request, *args, **kwargs)
 
     def create_celery(self, request, *args, **kwargs):
         context = {
