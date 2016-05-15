@@ -86,7 +86,7 @@ class ExchangeSerializer(serializers.ModelSerializer):
     """
         WARNING: STATUS FIELD ALWAYS SHOULD BE READ ONLY!
     """
-    status = MyChoiceField(choices=constants.AVAILABLE_TASK_STATUS,default=constants.EXCHANGE_INIT, read_only=True)
+    status = MyChoiceField(choices=constants.AVAILABLE_TASK_STATUS, default=constants.EXCHANGE_INIT, read_only=True)
     amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                       decimal_places=constants.DECIMAL_PLACES,
                                       min_value=constants.AMOUNT_MIN_VALUE)

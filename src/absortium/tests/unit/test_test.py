@@ -16,5 +16,3 @@ class TestViewTest(AbsoritumUnitTest):
 
         response = self.client.post('/api/tests/', data=data, format='json')
         self.assertEqual(response.status_code, HTTP_201_CREATED)
-
-

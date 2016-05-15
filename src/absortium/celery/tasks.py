@@ -6,10 +6,10 @@ from django.db.utils import OperationalError, IntegrityError
 
 from absortium import constants
 from absortium.celery.base import get_base_class
+from absortium.crossbarhttp import publishment
 from absortium.exceptions import AlreadyExistError
 from absortium.model.locks import lockexchange, opposites
 from absortium.model.models import Account
-from absortium.crossbarhttp import publishment
 from absortium.serializer.serializers import \
     ExchangeSerializer, \
     WithdrawSerializer, \

@@ -3,7 +3,8 @@ __author__ = 'andrew.shvv@gmail.com'
 from django.conf.urls import url, include
 from rest_framework_nested import routers
 
-from absortium.views import AccountViewSet, ExchangeViewSet, OfferListView, DepositViewSet, WithdrawalViewSet, TestViewSet
+from absortium.views import AccountViewSet, ExchangeViewSet, OfferListView, DepositViewSet, WithdrawalViewSet, \
+    TestViewSet
 
 router = routers.SimpleRouter()
 router.register(prefix=r'accounts', viewset=AccountViewSet, base_name="Account")

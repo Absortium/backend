@@ -24,6 +24,7 @@ if settings.CELERY_TEST:
     """
     from absortium.tests.mixins.celery import CeleryMockMixin
     from absortium.tests.mixins.coinbase import CoinbaseMockMixin
+
     CeleryMockMixin().mock_celery()
     CoinbaseMockMixin().mock_coinbase()
 

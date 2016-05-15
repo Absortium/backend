@@ -1,5 +1,3 @@
-import decimal
-
 __author__ = 'andrew.shvv@gmail.com'
 
 from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
