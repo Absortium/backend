@@ -22,8 +22,10 @@ docker_environments = {
     'POSTGRES_PASSWORD': 'POSTGRES_PASSWORD',
     'COINBASE_API_KEY': 'COINBASE_API_KEY',
     'COINBASE_API_SECRET': 'COINBASE_API_SECRET',
+    'ETH_NOTIFICATION_TOKEN': 'ETH_NOTIFICATION_TOKEN',
+    'BTC_NOTIFICATION_TOKEN': 'BTC_NOTIFICATION_TOKEN',
     'CELERY_TEST': 'CELERY_TEST',
-    'WHOAMI': 'WHOAMI',
+    'WHOAMI': 'WHOAMI'
 }
 
 settings_module = sys.modules[__name__]
@@ -43,6 +45,7 @@ CELERY_BROKER = 'amqp://guest@docker.celery.broker//'
 CELERY_RESULT_BACKEND = 'redis://docker.celery.backend'
 
 ROUTER_URL = "http://docker.router:8080/publish"
+ETHCLIENT_URL = "docker.ethclient"
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

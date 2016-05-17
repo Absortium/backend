@@ -5,7 +5,6 @@ from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN, HTTP_4
 
 from absortium.model.models import Account
 from absortium.tests.base import AbsoritumUnitTest
-from absortium.tests.mixins.coinbase import address
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
@@ -25,8 +24,8 @@ class AccountTest(AbsoritumUnitTest):
         self.make_deposit(account)
 
         # Check that 'address' and 'btc' serialized properly
-        self.assertEqual(account['address'], address)
         self.assertEqual(account['currency'], 'btc')
+        self.assertEqual(account['amount'], 0)
 
     def test_permissions(self, *args, **kwargs):
         account = self.get_account('btc')

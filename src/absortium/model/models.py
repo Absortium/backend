@@ -55,7 +55,7 @@ class Account(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="accounts")
 
     class Meta:
-        unique_together = ('currency', 'owner')
+        unique_together = ('currency', 'owner', 'address')
 
     def update(self, **kwargs):
         # update() is converted directly to an SQL statement; it doesn't exec save() on the model

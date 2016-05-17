@@ -6,7 +6,12 @@ from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
-address = "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2"
+
+def get_address(*args, **kwargs):
+    from string import ascii_letters
+    from random import choice
+    s = ascii_letters + "0123456789"
+    return "".join([choice(s) for _ in range(30)])
 
 
 class CoinbaseMockMixin():
@@ -19,7 +24,7 @@ class CoinbaseMockMixin():
         self._coinbase_patcher = None
 
     def mock_coinbase(self):
-        self._coinbase_patcher = patch('absortium.wallet.bitcoin.BitcoinClient.create_address', return_value=address)
+        self._coinbase_patcher = patch('absortium.wallet.bitcoin.BitcoinClient.create_address', new=get_address)
         self.mock_client = self._coinbase_patcher.start()
 
     def unmock_coinbase(self):

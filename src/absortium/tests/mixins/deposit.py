@@ -1,5 +1,6 @@
 __author__ = 'andrew.shvv@gmail.com'
 
+from django.conf import settings
 from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 from absortium.model.models import Deposit
@@ -11,7 +12,8 @@ logger = getPrettyLogger(__name__)
 class CreateDepositMixin():
     def make_deposit(self, account, amount="99999", with_checks=True, user=None, debug=False):
         data = {
-            'amount': amount
+            'amount': amount,
+            'address': account['address']
         }
 
         if user:
@@ -20,13 +22,22 @@ class CreateDepositMixin():
             self.client.force_authenticate(user)
 
         # Create deposit
-        url = '/api/accounts/{account_pk}/deposits/'.format(account_pk=account['pk'])
-        response = self.client.post(url, data=data, format='json')
+        if account['currency'] == 'eth':
+            url = '/notifications/{currency}/{token}/'.format(currency=account['currency'],
+                                                              token=settings.ETH_NOTIFICATION_TOKEN)
 
-        self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_204_NO_CONTENT])
+        elif account['currency'] == 'btc':
+            url = '/notifications/{currency}/{token}/'.format(currency=account['currency'],
+                                                              token=settings.BTC_NOTIFICATION_TOKEN)
+        else:
+            raise Exception("Unknown currency: {}".format(account['currency']))
+
+        response = self.client.post(url, data=data, format='json')
 
         if debug:
             logger.info(response.content)
+
+        self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_204_NO_CONTENT])
 
         if with_checks:
             deposit = response.json()

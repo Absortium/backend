@@ -6,6 +6,9 @@ from django.contrib.auth.models import User, Group
 from django.db import transaction
 from rest_framework import generics, mixins, viewsets
 from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
+from rest_framework.decorators import api_view
+from rest_framework.status import HTTP_201_CREATED
+from rest_framework.response import Response
 
 from absortium.celery import tasks
 from absortium.mixins import CreateCeleryMixin
@@ -148,8 +151,7 @@ class AccountViewSet(CreateCeleryMixin,
             serializer.save(owner=self.request.user)
 
 
-class DepositViewSet(CreateCeleryMixin,
-                     mixins.RetrieveModelMixin,
+class DepositViewSet(mixins.RetrieveModelMixin,
                      mixins.ListModelMixin,
                      viewsets.GenericViewSet):
     serializer_class = DepositSerializer
@@ -164,15 +166,6 @@ class DepositViewSet(CreateCeleryMixin,
     @init_account()
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
-
-    @init_account()
-    def create_celery(self, request, *args, **kwargs):
-        context = {
-            "data": request.data,
-            "account_pk": request.account.pk,
-        }
-
-        return tasks.do_deposit.delay(**context)
 
 
 class WithdrawalViewSet(CreateCeleryMixin,
@@ -239,3 +232,39 @@ class TestViewSet(mixins.CreateModelMixin,
             instance = serializer.save(owner_id=self.request.user.pk)
             instance = Test.objects.select_for_update().get(pk=instance.pk)
             instance = Test.objects.select_for_update().get(pk=instance.pk)
+
+
+@api_view(http_method_names=['POST'])
+def notification_handler(request, currency, *args, **kwargs):
+    # TODO: Make notification response async
+    address = request.data.get('address')
+
+    if not address:
+        raise ValidationError("Could not found address parameter in request")
+
+    if currency:
+        currency = currency.lower()
+
+        if currency in constants.AVAILABLE_CURRENCIES.keys():
+            currency = constants.AVAILABLE_CURRENCIES[currency]
+        else:
+            raise ValidationError("Not available currency '{}'".format(currency))
+    else:
+        raise ValidationError("'currency' should be specified in the url'")
+
+    try:
+        for account in Account.objects.all():
+            print(account.address)
+        account = Account.objects.get(currency=currency, address=address)
+    except Account.DoesNotExist:
+        raise NotFound("Could not found account with such address: {}".format(address))
+
+    request.data.update(currnecy=currency)
+    context = {
+        "data": request.data,
+        "account_pk": account.pk,
+    }
+
+    async_result = tasks.do_deposit.delay(**context)
+    obj = async_result.get(propagate=True)
+    return Response(obj, status=HTTP_201_CREATED)

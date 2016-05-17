@@ -27,15 +27,6 @@ class DepositTest(AbsoritumUnitTest):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, HTTP_403_FORBIDDEN)
 
-        # Try to create deposit in another account
-        # TODO: this operation should be granted only for notification service
-        data = {
-            'amount': '0.0111',
-        }
-        url = '/api/accounts/{account_pk}/deposits/'.format(account_pk=account['pk'])
-        response = self.client.post(url, data=data, format='json')
-        self.assertEqual(response.status_code, HTTP_403_FORBIDDEN)
-
         # Try to get deposit info from another account
         url = '/api/accounts/{account_pk}/deposits/{deposit_pk}/'.format(account_pk=account['pk'],
                                                                          deposit_pk=deposit_pk)
@@ -43,7 +34,7 @@ class DepositTest(AbsoritumUnitTest):
         self.assertEqual(response.status_code, HTTP_403_FORBIDDEN)
 
         # Try to delete deposit from another account
-        # TODO: this operation should be granted at all
+        # TODO: this operation should not be granted at all
         url = '/api/accounts/{account_pk}/deposits/{deposit_pk}/'.format(account_pk=account['pk'],
                                                                          deposit_pk=deposit_pk)
         response = self.client.delete(url, format='json')
