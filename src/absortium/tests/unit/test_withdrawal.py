@@ -12,7 +12,7 @@ logger = getLogger(__name__)
 class WithdrawalTest(AbsoritumUnitTest):
     def test_permissions(self, *args, **kwargs):
         account = self.get_account('btc')
-        self.make_deposit(account, debug=True)
+        self.make_deposit(account)
         withdrawal_pk, _ = self.make_withdrawal(account)
 
         # Create hacker user

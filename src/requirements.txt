@@ -22,7 +22,7 @@ coinbase
 celery
 drf-nested-routers
 django-extensions
-flower
+coverage
 
 # ======================================================================================
 # All other libraries that was installed during general libs installation
