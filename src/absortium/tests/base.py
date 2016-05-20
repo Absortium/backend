@@ -9,8 +9,9 @@ from rest_framework.test import APITestCase, APIClient, APITransactionTestCase
 
 from absortium import celery_app
 from absortium.tests.mixins.account import CreateAccountMixin
-from absortium.tests.mixins.coinbase import CoinbaseMockMixin
+from absortium.tests.mixins.bitcoin import BitcoinClientMockMixin
 from absortium.tests.mixins.deposit import CreateDepositMixin
+from absortium.tests.mixins.ethereum import EthereumClientMockMixin
 from absortium.tests.mixins.exchange import CreateExchangeMixin
 from absortium.tests.mixins.offer import CheckOfferMixin
 from absortium.tests.mixins.router import RouterMockMixin
@@ -37,18 +38,13 @@ class AbsoritumLiveTest(APITransactionTestCase,
                         CreateAccountMixin,
                         CreateDepositMixin,
                         CreateExchangeMixin,
-                        CoinbaseMockMixin,
                         CreateWithdrawalMixin,
                         CheckOfferMixin):
     def setUp(self):
         super().setUp()
-
-        self.mock_coinbase()
         self.client = APIClient()
 
     def tearDown(self):
-        self.unmock_coinbase()
-
         super().tearDown()
 
     def wait_celery(self, tag=None):
@@ -81,21 +77,23 @@ class AbsoritumLiveTest(APITransactionTestCase,
 
 @override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
                    CELERY_ALWAYS_EAGER=True)
-class AbsoritumUnitTest(APITestCase,
-                        AbsortiumTestMixin,
+class AbsoritumUnitTest(AbsortiumTestMixin,
                         CreateAccountMixin,
                         CreateDepositMixin,
                         CreateExchangeMixin,
                         CreateWithdrawalMixin,
                         CheckOfferMixin,
                         RouterMockMixin,
-                        CoinbaseMockMixin):
+                        BitcoinClientMockMixin,
+                        EthereumClientMockMixin,
+                        APITestCase):
     def setUp(self):
         super().setUp()
         self.mock_router()
-        self.mock_coinbase()
+        self.mock_bitcoin_client()
+        self.mock_ethereum_client()
 
-        # WARNING: User creation should be after mocking the coinbase, because there is user signal which creates the accounts.
+        # WARNING: User creation should be after mocking the bitcoin/ethereum clients, because there is user signal which creates the accounts.
         User = get_user_model()
         user = User(username="primary")
         user.save()
@@ -106,7 +104,8 @@ class AbsoritumUnitTest(APITestCase,
 
     def tearDown(self):
         self.unmock_router()
-        self.unmock_coinbase()
+        self.unmock_bitcoin_client()
+        self.unmock_ethereum_client()
         super().tearDown()
 
 

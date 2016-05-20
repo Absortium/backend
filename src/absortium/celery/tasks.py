@@ -15,7 +15,7 @@ from absortium.serializer.serializers import \
     WithdrawSerializer, \
     DepositSerializer, \
     AccountSerializer
-from absortium.wallet.base import get_client
+from absortium.wallet.base import get_wallet_client
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)
@@ -123,7 +123,7 @@ def create_account(self, *args, **kwargs):
             account = serializer.object(owner_id=user_pk)
 
             try:
-                client = get_client(currency=account.currency)
+                client = get_wallet_client(currency=account.currency)
                 account.address = client.create_address()
                 account.save()
             except IntegrityError:

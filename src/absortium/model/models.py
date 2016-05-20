@@ -7,6 +7,8 @@ from django.db import models
 from rest_framework.exceptions import ValidationError
 
 from absortium import constants
+from absortium.wallet.base import get_wallet_client
+
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
@@ -121,6 +123,9 @@ class Exchange(models.Model):
 
         # Check that we have enough money
         if self.from_account.amount >= self.amount:
+
+            wallet_client = get_wallet_client(self.from_currency)
+
 
             # Subtract money from account because it is locked by exchange
             self.from_account.amount -= self.amount

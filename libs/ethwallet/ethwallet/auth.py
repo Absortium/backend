@@ -30,9 +30,9 @@ class HMACAuth(AuthBase):
 
         signature = hmac.new(secret, message, hashlib.sha256).hexdigest()
         request.headers.update({
-            to_native_string('ETHCLIENT-VERSION'): self.api_version,
-            to_native_string('ETHCLIENT-ACCESS-KEY'): self.api_key,
-            to_native_string('ETHCLIENT-ACCESS-SIGN'): signature,
-            to_native_string('ETHCLIENT-ACCESS-TIMESTAMP'): timestamp,
+            to_native_string('ETHWALLET-VERSION'): self.api_version,
+            to_native_string('ETHWALLET-ACCESS-KEY'): self.api_key,
+            to_native_string('ETHWALLET-ACCESS-SIGN'): signature,
+            to_native_string('ETHWALLET-ACCESS-TIMESTAMP'): timestamp,
         })
         return request

@@ -13,11 +13,6 @@ class RouterMockMixin():
         after that you can check- is publishment was made and is publishment data is valid.
     """
 
-    def __init__(self):
-        # WARNING!: Be careful with names you may override variables in the class that inherit this mixin!
-        self._router_client = None
-        self._router_patcher = None
-
     def mock_router(self):
         self._router_client = MockClient()
         self._router_patcher = patch('absortium.crossbarhttp.client.Client', new=self._router_client)

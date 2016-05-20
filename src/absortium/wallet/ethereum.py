@@ -2,12 +2,32 @@ __author__ = 'andrew.shvv@gmail.com'
 
 from django.conf import settings
 
+from core.utils.logging import getLogger
+from ethwallet.client import Client
+from ethwallet.error import NotFoundError
+
+logger = getLogger(__name__)
+
+_client = None
+
 
 class EthereumClient():
-    url = settings.ETHCLIENT_URL
+    _client = None
+
+    @property
+    def client(self):
+        if self._client is None:
+            self._client = Client(api_key=settings.ETHWALLET_API_KEY,
+                                  api_secret=settings.ETHWALLET_API_SECRET,
+                                  base_api_uri=settings.ETHWALLET_URL)
+        return self._client
 
     def create_address(self):
-        from string import ascii_letters
-        from random import choice
-        s = ascii_letters + "0123456789"
-        return "".join([choice(s) for _ in range(30)])
+        try:
+            response = self.client.create_address()
+            return response['address']
+        except NotFoundError as e:
+            logger.debug(e)
+
+    def send(self, amount, address):
+        pass

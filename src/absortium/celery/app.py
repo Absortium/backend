@@ -23,10 +23,12 @@ if settings.CELERY_TEST:
         what we need when we test celery in integrity tests.
     """
     from absortium.tests.mixins.celery import CeleryMockMixin
-    from absortium.tests.mixins.coinbase import CoinbaseMockMixin
+    from absortium.tests.mixins.bitcoin import BitcoinClientMockMixin
+    from absortium.tests.mixins.ethereum import EthereumClientMockMixin
 
     CeleryMockMixin().mock_celery()
-    CoinbaseMockMixin().mock_coinbase()
+    BitcoinClientMockMixin().mock_bitcoin_client()
+    EthereumClientMockMixin.mock_ethereum_client()
 
 # Using a string here means the worker will not have to
 # pickle the object when using Windows.

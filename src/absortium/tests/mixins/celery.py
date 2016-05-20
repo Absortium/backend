@@ -14,11 +14,9 @@ class CeleryMockMixin():
         CeleryMockMixin substitute original DBTask in order to close db connections
     """
 
-    def __init__(self):
-        # WARNING!: Be careful with names you may override variables in the class that inherit this mixin!
-        self._celery_patcher = None
-
     def mock_celery(self):
+        # WARNING!: Be careful with names you may override variables in the class that inherit this mixin!
+
         self._celery_patcher = patch('absortium.celery.base.DBTask', new=DBTask)
         self.mock_dbtask = self._celery_patcher.start()
 

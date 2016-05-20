@@ -5,15 +5,15 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 
-class EthClientError(Exception):
+class EthWalletError(Exception):
     """Base error class for all exceptions raised in this library.
 
     Will never be raised naked; more specific subclasses of this exception will
     be raised when appropriate."""
 
 
-class APIError(EthClientError):
-    """Raised for errors related to interacting with the ethclient API server."""
+class APIError(EthWalletError):
+    """Raised for errors related to interacting with the ethwallet API server."""
 
     def __init__(self, response, id, message, errors=None):
         self.status_code = response.status_code
@@ -85,7 +85,7 @@ def build_api_error(response, blob=None):
     else:
         # In the case of an OAuth-specific error, the response data is the error
         # blob, and the keys are slightly different. See
-        # https://developers.ethclient.com/api/v2#error-response
+        # https://developers.ethwallet.com/api/v2#error-response
         error_id = blob.get('error')
         error_message = blob.get('error_description')
     error_class = (

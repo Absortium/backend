@@ -1,8 +1,15 @@
 __author__ = 'andrew.shvv@gmail.com'
 
+from random import choice
+from string import printable
+
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)
+
+
+def random_string(length=30):
+    return "".join([choice(printable) for _ in range(length)])
 
 
 def retry(exceptions=(), times=1):

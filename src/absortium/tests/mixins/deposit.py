@@ -3,6 +3,7 @@ __author__ = 'andrew.shvv@gmail.com'
 from django.conf import settings
 from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
+from absortium.utils import random_string
 from absortium.model.models import Deposit
 from core.utils.logging import getPrettyLogger
 
@@ -13,7 +14,8 @@ class CreateDepositMixin():
     def make_deposit(self, account, amount="99999", with_checks=True, user=None, debug=False):
         data = {
             'amount': amount,
-            'address': account['address']
+            'address': account['address'],
+            'tx_hash': random_string()
         }
 
         if user:

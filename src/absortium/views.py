@@ -238,6 +238,16 @@ class TestViewSet(mixins.CreateModelMixin,
 def notification_handler(request, currency, *args, **kwargs):
     # TODO: Make notification response async
     address = request.data.get('address')
+    if not address:
+        raise ValidationError("'address' parameter should be specified")
+
+    tx_hash = request.data.get('tx_hash')
+    if not tx_hash:
+        raise ValidationError("'tx_hash' parameter should be specified")
+
+    amount = request.data.get('amount')
+    if not amount:
+        raise ValidationError("'amount' parameter should be specified")
 
     if not address:
         raise ValidationError("Could not found address parameter in request")
@@ -247,19 +257,17 @@ def notification_handler(request, currency, *args, **kwargs):
 
         if currency in constants.AVAILABLE_CURRENCIES.keys():
             currency = constants.AVAILABLE_CURRENCIES[currency]
+            request.data.update(currnecy=currency)
         else:
             raise ValidationError("Not available currency '{}'".format(currency))
     else:
-        raise ValidationError("'currency' should be specified in the url'")
+        raise ValidationError("'currency' should be specified in the url")
 
     try:
-        for account in Account.objects.all():
-            print(account.address)
         account = Account.objects.get(currency=currency, address=address)
     except Account.DoesNotExist:
         raise NotFound("Could not found account with such address: {}".format(address))
 
-    request.data.update(currnecy=currency)
     context = {
         "data": request.data,
         "account_pk": account.pk,

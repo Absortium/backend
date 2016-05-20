@@ -13,24 +13,39 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 import os
 import sys
 
-docker_environments = {
+required_docker_environments = {
     'SECRET_KEY': 'DJANGO_SECRET_KEY',
+
+    'POSTGRES_PASSWORD': 'POSTGRES_PASSWORD',
+
+    'ETH_NOTIFICATION_TOKEN': 'ETH_NOTIFICATION_TOKEN',
+    'BTC_NOTIFICATION_TOKEN': 'BTC_NOTIFICATION_TOKEN',
+    'WHOAMI': 'WHOAMI'
+}
+
+optional_docker_environments = {
     'SOCIAL_AUTH_GITHUB_OAUTH2_SECRET': 'SOCIAL_AUTH_GITHUB_OAUTH2_SECRET',
     'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET': 'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET',
     'SOCIAL_AUTH_TWITTER_OAUTH1_SECRET': 'SOCIAL_AUTH_TWITTER_OAUTH1_SECRET',
     'SOCIAL_AUTH_TWITTER_OAUTH1_KEY': 'SOCIAL_AUTH_TWITTER_OAUTH1_KEY',
-    'POSTGRES_PASSWORD': 'POSTGRES_PASSWORD',
     'COINBASE_API_KEY': 'COINBASE_API_KEY',
     'COINBASE_API_SECRET': 'COINBASE_API_SECRET',
-    'ETH_NOTIFICATION_TOKEN': 'ETH_NOTIFICATION_TOKEN',
-    'BTC_NOTIFICATION_TOKEN': 'BTC_NOTIFICATION_TOKEN',
+
+    'ETHWALLET_API_KEY': 'ETHWALLET_API_KEY',
+    'ETHWALLET_API_SECRET': 'ETHWALLET_API_SECRET',
     'CELERY_TEST': 'CELERY_TEST',
-    'WHOAMI': 'WHOAMI'
+
 }
 
 settings_module = sys.modules[__name__]
-for name, env_name in docker_environments.items():
+for name, env_name in optional_docker_environments.items():
     value = os.environ[env_name] if env_name in os.environ else None
+    setattr(settings_module, name, value)
+
+for name, env_name in required_docker_environments.items():
+    value = os.environ[env_name] if env_name in os.environ else None
+    if not value:
+        raise NotImplementedError("Specify the '{}' environment variable.".format(env_name))
     setattr(settings_module, name, value)
 
 COINBASE_SANDBOX = True
@@ -45,7 +60,7 @@ CELERY_BROKER = 'amqp://guest@docker.celery.broker//'
 CELERY_RESULT_BACKEND = 'redis://docker.celery.backend'
 
 ROUTER_URL = "http://docker.router:8080/publish"
-ETHCLIENT_URL = "docker.ethclient"
+ETHWALLET_URL = "docker.ethwallet"
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

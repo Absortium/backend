@@ -20,12 +20,9 @@ djangorestframework-jwt==1.8.0
 mock==2.0.0
 coinbase
 celery
-redlock-py
 drf-nested-routers
 django-extensions
 flower
-eventlet
-gevent
 
 # ======================================================================================
 # All other libraries that was installed during general libs installation
