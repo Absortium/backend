@@ -73,7 +73,7 @@ class opposites:
         while True:
             try:
                 """
-                    Get first non-blocked exchange which suit out conditions (price, status, currency) anf block it.
+                    Get first non-blocked exchange which suit out conditions (price, status, currency) and block it.
                 """
                 opposite = Exchange.objects.raw(' SELECT *'
                                                 ' FROM absortium_exchange'
@@ -85,8 +85,8 @@ class opposites:
 
             except IndexError:
                 """
-                    Very dirty hack; When we SELECT exchanges situation may arise when all exchanges are locked
-                    and we skip the exchanges processing, so in order to low the likelihood of such situation, do it
+                    Very dirty hack; While exchanges selection might happen that all exchanges are locked,
+                    so we may end up with skipping the exchanges processing, in order to low the likelihood of such situation, do it
                     3 times.
                 """
                 self.times -= 1

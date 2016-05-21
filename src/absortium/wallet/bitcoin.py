@@ -35,4 +35,9 @@ class BitcoinClient():
             logger.debug(e)
 
     def send(self, amount, address):
-        pass
+        # Get your primary coinbase account
+        primary_account = self.client.get_primary_account()
+
+        tx = primary_account.send_money(to=address,
+                                        amount=amount,
+                                        currency='BTC')

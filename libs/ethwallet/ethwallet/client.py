@@ -110,10 +110,14 @@ class Client(object):
             data=params)
         return response
 
-    def create_address(self, **params):
-        response = self._post('v1', 'addresses', data=params)
+    def create_address(self):
+        response = self._post('v1', 'addresses')
         return response
 
-    def send(self, **params):
+    def send(self, amount, address):
+        params = {
+            'amount': amount,
+            'address': address
+        }
         response = self._post('v1', 'addresses', 'send', data=params)
         return response
