@@ -28,16 +28,15 @@ class BitcoinClient():
 
     def create_address(self):
         try:
-            response = self.client.create_address(account_id=settings.COINBASE_ACCOUNT_ID)
-            coinbase_data = response['data']
-            return coinbase_data['address']
+            primary_account = self.client.get_primary_account()
+            address = primary_account.create_address()
+            return address.address
         except NotFoundError as e:
             logger.debug(e)
 
     def send(self, amount, address):
         # Get your primary coinbase account
         primary_account = self.client.get_primary_account()
-
         tx = primary_account.send_money(to=address,
                                         amount=amount,
                                         currency='BTC')

@@ -4,6 +4,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import json
 import os
 
 import requests
@@ -61,6 +62,7 @@ class Client(object):
 
     def _create_api_uri(self, *parts):
         """Internal helper for creating fully qualified endpoint URIs."""
+        parts += ('/',)
         return urljoin(self.BASE_API_URI, '/'.join(imap(quote, parts)))
 
     def _request(self, method, *relative_path_parts, **kwargs):
@@ -79,7 +81,10 @@ class Client(object):
             kwargs.setdefault('verify', False)
         kwargs.update(verify=self.VERIFY_SSL)
         response = getattr(self.session, method)(uri, **kwargs)
-        return response
+        return self._handle_response(response)
+
+    def _handle_response(self, response):
+        return response.json()
 
     def _get(self, *args, **kwargs):
         return self._request('get', *args, **kwargs)
@@ -100,14 +105,6 @@ class Client(object):
 
     def get_address(self, address_id, **params):
         response = self._get('v1', 'addresses', address_id, data=params)
-        return response
-
-    def get_address_transactions(self, address_id, **params):
-        response = self._get(
-            'v1',
-            'addresses', address_id,
-            'transactions',
-            data=params)
         return response
 
     def create_address(self):

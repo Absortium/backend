@@ -2,7 +2,7 @@ __author__ = 'andrew.shvv@gmail.com'
 
 from celery import shared_task
 from django.db import transaction
-from django.db.utils import OperationalError, IntegrityError
+from django.db.utils import OperationalError
 
 from absortium import constants
 from absortium.celery.base import get_base_class
@@ -117,17 +117,17 @@ def create_account(self, *args, **kwargs):
     user_pk = kwargs['user_pk']
 
     with publishment.atomic():
-        with transaction.atomic():
-            serializer = AccountSerializer(data=data)
-            serializer.is_valid(raise_exception=True)
-            account = serializer.object(owner_id=user_pk)
+        serializer = AccountSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        account = serializer.object(owner_id=user_pk)
 
-            try:
+        try:
+            obj = Account.objects.filter(owner_id=user_pk, currency=account.currency).all()[0]
+            data = AccountSerializer(obj).data
+            raise AlreadyExistError(data)
+        except IndexError:
+            with transaction.atomic():
                 client = get_wallet_client(currency=account.currency)
                 account.address = client.create_address()
                 account.save()
-            except IntegrityError:
-                obj = Account.objects.get(owner_id=user_pk, currency=account.currency)
-                data = AccountSerializer(obj).data
-                raise AlreadyExistError(data)
-            return AccountSerializer(account).data
+                return AccountSerializer(account).data

@@ -58,6 +58,7 @@ class Account(models.Model):
 
     class Meta:
         unique_together = ('currency', 'owner', 'address')
+        ordering = ('created',)
 
     def update(self, **kwargs):
         # update() is converted directly to an SQL statement; it doesn't exec save() on the model

@@ -32,8 +32,6 @@ def jwt_decode_handler(token):
 
 
 def jwt_get_username_from_payload(payload):
-    logger.debug(payload)
-
     sub = payload.get('sub')
     if not sub:
         return None

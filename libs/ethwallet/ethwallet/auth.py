@@ -20,7 +20,7 @@ class HMACAuth(AuthBase):
 
     def __call__(self, request):
         timestamp = str(int(time.time()))
-        message = timestamp + request.method + request.path_url + (request.body or '')
+        message = request.body or ''
         secret = self.api_secret
 
         if not isinstance(message, bytes):

@@ -53,7 +53,7 @@ class CreateCeleryMixin():
         async_result = self.create_celery(request, *args, **kwargs)
 
         try:
-            obj = async_result.get(timeout=0.5, propagate=True)
+            obj = async_result.get(timeout=10, propagate=True)
             return Response(obj, status=HTTP_201_CREATED)
         except TimeoutError:
             data = {

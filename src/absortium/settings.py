@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 
 import os
 import sys
+from kombu import Exchange, Queue
 
 required_docker_environments = {
     'SECRET_KEY': 'DJANGO_SECRET_KEY',
@@ -20,7 +21,7 @@ required_docker_environments = {
 
     'ETH_NOTIFICATION_TOKEN': 'ETH_NOTIFICATION_TOKEN',
     'BTC_NOTIFICATION_TOKEN': 'BTC_NOTIFICATION_TOKEN',
-    'WHOAMI': 'WHOAMI'
+    'WHOAMI': 'WHOAMI',
 }
 
 optional_docker_environments = {
@@ -33,6 +34,7 @@ optional_docker_environments = {
     'ETHWALLET_API_KEY': 'ETHWALLET_API_KEY',
     'ETHWALLET_API_SECRET': 'ETHWALLET_API_SECRET',
     'CELERY_TEST': 'CELERY_TEST',
+    'TESTNET': 'TESTNET'
 
 }
 
@@ -47,7 +49,7 @@ for name, env_name in required_docker_environments.items():
         raise NotImplementedError("Specify the '{}' environment variable.".format(env_name))
     setattr(settings_module, name, value)
 
-COINBASE_SANDBOX = True
+COINBASE_SANDBOX = getattr(settings_module, 'TESTNET') in ['true', 'True']
 if COINBASE_SANDBOX:
     COINBASE_API_URL = 'https://api.sandbox.coinbase.com'
 else:
@@ -59,7 +61,12 @@ CELERY_BROKER = 'amqp://guest@docker.celery.broker//'
 CELERY_RESULT_BACKEND = 'redis://docker.celery.backend'
 
 ROUTER_URL = "http://docker.router:8080/publish"
-ETHWALLET_URL = "docker.ethwallet"
+ETHWALLET_URL = "http://docker.ethwallet:3000/"
+
+CELERY_DEFAULT_QUEUE = 'absortium'
+CELERY_QUEUES = (
+    Queue('absortium', Exchange('absortium'), routing_key='absortium'),
+)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -108,7 +115,7 @@ JWT_AUTH = {
 WSGI_APPLICATION = 'wsgi.application'
 
 # Very dirty hack for making celery to connect to the test_postgres db.
-CELERY_TEST = getattr(settings_module, 'CELERY_TEST') == "True"
+CELERY_TEST = getattr(settings_module, 'CELERY_TEST') in ["True", "true"]
 dbname = 'test_postgres' if CELERY_TEST else 'postgres'
 
 DATABASES = {
