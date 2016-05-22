@@ -24,10 +24,9 @@ required_docker_environments = {
 }
 
 optional_docker_environments = {
-    'SOCIAL_AUTH_GITHUB_OAUTH2_SECRET': 'SOCIAL_AUTH_GITHUB_OAUTH2_SECRET',
-    'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET': 'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET',
-    'SOCIAL_AUTH_TWITTER_OAUTH1_SECRET': 'SOCIAL_AUTH_TWITTER_OAUTH1_SECRET',
-    'SOCIAL_AUTH_TWITTER_OAUTH1_KEY': 'SOCIAL_AUTH_TWITTER_OAUTH1_KEY',
+    'AUTH0_SECRET_KEY': 'AUTH0_SECRET_KEY',
+    'AUTH0_API_KEY': 'AUTH0_API_KEY',
+
     'COINBASE_API_KEY': 'COINBASE_API_KEY',
     'COINBASE_API_SECRET': 'COINBASE_API_SECRET',
 
@@ -78,16 +77,9 @@ INSTALLED_APPS = [
     'django_extensions',
     'rest_framework',
     'absortium',
-    'jwtauth',
     'absortium.celery'
-]
 
-AUTHENTICATION_BACKENDS = (
-    'jwtauth.backends.GoogleOAuth2',
-    'jwtauth.backends.GithubOAuth2',
-    'jwtauth.backends.TwitterOAuth1',
-    'django.contrib.auth.backends.ModelBackend',
-)
+]
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
@@ -98,27 +90,31 @@ REST_FRAMEWORK = {
     ),
     'PAGE_SIZE': 10,
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'jwtauth.authentication.JWTAuthentication',
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
     )
 }
 
 ROOT_URLCONF = 'absortium.urls'
 
 JWT_AUTH = {
-    'JWT_PAYLOAD_HANDLER': 'jwtauth.utils.wrapped_jwt_payload_handler',
+    'JWT_DECODE_HANDLER': 'absortium.jwt.jwt_decode_handler',
+    'JWT_PAYLOAD_GET_USERNAME_HANDLER': 'absortium.jwt.jwt_get_username_from_payload',
+    'JWT_AUDIENCE': getattr(settings_module, 'AUTH0_API_KEY'),
+    'JWT_SECRET_KEY': getattr(settings_module, 'AUTH0_SECRET_KEY'),
+    'JWT_AUTH_HEADER_PREFIX': 'Bearer',
+
 }
 
 WSGI_APPLICATION = 'wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/1.9/ref/settings/#databases
-
+# Very dirty hack for making celery to connect to the test_postgres db.
 CELERY_TEST = getattr(settings_module, 'CELERY_TEST') == "True"
+dbname = 'test_postgres' if CELERY_TEST else 'postgres'
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'postgres' if not CELERY_TEST else 'test_postgres',
+        'NAME': dbname,
         'USER': 'postgres',
         'PASSWORD': getattr(settings_module, 'POSTGRES_PASSWORD'),
         'HOST': 'docker.postgres',

@@ -44,3 +44,5 @@ ACCOUNT_MAX_DIGITS = OFFER_MAX_DIGITS
 
 AMOUNT_MIN_VALUE = float(Decimal("1") / (Decimal("10") ** DECIMAL_PLACES))
 PRICE_MIN_VALUE = float(Decimal("1") / (Decimal("10") ** DECIMAL_PLACES))
+
+USERNAME_LENGTH = 30

@@ -21,7 +21,6 @@ urlpatterns = [
     url(r'^api/', include(router.urls)),
     url(r'^api/', include(accounts_router.urls)),
     url(r'^api/offers/$', OfferListView.as_view()),
-    url(r'^auth/', include('jwtauth.urls')),
     url(r'^notifications/(?P<currency>eth)/' + settings.ETH_NOTIFICATION_TOKEN, notification_handler),
     url(r'^notifications/(?P<currency>btc)/' + settings.BTC_NOTIFICATION_TOKEN, notification_handler)
 ]
