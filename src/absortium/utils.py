@@ -1,8 +1,12 @@
 __author__ = 'andrew.shvv@gmail.com'
 
+from decimal import Decimal
 from random import choice
 from string import printable
 
+from rest_framework.exceptions import ValidationError
+
+from absortium import constants
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)
@@ -36,3 +40,16 @@ def retry(exceptions=(), times=1):
         return decorator
 
     return wrapper
+
+
+def get_currency(data, name):
+    currency = data.get(name)
+    if currency:
+        currency = currency.lower()
+
+        if currency in constants.AVAILABLE_CURRENCIES.keys():
+            return constants.AVAILABLE_CURRENCIES[currency]
+        else:
+            raise ValidationError("Not available currency '{}'".format(currency))
+    else:
+        raise ValidationError("You should specify '{}' field'".format(name))

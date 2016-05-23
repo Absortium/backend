@@ -8,7 +8,6 @@ from rest_framework.exceptions import ValidationError
 
 from absortium import constants
 from absortium.wallet.base import get_wallet_client
-
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
@@ -18,12 +17,8 @@ class Offer(models.Model):
     """
         Offer model represent summarized amount of currency that we want to sell grouped by price.
 
-    primary_currency - represent currency which we will give, for example exchange BTC to XMR,
-    primary currency BTC, secondary currency XMR. As input we get string but values stored in Integer, translation from
-    string representation "BTC" to integer code 0 happens on the serialization state.
-
-    secondary_currency - represent currency which we will take, for example exchange BTC to XMR,
-    primary currency BTC, secondary currency XMR. As input we get string but values stored in Integer, translation from
+    from_currency/to_currency; example exchange BTC to XMR, from_currency will be BTC, to_currency will be XMR.
+    As input we get string but values stored in Integer, translation from
     string representation "BTC" to integer code 0 happens on the serialization state.
 
     amount - represent amount of the currency that user want to exchange.
@@ -58,7 +53,7 @@ class Account(models.Model):
 
     class Meta:
         unique_together = ('currency', 'owner', 'address')
-        ordering = ('created',)
+        ordering = ('-created',)
 
     def update(self, **kwargs):
         # update() is converted directly to an SQL statement; it doesn't exec save() on the model
@@ -85,16 +80,23 @@ class Exchange(models.Model):
         Exchange model represent order for exchange primary currency determined as account currency
         secondary currency determined from the post request.
 
-    currency - represent currency BTC, XMR etc, but values stored in Integer,
-    translation from string representation "BTC" to integer code 0 happens on the serialization state.
+    from_currency/to_currency; example exchange BTC to XMR, from_currency will be BTC, to_currency will be XMR.
+    As input we get string but values stored in Integer, translation from
+    string representation "BTC" to integer code 0 happens on the serialization state.
 
     amount - represent amount of the currency that  user want to exchange.
 
     price - represent the price for the 1 amount of base currency he wants to exchange.
 
-    created - order time creation.
+    created - exchange time creation.
 
-    account - account from which exchange is happening.
+    owner - user; owner of the exchange
+
+    status - status of the exhcange:
+        init -
+        pending -
+        completed -
+
     """
 
     status = models.IntegerField()
@@ -126,7 +128,6 @@ class Exchange(models.Model):
         if self.from_account.amount >= self.amount:
 
             wallet_client = get_wallet_client(self.from_currency)
-
 
             # Subtract money from account because it is locked by exchange
             self.from_account.amount -= self.amount
@@ -232,6 +233,24 @@ class Withdrawal(models.Model):
             self.account.update(amount=amount)
         else:
             raise ValidationError("Not enough money for withdrawal")
+
+
+class MarketInfo(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+    rate = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                               decimal_places=constants.DECIMAL_PLACES)
+    rate_24h_max = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                       decimal_places=constants.DECIMAL_PLACES)
+    rate_24h_min = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                       decimal_places=constants.DECIMAL_PLACES)
+    volume_24h = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                     decimal_places=constants.DECIMAL_PLACES)
+
+    from_currency = models.IntegerField()
+    to_currency = models.IntegerField()
+
+    class Meta:
+        ordering = ('-created',)
 
 
 class Test(models.Model):

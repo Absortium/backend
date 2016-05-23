@@ -2,13 +2,6 @@ __author__ = 'andrew.shvv@gmail.com'
 
 from decimal import Decimal
 
-BTC_ETH = 0
-BTC_XMR = 1
-AVAILABLE_PAIRS = {
-    'btc_eth': BTC_ETH,
-    'btc_xmr': BTC_XMR,
-}
-
 SELL = 0
 BUY = 1
 AVAILABLE_ORDER_TYPES = {
@@ -46,3 +39,6 @@ AMOUNT_MIN_VALUE = float(Decimal("1") / (Decimal("10") ** DECIMAL_PLACES))
 PRICE_MIN_VALUE = float(Decimal("1") / (Decimal("10") ** DECIMAL_PLACES))
 
 USERNAME_LENGTH = 30
+
+MARKET_INFO_DELTA=24
+MARKET_INFO_COUNT_OF_EXCHANGES=10

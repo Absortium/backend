@@ -5,7 +5,7 @@ from django.conf.urls import url, include
 from rest_framework_nested import routers
 
 from absortium.views import AccountViewSet, ExchangeViewSet, OfferListView, WithdrawalViewSet, DepositViewSet, \
-    TestViewSet, notification_handler
+    TestViewSet, MarketInfoSet, notification_handler
 
 router = routers.SimpleRouter()
 router.register(prefix=r'accounts', viewset=AccountViewSet, base_name="Account")
@@ -21,6 +21,7 @@ urlpatterns = [
     url(r'^api/', include(router.urls)),
     url(r'^api/', include(accounts_router.urls)),
     url(r'^api/offers/$', OfferListView.as_view()),
+    url(r'^api/marketinfo/$', MarketInfoSet.as_view()),
     url(r'^notifications/(?P<currency>eth)/' + settings.ETH_NOTIFICATION_TOKEN, notification_handler),
     url(r'^notifications/(?P<currency>btc)/' + settings.BTC_NOTIFICATION_TOKEN, notification_handler)
 ]

@@ -10,9 +10,10 @@ from rest_framework.decorators import api_view
 from rest_framework.status import HTTP_201_CREATED
 from rest_framework.response import Response
 
+from absortium.utils import get_currency
 from absortium.celery import tasks
 from absortium.mixins import CreateCeleryMixin
-from absortium.model.models import Offer, Account, Test
+from absortium.model.models import Offer, Account, Test, MarketInfo
 from absortium.serializer.serializers import \
     UserSerializer, \
     GroupSerializer, \
@@ -21,7 +22,7 @@ from absortium.serializer.serializers import \
     ExchangeSerializer, \
     DepositSerializer, \
     WithdrawSerializer, \
-    TestSerializer
+    TestSerializer, MarketInfoSerializer
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)
@@ -57,50 +58,21 @@ class OfferListView(mixins.ListModelMixin,
     permission_classes = ()
     authentication_classes = ()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.exclude_fields = []
-
     def filter_queryset(self, queryset):
         """
             This method used for filter origin offers queryset by the given from/to currency.
         """
         fields = {}
 
-        to_currency = self.request.data['to_currency']
-        if to_currency:
-            to_currency = to_currency.lower()
+        to_currency = get_currency(self.request.GET, 'to_currency')
+        fields.update(to_currency=to_currency)
 
-            if to_currency in constants.AVAILABLE_CURRENCIES.keys():
-                to_currency = constants.AVAILABLE_CURRENCIES[to_currency]
-                fields.update(to_currency=to_currency)
-            else:
-                raise ValidationError("Not available currency '{}'".format(to_currency))
-        else:
-            raise ValidationError("You should specify 'to_currency' field'")
-
-        from_currency = self.request.data['from_currency']
-        if from_currency:
-            from_currency = from_currency.lower()
-
-            if from_currency in constants.AVAILABLE_CURRENCIES.keys():
-                from_currency = constants.AVAILABLE_CURRENCIES[from_currency]
-                fields.update(from_currency=from_currency)
-            else:
-                raise ValidationError("Not available currency '{}'".format(from_currency))
-        else:
-            raise ValidationError("You should specify 'from_currency' field'")
+        from_currency = get_currency(self.request.GET, 'from_currency')
+        fields.update(from_currency=from_currency)
 
         return queryset.filter(**fields)
 
-    def get_serializer(self, *args, **kwargs):
-        """
-            This method used setting 'exclude_fields' parameter
-            that was constructed in the 'get_queryset' method
-        """
-        return super().get_serializer(*args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
 
 
@@ -221,6 +193,36 @@ class ExchangeViewSet(CreateCeleryMixin,
         }
 
         return tasks.do_exchange.delay(**context)
+
+
+class MarketInfoSet(mixins.ListModelMixin,
+                    generics.GenericAPIView):
+    serializer_class = MarketInfoSerializer
+    queryset = MarketInfo.objects.all()
+
+    def filter_queryset(self, queryset):
+        fields = {}
+
+        to_currency = get_currency(self.request.GET, 'to_currency')
+        fields.update(to_currency=to_currency)
+
+        from_currency = get_currency(self.request.GET, 'from_currency')
+        fields.update(from_currency=from_currency)
+
+        count = self.request.GET.get('count')
+
+        if not count:
+            count = 1
+        else:
+            try:
+                count = int(count)
+            except ValueError:
+                raise ValidationError("You should specify valid 'count' field")
+
+        return queryset.filter(**fields)[:count]
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
 
 
 class TestViewSet(mixins.CreateModelMixin,

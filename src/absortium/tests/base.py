@@ -1,6 +1,7 @@
 __author__ = 'andrew.shvv@gmail.com'
 
 import time
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.test import override_settings
@@ -13,6 +14,7 @@ from absortium.tests.mixins.bitcoin import BitcoinClientMockMixin
 from absortium.tests.mixins.deposit import CreateDepositMixin
 from absortium.tests.mixins.ethereum import EthereumClientMockMixin
 from absortium.tests.mixins.exchange import CreateExchangeMixin
+from absortium.tests.mixins.market import MarketInfoMixin
 from absortium.tests.mixins.offer import CheckOfferMixin
 from absortium.tests.mixins.router import RouterMockMixin
 from absortium.tests.mixins.withdrawal import CreateWithdrawalMixin
@@ -32,6 +34,12 @@ class AbsortiumTestMixin():
 
         return results[0]
 
+    def to_dec(self, s):
+        return Decimal(s)
+
+    def interrupt(self):
+        input("To continue press some button:")
+
 
 class AbsoritumLiveTest(APITransactionTestCase,
                         AbsortiumTestMixin,
@@ -39,7 +47,8 @@ class AbsoritumLiveTest(APITransactionTestCase,
                         CreateDepositMixin,
                         CreateExchangeMixin,
                         CreateWithdrawalMixin,
-                        CheckOfferMixin):
+                        CheckOfferMixin,
+                        MarketInfoMixin):
     def setUp(self):
         super().setUp()
         self.client = APIClient()
@@ -86,6 +95,7 @@ class AbsoritumUnitTest(AbsortiumTestMixin,
                         RouterMockMixin,
                         BitcoinClientMockMixin,
                         EthereumClientMockMixin,
+                        MarketInfoMixin,
                         APITestCase):
     def setUp(self):
         super().setUp()

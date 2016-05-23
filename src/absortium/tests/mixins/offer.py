@@ -16,7 +16,7 @@ class CheckOfferMixin():
             'to_currency': to_currency,
         }
 
-        response = self.client.post('/api/offers/', data=data, format='json')
+        response = self.client.get('/api/offers/', data=data, format='json')
         if debug:
             logger.debug(response.content)
 
