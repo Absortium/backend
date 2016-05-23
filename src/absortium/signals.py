@@ -15,8 +15,8 @@ from django.dispatch.dispatcher import receiver
 from absortium import constants
 from absortium.celery import tasks
 from absortium.crossbarhttp import get_crossbar_client
-from absortium.model.models import Exchange, Offer, Test
-from absortium.serializer.serializers import OfferSerializer
+from absortium.model.models import Exchange, Offer, Test, MarketInfo
+from absortium.serializer.serializers import OfferSerializer, MarketInfoSerializer
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__, level=logging.INFO)
@@ -104,8 +104,9 @@ def offer_post_save(sender, instance, *args, **kwargs):
     serializer = OfferSerializer(offer)
 
     publishment = serializer.data
-    topic = "{from_currency}_{to_currency}".format(from_currency=offer.from_currency,
-                                                   to_currency=offer.to_currency)
+    to_repr = {value: key for key, value in constants.AVAILABLE_CURRENCIES.items()}
+    topic = "{from_currency}_{to_currency}".format(from_currency=to_repr[offer.from_currency],
+                                                   to_currency=to_repr[offer.to_currency])
 
     client = get_crossbar_client()
     client.publish(topic, **publishment)
@@ -120,12 +121,27 @@ def offer_post_delete(sender, instance, *args, **kwargs):
     serializer = OfferSerializer(offer)
 
     publishment = serializer.data
-    topic = "{from_currency}_{to_currency}".format(from_currency=offer.from_currency,
-                                                   to_currency=offer.to_currency)
+    to_repr = {value: key for key, value in constants.AVAILABLE_CURRENCIES.items()}
+
+    topic = "{from_currency}_{to_currency}".format(from_currency=to_repr[offer.from_currency],
+                                                   to_currency=to_repr[offer.to_currency])
 
     publishment['amount'] = 0
     client = get_crossbar_client()
     client.publish(topic, **publishment)
+
+
+@receiver(post_save, sender=MarketInfo, dispatch_uid="market_info_post_save")
+def market_info_post_save(sender, instance, *args, **kwargs):
+    """
+        Send websocket notification to the router if offer is changed.
+    """
+    info = instance
+    serializer = MarketInfoSerializer(info)
+    publishment = serializer.data
+
+    client = get_crossbar_client()
+    client.publish(constants.TOPIC_MARKET_INFO, **publishment)
 
 
 @receiver(post_save, sender=Test, dispatch_uid="test_post_save")

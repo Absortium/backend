@@ -146,6 +146,7 @@ def calculate_market_info(self, *args, **kwargs):
 
             for from_currency, to_currency in pairs:
                 info = MarketInfo()
+
                 info.from_currency = from_currency
                 info.to_currency = to_currency
 

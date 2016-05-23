@@ -149,8 +149,8 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
 
 class MarketInfoSerializer(serializers.ModelSerializer):
-    from_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, write_only=True)
-    to_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, write_only=True)
+    from_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
+    to_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
 
     class Meta:
         model = MarketInfo
