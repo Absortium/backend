@@ -145,15 +145,16 @@ def calculate_market_info(self, *args, **kwargs):
             pairs = [(fc, tc) for fc in currencies for tc in currencies if fc != tc]
 
             for from_currency, to_currency in pairs:
+                info = MarketInfo()
+                info.from_currency = from_currency
+                info.to_currency = to_currency
+
                 # 1. Get exchanges for the last 24h.
                 day_ago = timezone.now() - timedelta(hours=constants.MARKET_INFO_DELTA)
                 exchanges_24h = Exchange.objects.filter(status=constants.EXCHANGE_COMPLETED,
                                                         from_currency=from_currency,
                                                         to_currency=to_currency,
                                                         created__gt=day_ago).all()
-                info = MarketInfo()
-                info.from_currency = from_currency
-                info.to_currency = to_currency
 
                 rate_24h_max = 0
                 rate_24h_min = 0
@@ -174,16 +175,16 @@ def calculate_market_info(self, *args, **kwargs):
                 info.rate_24h_min = rate_24h_min
                 info.volume_24h = volume_24h
 
-                # 5. Get the open exchanges
+                # 5. Get the last completed exchanges
                 last_exchanges = Exchange.objects.filter(
                     status=constants.EXCHANGE_COMPLETED,
                     from_currency=from_currency,
                     to_currency=to_currency).all()[:constants.MARKET_INFO_COUNT_OF_EXCHANGES]
 
-                price = 0
+                average_price = 0
                 if last_exchanges:
                     # 6. Calculate average price
-                    price = sum([exchange.price for exchange in last_exchanges]) / len(last_exchanges)
+                    average_price = sum([exchange.price for exchange in last_exchanges]) / len(last_exchanges)
 
-                info.rate = price
+                info.rate = average_price
                 info.save()
