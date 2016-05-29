@@ -62,14 +62,14 @@
 * `gods <service>` - go to the `<service>` project directory.
 * `dcinit <mode>` - init start mode, default mode is `DEFAULT_MODE` .
     * `unit`
-        * external systems like 'coinbase' and 'ethwallet' are mocked.
-        * internal systems like 'router' are mocked.
-        * generally, only 'postgres' service  is required to be up in order to start tests.
+        * external systems like `coinbase` and `ethwallet` are mocked.
+        * internal systems like `router` are mocked.
+        * generally, only `postgres` service  is required to be up in order to start tests.
         * celery workers are not working and code is executing in main process.
     * `integration`
-        * external systems like 'coinbase' are mocked.
-        * 'ethwallet' service might working in private net or might be mocked (it dependence).
-        * 'postgres', 'rabbitmq', 'celery', 'router' services are required to be up in order to start tests.
+        * external systems like `coinbase` are mocked.
+        * `ethwallet` service might working in private net or might be mocked (it dependence).
+        * `postgres`, `rabbitmq`, `celery`, `router` services are required to be up in order to start tests.
         * celery workers are working and celery tasks are executing in another processes.
     * (for more information please read `README.md` in the `docker` directory)         
    
