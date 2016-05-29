@@ -32,15 +32,16 @@
   ```
   $ dc up -d postgres
   ```
+  
 * Migrate `m-backend` database.
   ```
   $ dc run m-backend migrate
   ```  
+  
 * Run `backend` tests.
   ```
   $ dc run m-backend test --verbosity 2 absortium.tests.unit
   ```
-
     
 ## Tips
 * If you use `docker-machine` than you must download project only in user directory.
