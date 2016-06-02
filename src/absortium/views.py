@@ -237,14 +237,15 @@ class MarketInfoSet(mixins.ListModelMixin,
             except ValueError:
                 raise ValidationError("You should specify valid 'count' field")
 
-        response = {}
-        to_repr = {value: key for key, value in constants.AVAILABLE_CURRENCIES.items()}
-
         response = []
         for fc in from_currency:
             for tc in to_currency:
                 if fc != tc:
-                    objs = self.get_queryset().filter(from_currency=fc, to_currency=tc)[:count]
+                    if count == 0:
+                        objs = self.get_queryset().filter(from_currency=fc, to_currency=tc)
+                    else:
+                        objs = self.get_queryset().filter(from_currency=fc, to_currency=tc)[:count]
+
                     serializer = self.get_serializer(objs, many=True)
                     response += serializer.data
 

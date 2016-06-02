@@ -21,7 +21,7 @@ class MarketInfoTest(AbsoritumUnitTest):
 
     def test_without_data(self):
         tasks.calculate_market_info.delay()
-        last_info_btc_eth = self.get_market_info("btc", "eth", debug=True)
+        last_info_btc_eth = self.get_market_info("btc", "eth")
         last_info_eth_btc = self.get_market_info("eth", "btc")
 
         self.assertEqual(self.to_dec(last_info_btc_eth["rate"]), 0.0)
@@ -33,6 +33,11 @@ class MarketInfoTest(AbsoritumUnitTest):
         self.assertEqual(self.to_dec(last_info_eth_btc["volume_24h"]), 0.0)
         self.assertEqual(self.to_dec(last_info_eth_btc["rate_24h_max"]), 0.0)
         self.assertEqual(self.to_dec(last_info_eth_btc["rate_24h_min"]), 0.0)
+
+    def test_without_specifying_currency(self):
+        tasks.calculate_market_info.delay()
+        all_info = self.get_market_info(debug=True)
+        self.assertEqual(len(all_info), 2)
 
     def test_market_info_changes(self, *args, **kwargs):
         self.make_deposit(self.get_account("btc"), amount="999999.0")
