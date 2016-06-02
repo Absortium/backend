@@ -207,9 +207,6 @@ class MarketInfoSet(mixins.ListModelMixin,
         to_currency = get_currency(self.request.GET, 'to_currency', throw=False)
         from_currency = get_currency(self.request.GET, 'from_currency', throw=False)
 
-        logger.debug(from_currency)
-        logger.debug(to_currency)
-
         c1 = from_currency is not None
         c2 = to_currency is not None
 

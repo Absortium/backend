@@ -12,8 +12,8 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 
 import os
 import sys
-
 from datetime import timedelta
+
 from kombu import Exchange, Queue
 
 required_docker_environments = {
@@ -108,8 +108,6 @@ JWT_AUTH = {
     'JWT_PAYLOAD_GET_USERNAME_HANDLER': 'absortium.jwt.jwt_get_username_from_payload',
     'JWT_AUDIENCE': getattr(settings_module, 'AUTH0_API_KEY'),
     'JWT_SECRET_KEY': getattr(settings_module, 'AUTH0_SECRET_KEY'),
-    'JWT_AUTH_HEADER_PREFIX': 'Bearer',
-
 }
 
 CELERYBEAT_SCHEDULE = {
