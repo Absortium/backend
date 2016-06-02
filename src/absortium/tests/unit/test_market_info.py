@@ -21,7 +21,7 @@ class MarketInfoTest(AbsoritumUnitTest):
 
     def test_without_data(self):
         tasks.calculate_market_info.delay()
-        last_info_btc_eth = self.get_market_info("btc", "eth")
+        last_info_btc_eth = self.get_market_info("btc", "eth", debug=True)
         last_info_eth_btc = self.get_market_info("eth", "btc")
 
         self.assertEqual(self.to_dec(last_info_btc_eth["rate"]), 0.0)
