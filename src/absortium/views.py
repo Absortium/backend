@@ -23,6 +23,7 @@ from absortium.serializer.serializers import \
     DepositSerializer, \
     WithdrawSerializer, \
     TestSerializer, MarketInfoSerializer
+
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)
@@ -199,18 +200,35 @@ class MarketInfoSet(mixins.ListModelMixin,
                     generics.GenericAPIView):
     serializer_class = MarketInfoSerializer
     queryset = MarketInfo.objects.all()
+    permission_classes = ()
+    authentication_classes = ()
 
-    def filter_queryset(self, queryset):
-        fields = {}
+    def list(self, request, *args, **kwargs):
+        to_currency = get_currency(self.request.GET, 'to_currency', throw=False)
+        from_currency = get_currency(self.request.GET, 'from_currency', throw=False)
 
-        to_currency = get_currency(self.request.GET, 'to_currency')
-        fields.update(to_currency=to_currency)
+        logger.debug(from_currency)
+        logger.debug(to_currency)
 
-        from_currency = get_currency(self.request.GET, 'from_currency')
-        fields.update(from_currency=from_currency)
+        c1 = from_currency is not None
+        c2 = to_currency is not None
+
+        if c1 and c2:
+            from_currency = [from_currency]
+            to_currency = [to_currency]
+
+        elif c1 and not c2:
+            from_currency = [from_currency]
+            to_currency = constants.AVAILABLE_CURRENCIES.values()
+
+        elif not c1 and not c2:
+            from_currency = constants.AVAILABLE_CURRENCIES.values()
+            to_currency = constants.AVAILABLE_CURRENCIES.values()
+
+        elif not c1 and c2:
+            raise ValidationError("You should specify 'to_currency' field")
 
         count = self.request.GET.get('count')
-
         if not count:
             count = 1
         else:
@@ -219,7 +237,18 @@ class MarketInfoSet(mixins.ListModelMixin,
             except ValueError:
                 raise ValidationError("You should specify valid 'count' field")
 
-        return queryset.filter(**fields)[:count]
+        response = {}
+        to_repr = {value: key for key, value in constants.AVAILABLE_CURRENCIES.items()}
+
+        response = []
+        for fc in from_currency:
+            for tc in to_currency:
+                if fc != tc:
+                    objs = self.get_queryset().filter(from_currency=fc, to_currency=tc)[:count]
+                    serializer = self.get_serializer(objs, many=True)
+                    response += serializer.data
+
+        return Response(response)
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)

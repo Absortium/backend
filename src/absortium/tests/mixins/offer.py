@@ -22,8 +22,7 @@ class CheckOfferMixin():
 
         self.assertEqual(response.status_code, HTTP_200_OK)
 
-        json = response.json()
-        offers = json['results']
+        offers = response.json()
 
         amount = decimal.Decimal(amount)
         price = decimal.Decimal(price)

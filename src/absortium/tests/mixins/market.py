@@ -9,23 +9,23 @@ logger = getLogger(__name__)
 
 class MarketInfoMixin():
     def get_market_info(self, from_currency="btc", to_currency="eth", counts="1", with_checks=True, debug=False):
-        data = {
+        params = {
             'from_currency': from_currency,
             'to_currency': to_currency,
             'counts': counts,
         }
 
         # Get market info
-        response = self.client.get('/api/marketinfo/', data=data, format='json')
+        response = self.client.get('/api/marketinfo/', data=params, format='json')
         if debug:
             logger.debug(response.content)
 
         if with_checks:
             self.assertIn(response.status_code, [HTTP_200_OK])
 
-        json = response.json()
+        results = response.json()
 
         if int(counts) == 1:
-            return json['results'][0]
+            return results[0]
         else:
-            return json['results']
+            return results

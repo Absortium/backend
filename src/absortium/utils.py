@@ -1,6 +1,5 @@
 __author__ = 'andrew.shvv@gmail.com'
 
-from decimal import Decimal
 from random import choice
 from string import printable
 
@@ -42,7 +41,7 @@ def retry(exceptions=(), times=1):
     return wrapper
 
 
-def get_currency(data, name):
+def get_currency(data, name, throw=True):
     currency = data.get(name)
     if currency:
         currency = currency.lower()
@@ -52,4 +51,7 @@ def get_currency(data, name):
         else:
             raise ValidationError("Not available currency '{}'".format(currency))
     else:
-        raise ValidationError("You should specify '{}' field'".format(name))
+        if throw:
+            raise ValidationError("You should specify '{}' field'".format(name))
+        else:
+            return None

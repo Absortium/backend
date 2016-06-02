@@ -32,7 +32,7 @@ class CreateAccountMixin():
         response = self.client.get('/api/accounts/', format='json')
         self.assertEqual(response.status_code, HTTP_200_OK)
 
-        accounts = response.json()['results']
+        accounts = response.json()
         for account in accounts:
             if account['currency'] == currency:
                 account['amount'] = decimal.Decimal(account['amount'])
