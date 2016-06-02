@@ -17,7 +17,7 @@ app = Celery('absortium',
              broker=settings.CELERY_BROKER,
              backend=settings.CELERY_RESULT_BACKEND)
 
-if settings.CELERY_TEST:
+if settings.MODE in ['integration', 'frontend']:
     """
         Because celery run in another process we should manually mock
         what we need when we test celery in integrity tests.
@@ -28,7 +28,7 @@ if settings.CELERY_TEST:
 
     CeleryMockMixin().mock_celery()
     BitcoinClientMockMixin().mock_bitcoin_client()
-    EthereumClientMockMixin.mock_ethereum_client()
+    EthereumClientMockMixin().mock_ethereum_client()
 
 # Using a string here means the worker will not have to
 # pickle the object when using Windows.

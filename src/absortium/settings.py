@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 
 import os
 import sys
+
+from datetime import timedelta
 from kombu import Exchange, Queue
 
 required_docker_environments = {
@@ -33,8 +35,7 @@ optional_docker_environments = {
 
     'ETHWALLET_API_KEY': 'ETHWALLET_API_KEY',
     'ETHWALLET_API_SECRET': 'ETHWALLET_API_SECRET',
-    'CELERY_TEST': 'CELERY_TEST',
-    'TESTNET': 'TESTNET'
+    'MODE': 'MODE'
 
 }
 
@@ -49,7 +50,7 @@ for name, env_name in required_docker_environments.items():
         raise NotImplementedError("Specify the '{}' environment variable.".format(env_name))
     setattr(settings_module, name, value)
 
-COINBASE_SANDBOX = getattr(settings_module, 'TESTNET') in ['true', 'True']
+COINBASE_SANDBOX = getattr(settings_module, 'MODE') in ['testnet']
 if COINBASE_SANDBOX:
     COINBASE_API_URL = 'https://api.sandbox.coinbase.com'
 else:
@@ -111,11 +112,18 @@ JWT_AUTH = {
 
 }
 
+CELERYBEAT_SCHEDULE = {
+    'calculate-market-info-every-20-seconds': {
+        'task': 'absortium.celery.tasks.calculate_market_info',
+        'schedule': timedelta(seconds=20)
+    },
+}
+
 WSGI_APPLICATION = 'wsgi.application'
 
-# Very dirty hack for making celery to connect to the test_postgres db.
-CELERY_TEST = getattr(settings_module, 'CELERY_TEST') in ["True", "true"]
-dbname = 'test_postgres' if CELERY_TEST else 'postgres'
+# Very dirty hack for forcing celery to connect to the test_postgres db while integration test.
+NEED_TEST_DB = getattr(settings_module, 'MODE') in ['integration']
+dbname = 'test_postgres' if NEED_TEST_DB else 'postgres'
 
 DATABASES = {
     'default': {
