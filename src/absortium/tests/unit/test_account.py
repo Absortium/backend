@@ -1,7 +1,9 @@
+import decimal
+
 __author__ = 'andrew.shvv@gmail.com'
 
 from django.contrib.auth import get_user_model
-from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN, HTTP_405_METHOD_NOT_ALLOWED
+from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN, HTTP_405_METHOD_NOT_ALLOWED, HTTP_201_CREATED
 
 from absortium.model.models import Account
 from absortium.tests.base import AbsoritumUnitTest
@@ -56,6 +58,26 @@ class AccountTest(AbsoritumUnitTest):
         response = self.client.get('/api/accounts/{pk}/'.format(pk=trash_account_pk), format='json')
         self.assertEqual(response.status_code, HTTP_404_NOT_FOUND)
 
-    # TODO test deposit notification
-    def test_deposit(self):
-        pass
+    def test_with_amount(self):
+        """
+            Test that accounts could not be created with amount
+        """
+
+        # Accounts are creating during user creation, so delete all accounts
+        accounts = Account.objects.all()
+        accounts.delete()
+
+        data = {
+            'currency': 'btc',
+            'amount': '10'
+        }
+
+        # Create btc account with amount
+        response = self.client.post('/api/accounts/', data=data, format='json')
+        self.assertEqual(response.status_code, HTTP_201_CREATED)
+
+        # Check that amount equal to zero
+        account = self.get_account('btc')
+        self.assertEqual(account['amount'], decimal.Decimal('0'))
+
+        self.assertEqual(len(self.get_accounts()) , 1)

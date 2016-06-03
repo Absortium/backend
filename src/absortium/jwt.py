@@ -8,9 +8,9 @@ from django.contrib.auth import get_user_model
 from rest_framework_jwt.settings import api_settings
 
 from absortium.constants import USERNAME_LENGTH
-from core.utils.logging import getLogger
+from core.utils.logging import getPrettyLogger
 
-logger = getLogger(__name__)
+logger = getPrettyLogger(__name__)
 
 
 def jwt_decode_handler(token):

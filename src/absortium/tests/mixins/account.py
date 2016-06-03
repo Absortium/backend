@@ -29,14 +29,17 @@ class CreateAccountMixin():
         return account_pk, response
 
     def get_account(self, currency):
-        response = self.client.get('/api/accounts/', format='json')
-        self.assertEqual(response.status_code, HTTP_200_OK)
-
-        accounts = response.json()
+        accounts = self.get_accounts()
         for account in accounts:
             if account['currency'] == currency:
                 account['amount'] = decimal.Decimal(account['amount'])
                 return account
+
+    def get_accounts(self):
+        response = self.client.get('/api/accounts/', format='json')
+        self.assertEqual(response.status_code, HTTP_200_OK)
+
+        return response.json()
 
     def check_account_amount(self, account, amount, user=None):
         if user:

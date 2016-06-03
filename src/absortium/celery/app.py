@@ -16,19 +16,24 @@ logger = getPrettyLogger(__name__)
 app = Celery('absortium',
              broker=settings.CELERY_BROKER,
              backend=settings.CELERY_RESULT_BACKEND)
-
-if settings.MODE in ['integration', 'frontend']:
+if settings.MODE in ['frontend', 'integration']:
     """
         Because celery run in another process we should manually mock
         what we need when we test celery in integrity tests.
     """
-    from absortium.tests.mixins.celery import CeleryMockMixin
-    from absortium.tests.mixins.bitcoin import BitcoinClientMockMixin
-    from absortium.tests.mixins.ethereum import EthereumClientMockMixin
 
-    CeleryMockMixin().mock_celery()
+    if settings.MODE == 'integration':
+        from absortium.tests.mixins.celery import CeleryMockMixin
+        CeleryMockMixin().mock_celery()
+        logger.debug("Mock DBTask celery class")
+
+    from absortium.tests.mixins.bitcoin import BitcoinClientMockMixin
     BitcoinClientMockMixin().mock_bitcoin_client()
+    logger.debug("Mock Bitcoin client")
+
+    from absortium.tests.mixins.ethereum import EthereumClientMockMixin
     EthereumClientMockMixin().mock_ethereum_client()
+    logger.debug("Mock Ethereum client")
 
 # Using a string here means the worker will not have to
 # pickle the object when using Windows.

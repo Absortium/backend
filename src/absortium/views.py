@@ -6,7 +6,7 @@ from django.contrib.auth.models import User, Group
 from django.db import transaction
 from rest_framework import generics, mixins, viewsets
 from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.status import HTTP_201_CREATED
 from rest_framework.response import Response
 
@@ -264,17 +264,21 @@ class TestViewSet(mixins.CreateModelMixin,
 
 
 @api_view(http_method_names=['POST'])
+@authentication_classes([])
+@permission_classes([])
 def notification_handler(request, currency, *args, **kwargs):
     # TODO: Make notification response async
-    address = request.data.get('address')
+    data = request.data.copy()
+
+    address = data.get('address')
     if not address:
         raise ValidationError("'address' parameter should be specified")
 
-    tx_hash = request.data.get('tx_hash')
+    tx_hash = data.get('tx_hash')
     if not tx_hash:
         raise ValidationError("'tx_hash' parameter should be specified")
 
-    amount = request.data.get('amount')
+    amount = data.get('amount')
     if not amount:
         raise ValidationError("'amount' parameter should be specified")
 
@@ -286,7 +290,7 @@ def notification_handler(request, currency, *args, **kwargs):
 
         if currency in constants.AVAILABLE_CURRENCIES.keys():
             currency = constants.AVAILABLE_CURRENCIES[currency]
-            request.data.update(currnecy=currency)
+            data.update(currency=currency)
         else:
             raise ValidationError("Not available currency '{}'".format(currency))
     else:
@@ -298,7 +302,7 @@ def notification_handler(request, currency, *args, **kwargs):
         raise NotFound("Could not found account with such address: {}".format(address))
 
     context = {
-        "data": request.data,
+        "data": data,
         "account_pk": account.pk,
     }
 
