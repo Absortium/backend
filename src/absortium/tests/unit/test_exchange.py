@@ -36,17 +36,11 @@ class ExchangeTest(AbsoritumUnitTest):
         self.client.force_authenticate(self.user)
 
     def test_malformed(self, *args, **kwargs):
-        trash_account_pk = "129381728763"
         trash_exchange_pk = "972368423423"
-
-        # Try to get exchange info from uncreated account
-        url = "/api/accounts/{account_pk}/exchanges/{exchange_pk}/".format(account_pk=trash_account_pk,
-                                                                           exchange_pk=trash_exchange_pk)
 
         # Create an account and try to get uncreated exchange
         account = self.get_account("btc")
-        url = "/api/accounts/{account_pk}/exchanges/{exchange_pk}/".format(account_pk=account['pk'],
-                                                                           exchange_pk=trash_exchange_pk)
+        url = "/api/exchanges/{exchange_pk}/".format(exchange_pk=trash_exchange_pk)
 
         response = self.client.get(url, format="json")
         self.assertEqual(response.status_code, HTTP_404_NOT_FOUND)

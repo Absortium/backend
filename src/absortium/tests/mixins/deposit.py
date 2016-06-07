@@ -6,6 +6,7 @@ from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
 from absortium.utils import random_string
 from absortium.model.models import Deposit
 from core.utils.logging import getPrettyLogger
+from absortium.utils import convert
 
 logger = getPrettyLogger(__name__)
 
@@ -13,7 +14,7 @@ logger = getPrettyLogger(__name__)
 class CreateDepositMixin():
     def make_deposit(self, account, amount="99999", with_checks=True, user=None, debug=False):
         data = {
-            'amount': amount,
+            'amount': convert(amount),
             'address': account['address'],
             'tx_hash': random_string()
         }

@@ -1,9 +1,11 @@
+from decimal import Decimal
+
 __author__ = 'andrew.shvv@gmail.com'
 
-import decimal
+
 
 from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK, HTTP_409_CONFLICT
-
+from absortium.utils import convert
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
@@ -32,7 +34,7 @@ class CreateAccountMixin():
         accounts = self.get_accounts()
         for account in accounts:
             if account['currency'] == currency:
-                account['amount'] = decimal.Decimal(account['amount'])
+                account['amount'] = Decimal(account['amount'])
                 return account
 
     def get_accounts(self):
@@ -51,4 +53,4 @@ class CreateAccountMixin():
         self.assertEqual(response.status_code, HTTP_200_OK)
 
         account = response.json()
-        self.assertEqual(decimal.Decimal(account['amount']), decimal.Decimal(amount))
+        self.assertEqual(Decimal(account['amount']), Decimal(convert(amount)))

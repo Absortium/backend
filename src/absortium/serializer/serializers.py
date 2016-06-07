@@ -46,9 +46,7 @@ class OfferSerializer(DynamicFieldsModelSerializer):
     from_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, write_only=True)
     to_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, write_only=True)
 
-    amount = serializers.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
-                                      decimal_places=constants.DECIMAL_PLACES,
-                                      min_value=constants.AMOUNT_MIN_VALUE)
+    amount = serializers.IntegerField(min_value=constants.AMOUNT_MIN_VALUE)
     price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                      decimal_places=constants.DECIMAL_PLACES,
                                      min_value=constants.PRICE_MIN_VALUE)
@@ -87,12 +85,11 @@ class ExchangeSerializer(serializers.ModelSerializer):
         WARNING: STATUS FIELD ALWAYS SHOULD BE READ ONLY!
     """
     status = MyChoiceField(choices=constants.AVAILABLE_TASK_STATUS, default=constants.EXCHANGE_INIT, read_only=True)
-    amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
-                                      decimal_places=constants.DECIMAL_PLACES,
-                                      min_value=constants.AMOUNT_MIN_VALUE)
+    amount = serializers.IntegerField(min_value=constants.AMOUNT_MIN_VALUE)
     price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                      decimal_places=constants.DECIMAL_PLACES,
-                                     min_value=constants.PRICE_MIN_VALUE)
+                                     min_value=constants.PRICE_MIN_VALUE,
+                                     max_value=constants.PRICE_MAX_VALUE)
 
     from_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
     to_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
@@ -126,9 +123,7 @@ class DepositSerializer(serializers.ModelSerializer):
     currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, read_only=True)
     address = serializers.ReadOnlyField(source='account.address')
 
-    amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
-                                      decimal_places=constants.DECIMAL_PLACES,
-                                      min_value=constants.AMOUNT_MIN_VALUE)
+    amount = serializers.IntegerField(min_value=constants.AMOUNT_MIN_VALUE)
 
     class Meta:
         model = Deposit
@@ -139,9 +134,7 @@ class WithdrawSerializer(serializers.ModelSerializer):
     currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, read_only=True)
 
     address = serializers.CharField()
-    amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
-                                      decimal_places=constants.DECIMAL_PLACES,
-                                      min_value=constants.AMOUNT_MIN_VALUE)
+    amount = serializers.IntegerField(min_value=constants.AMOUNT_MIN_VALUE)
 
     class Meta:
         model = Withdrawal

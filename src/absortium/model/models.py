@@ -28,8 +28,7 @@ class Offer(models.Model):
 
     from_currency = models.IntegerField()
     to_currency = models.IntegerField()
-    amount = models.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
-                                 decimal_places=constants.DECIMAL_PLACES, default=decimal.Decimal("0.0"))
+    amount = models.BigIntegerField(default=0)
     price = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                 decimal_places=constants.DECIMAL_PLACES)
 
@@ -42,8 +41,7 @@ class Account(models.Model):
     """
         Comment me!
     """
-    amount = models.DecimalField(max_digits=constants.ACCOUNT_MAX_DIGITS,
-                                 decimal_places=constants.DECIMAL_PLACES, default=0)
+    amount = models.BigIntegerField(default=0)
 
     address = models.CharField(max_length=50)
     currency = models.IntegerField()
@@ -101,8 +99,7 @@ class Exchange(models.Model):
 
     status = models.IntegerField()
 
-    amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
-                                 decimal_places=constants.DECIMAL_PLACES)
+    amount = models.BigIntegerField()
     price = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                 decimal_places=constants.DECIMAL_PLACES)
 
@@ -120,14 +117,10 @@ class Exchange(models.Model):
         super().__init__(*args, **kwargs)
         self.from_account = None
         self.to_account = None
-        self.is_dirty = False
 
     def process_account(self):
-
         # Check that we have enough money
         if self.from_account.amount >= self.amount:
-
-            wallet_client = get_wallet_client(self.from_currency)
 
             # Subtract money from account because it is locked by exchange
             self.from_account.amount -= self.amount
@@ -211,8 +204,7 @@ class Exchange(models.Model):
 class Deposit(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(Account, related_name="deposits")
-    amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
-                                 decimal_places=constants.DECIMAL_PLACES)
+    amount = models.BigIntegerField()
 
     def process_account(self):
         amount = self.account.amount + self.amount
@@ -222,8 +214,7 @@ class Deposit(models.Model):
 class Withdrawal(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(Account, related_name="withdrawals")
-    amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
-                                 decimal_places=constants.DECIMAL_PLACES)
+    amount = models.BigIntegerField()
 
     address = models.CharField(max_length=50)
 
@@ -243,8 +234,7 @@ class MarketInfo(models.Model):
                                        decimal_places=constants.DECIMAL_PLACES)
     rate_24h_min = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                        decimal_places=constants.DECIMAL_PLACES)
-    volume_24h = models.DecimalField(max_digits=constants.MAX_DIGITS,
-                                     decimal_places=constants.DECIMAL_PLACES)
+    volume_24h = models.BigIntegerField()
 
     from_currency = models.IntegerField()
     to_currency = models.IntegerField()

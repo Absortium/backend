@@ -1,9 +1,9 @@
+from decimal import Decimal
+
 __author__ = 'andrew.shvv@gmail.com'
 
-import decimal
-
 from rest_framework.status import HTTP_200_OK
-
+from absortium.utils import convert
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
@@ -24,20 +24,20 @@ class CheckOfferMixin():
 
         offers = response.json()
 
-        amount = decimal.Decimal(amount)
-        price = decimal.Decimal(price)
+        amount = Decimal(amount)
+        price = Decimal(price)
 
         offer_amount = None
         is_offer_exist = False
         for offer in offers:
 
-            offer_price = decimal.Decimal(offer['price'])
+            offer_price = Decimal(offer['price'])
             if offer_price == price:
-                offer_amount = decimal.Decimal(offer['amount'])
+                offer_amount = Decimal(offer['amount'])
                 is_offer_exist = True
 
         if should_exist:
             self.assertTrue(is_offer_exist)
-            self.assertEqual(offer_amount, amount)
+            self.assertEqual(offer_amount, convert(amount))
         else:
             self.assertTrue(not is_offer_exist)

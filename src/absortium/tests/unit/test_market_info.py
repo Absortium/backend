@@ -1,3 +1,5 @@
+from absortium.utils import convert
+
 __author__ = "andrew.shvv@gmail.com"
 
 from freezegun import freeze_time
@@ -56,12 +58,12 @@ class MarketInfoTest(AbsoritumUnitTest):
         last_info_eth_btc = self.get_market_info("eth", "btc")
 
         self.assertEqual(self.to_dec(last_info_btc_eth["rate"]), 2.0)
-        self.assertEqual(self.to_dec(last_info_btc_eth["volume_24h"]), 1.0)
+        self.assertEqual(self.to_dec(last_info_btc_eth["volume_24h"]), convert(1.0))
         self.assertEqual(self.to_dec(last_info_btc_eth["rate_24h_max"]), 2.0)
         self.assertEqual(self.to_dec(last_info_btc_eth["rate_24h_min"]), 2.0)
 
         self.assertEqual(self.to_dec(last_info_eth_btc["rate"]), 0.5)
-        self.assertEqual(self.to_dec(last_info_eth_btc["volume_24h"]), 2.0)
+        self.assertEqual(self.to_dec(last_info_eth_btc["volume_24h"]), convert(2.0))
         self.assertEqual(self.to_dec(last_info_eth_btc["rate_24h_max"]), 0.5)
         self.assertEqual(self.to_dec(last_info_eth_btc["rate_24h_min"]), 0.5)
 
@@ -78,12 +80,12 @@ class MarketInfoTest(AbsoritumUnitTest):
         last_info_eth_btc = self.get_market_info("eth", "btc")
 
         self.assertEqual(self.to_dec(last_info_btc_eth["rate"]), 1.5)
-        self.assertEqual(self.to_dec(last_info_btc_eth["volume_24h"]), 2.0)
+        self.assertEqual(self.to_dec(last_info_btc_eth["volume_24h"]), convert(2.0))
         self.assertEqual(self.to_dec(last_info_btc_eth["rate_24h_max"]), 2.0)
         self.assertEqual(self.to_dec(last_info_btc_eth["rate_24h_min"]), 1.0)
 
         self.assertEqual(self.to_dec(last_info_eth_btc["rate"]), 0.75)
-        self.assertEqual(self.to_dec(last_info_eth_btc["volume_24h"]), 3.0)
+        self.assertEqual(self.to_dec(last_info_eth_btc["volume_24h"]), convert(3.0))
         self.assertEqual(self.to_dec(last_info_eth_btc["rate_24h_max"]), 1.0)
         self.assertEqual(self.to_dec(last_info_eth_btc["rate_24h_min"]), 0.5)
 
@@ -113,11 +115,11 @@ class MarketInfoTest(AbsoritumUnitTest):
             last_info_btc_eth = self.get_market_info("btc", "eth")
             last_info_eth_btc = self.get_market_info("eth", "btc")
 
-            self.assertEqual(self.to_dec(last_info_btc_eth["volume_24h"]), 1.0)
+            self.assertEqual(self.to_dec(last_info_btc_eth["volume_24h"]), convert(1.0))
             self.assertEqual(self.to_dec(last_info_btc_eth["rate_24h_max"]), 2.0)
             self.assertEqual(self.to_dec(last_info_btc_eth["rate_24h_min"]), 2.0)
 
-            self.assertEqual(self.to_dec(last_info_eth_btc["volume_24h"]), 2.0)
+            self.assertEqual(self.to_dec(last_info_eth_btc["volume_24h"]), convert(2.0))
             self.assertEqual(self.to_dec(last_info_eth_btc["rate_24h_max"]), 0.5)
             self.assertEqual(self.to_dec(last_info_eth_btc["rate_24h_min"]), 0.5)
 
@@ -146,11 +148,11 @@ class MarketInfoTest(AbsoritumUnitTest):
             last_info_btc_eth = self.get_market_info("btc", "eth")
             last_info_eth_btc = self.get_market_info("eth", "btc")
 
-            self.assertEqual(self.to_dec(last_info_btc_eth["volume_24h"]), 2.0)
+            self.assertEqual(self.to_dec(last_info_btc_eth["volume_24h"]), convert(2.0))
             self.assertEqual(self.to_dec(last_info_btc_eth["rate_24h_max"]), 2.0)
             self.assertEqual(self.to_dec(last_info_btc_eth["rate_24h_min"]), 1.0)
 
-            self.assertEqual(self.to_dec(last_info_eth_btc["volume_24h"]), 3.0)
+            self.assertEqual(self.to_dec(last_info_eth_btc["volume_24h"]), convert(3.0))
             self.assertEqual(self.to_dec(last_info_eth_btc["rate_24h_max"]), 1.0)
             self.assertEqual(self.to_dec(last_info_eth_btc["rate_24h_min"]), 0.5)
 
@@ -193,12 +195,12 @@ class MarketInfoTest(AbsoritumUnitTest):
         for p in publishments:
             if p["from_currency"] == "btc":
                 self.assertEqual(self.to_dec(p["rate"]), 2.0)
-                self.assertEqual(self.to_dec(p["volume_24h"]), 1.0)
+                self.assertEqual(self.to_dec(p["volume_24h"]), convert(1.0))
                 self.assertEqual(self.to_dec(p["rate_24h_max"]), 2.0)
                 self.assertEqual(self.to_dec(p["rate_24h_min"]), 2.0)
             elif p["from_currency"] == "eth":
                 self.assertEqual(self.to_dec(p["rate"]), 0.5)
-                self.assertEqual(self.to_dec(p["volume_24h"]), 2.0)
+                self.assertEqual(self.to_dec(p["volume_24h"]), convert(2.0))
                 self.assertEqual(self.to_dec(p["rate_24h_max"]), 0.5)
                 self.assertEqual(self.to_dec(p["rate_24h_min"]), 0.5)
             else:

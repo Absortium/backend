@@ -1,3 +1,5 @@
+from absortium.utils import convert
+
 __author__ = 'andrew.shvv@gmail.com'
 
 from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
@@ -11,7 +13,7 @@ logger = getLogger(__name__)
 class CreateWithdrawalMixin():
     def make_withdrawal(self, account, amount="0.00001", user=None, with_checks=True):
         data = {
-            'amount': amount,
+            'amount': convert(amount),
             'address': '1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX'
         }
 

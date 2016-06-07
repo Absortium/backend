@@ -1,3 +1,6 @@
+import decimal
+from decimal import Decimal
+
 __author__ = 'andrew.shvv@gmail.com'
 
 from random import choice
@@ -55,3 +58,23 @@ def get_currency(data, name, throw=True):
             raise ValidationError("You should specify '{}' field'".format(name))
         else:
             return None
+
+
+def convert(value):
+    try:
+        if type(value) == str:
+            return str(Decimal(value) * constants.VIABLE_UNIT)
+        else:
+            return value * constants.VIABLE_UNIT
+    except decimal.InvalidOperation:
+        return value
+
+
+def deconvert(value):
+    try:
+        if type(value) == str:
+            return str(Decimal(value) / constants.VIABLE_UNIT)
+        else:
+            return value / constants.VIABLE_UNIT
+    except decimal.InvalidOperation:
+        return value
