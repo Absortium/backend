@@ -1,8 +1,6 @@
 import decimal
 from decimal import Decimal
 
-import math
-
 __author__ = 'andrew.shvv@gmail.com'
 
 from random import choice
@@ -62,7 +60,7 @@ def get_currency(data, name, throw=True):
             return None
 
 
-def eth2wei(value):
+def ethToWei(value):
     try:
         v = Decimal(value) * constants.WEI_IN_ETH
         if type(value) == str:
@@ -74,7 +72,7 @@ def eth2wei(value):
         return value
 
 
-def wei2eth(value):
+def weiToEth(value):
     try:
         v = Decimal(value) / constants.WEI_IN_ETH
         if type(value) == str:
@@ -83,6 +81,14 @@ def wei2eth(value):
             return v
     except decimal.InvalidOperation:
         return value
+
+
+def ethTo10Gwei(value):
+    return convert(value)
+
+
+def btcToSatoshi(value):
+    return convert(value)
 
 
 def convert(value):
@@ -105,16 +111,5 @@ def convert(value):
             return str(round(v))
         else:
             return round(v)
-    except decimal.InvalidOperation:
-        return value
-
-
-def deconvert(value):
-    try:
-        v = Decimal(value) / constants.VIABLE_UNIT
-        if type(value) == str:
-            return str(v)
-        else:
-            return v
     except decimal.InvalidOperation:
         return value

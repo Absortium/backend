@@ -4,7 +4,7 @@ from django.conf import settings
 from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 from absortium.model.models import Deposit
-from absortium.utils import eth2wei
+from absortium.utils import ethToWei
 from absortium.utils import random_string
 from core.utils.logging import getPrettyLogger
 
@@ -22,7 +22,7 @@ class CreateDepositMixin():
             """
                 In case of eth we should emulate ethwallet and send eth in wei.
             """
-            amount = eth2wei(amount)
+            amount = ethToWei(amount)
         else:
             raise Exception("Unknown currency!")
 

@@ -1,4 +1,4 @@
-from absortium.utils import eth2wei
+from absortium.utils import ethToWei
 
 __author__ = 'andrew.shvv@gmail.com'
 

@@ -8,7 +8,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from absortium import constants
 from absortium.model.models import Account
-from absortium.utils import convert
+from absortium.utils import ethToWei, btcToSatoshi
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)
@@ -16,7 +16,8 @@ logger = getPrettyLogger(__name__)
 __author__ = 'andrew.shvv@gmail.com'
 
 TIMEDELTA = 20
-DEFAULT_AMOUNT = convert(4)
+DEFAULT_BTC_AMOUNT = 4
+DEFAULT_ETH_AMOUNT = ethToWei(4)
 
 
 def random_string(length=30):
@@ -32,10 +33,18 @@ class Command(BaseCommand):
         while True:
             accounts = Account.objects.all()
             for account in accounts:
+
+                if account.currency == constants.BTC:
+                    amount = DEFAULT_BTC_AMOUNT
+                elif account.currency == constants.ETH:
+                    amount = DEFAULT_ETH_AMOUNT
+                else:
+                    raise Exception("Unknown currency")
+
                 data = {
                     'tx_hash': random_string(),
                     'address': account.address,
-                    'amount': DEFAULT_AMOUNT
+                    'amount': amount
                 }
 
                 if account.currency == constants.BTC:

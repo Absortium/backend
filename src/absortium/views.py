@@ -10,7 +10,7 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.status import HTTP_201_CREATED
 from rest_framework.response import Response
 
-from absortium.utils import get_currency, wei2eth, convert
+from absortium.utils import get_currency, weiToEth, convert, btcToSatoshi, ethTo10Gwei
 from absortium.celery import tasks
 from absortium.mixins import CreateCeleryMixin
 from absortium.model.models import Offer, Account, Test, MarketInfo
@@ -286,12 +286,12 @@ def notification_handler(request, currency, *args, **kwargs):
                 In case of eth the amount in the wei 1ETH = 10 ** 18 Wei,
                 so we should convert wei -> eth -> 10 Gwei (10 Gwei is like satoshi in bitcoin)
             """
-            data['amount'] = convert(wei2eth(amount))
+            data['amount'] = ethTo10Gwei(weiToEth(amount))
         elif currency == 'btc':
             """
                 In case of btc we get the amount in btc. so we should convert it in satoshi.
             """
-            data['amount'] = convert(amount)
+            data['amount'] = btcToSatoshi(amount)
         else:
             raise ValidationError("Unknown currency")
 
