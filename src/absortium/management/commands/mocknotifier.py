@@ -8,7 +8,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from absortium import constants
 from absortium.model.models import Account
-
+from absortium.utils import convert
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)
@@ -16,7 +16,7 @@ logger = getPrettyLogger(__name__)
 __author__ = 'andrew.shvv@gmail.com'
 
 TIMEDELTA = 20
-DEFAULT_AMOUNT = 4
+DEFAULT_AMOUNT = convert(4)
 
 
 def random_string(length=30):
