@@ -38,7 +38,7 @@ class MarketInfoTest(AbsoritumUnitTest):
 
     def test_without_specifying_currency(self):
         tasks.calculate_market_info.delay()
-        all_info = self.get_market_info(debug=True)
+        all_info = self.get_market_info()
         self.assertEqual(len(all_info), 2)
 
     def test_market_info_changes(self, *args, **kwargs):

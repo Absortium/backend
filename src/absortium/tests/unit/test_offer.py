@@ -1,3 +1,8 @@
+import time
+
+from absortium.model.models import Account
+from absortium.utils import convert
+
 __author__ = 'andrew.shvv@gmail.com'
 
 import decimal
@@ -28,11 +33,16 @@ class OfferTest(AbsoritumUnitTest):
         n = 20
         amounts = [self.random_amount() for _ in range(0, n)]
 
+        should_be = 0
         for amount in amounts:
             self.make_deposit(account, amount=amount)
+            self.check_account_amount(account=account, amount=amount)
             self.create_exchange(amount=str(amount), price="0.1", status="init")
 
-        self.check_offer(amount=sum(amounts), price="0.1")
+            should_be += amount
+            self.check_offer(amount=should_be, price="0.1")
+
+
 
     def test_different_price(self, *args, **kwargs):
         self.make_deposit(self.get_account('btc'), amount="999999.0")

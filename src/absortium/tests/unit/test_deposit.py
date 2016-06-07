@@ -1,3 +1,5 @@
+from absortium.utils import eth2wei
+
 __author__ = 'andrew.shvv@gmail.com'
 
 from django.contrib.auth import get_user_model
@@ -10,6 +12,16 @@ logger = getLogger(__name__)
 
 
 class DepositTest(AbsoritumUnitTest):
+    def test_precision(self, *args, **kwargs):
+        account = self.get_account('btc')
+        self.make_deposit(account, "10")
+        self.check_account_amount(account, "10")
+
+    def test_smaller_than_min(self):
+        account = self.get_account('btc')
+        with self.assertRaises(AssertionError):
+            self.make_deposit(account, "0.000000001")
+
     def test_permissions(self, *args, **kwargs):
         account = self.get_account('btc')
         deposit_pk, _ = self.make_deposit(account)

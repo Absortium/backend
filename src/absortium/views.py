@@ -10,7 +10,7 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.status import HTTP_201_CREATED
 from rest_framework.response import Response
 
-from absortium.utils import get_currency
+from absortium.utils import get_currency, wei2eth, convert
 from absortium.celery import tasks
 from absortium.mixins import CreateCeleryMixin
 from absortium.model.models import Offer, Account, Test, MarketInfo
@@ -267,22 +267,35 @@ class TestViewSet(mixins.CreateModelMixin,
 @authentication_classes([])
 @permission_classes([])
 def notification_handler(request, currency, *args, **kwargs):
-    # TODO: Make notification response async
     data = request.data.copy()
 
     address = data.get('address')
-    if not address:
+    if address is None:
         raise ValidationError("'address' parameter should be specified")
 
     tx_hash = data.get('tx_hash')
-    if not tx_hash:
+    if tx_hash is None:
         raise ValidationError("'tx_hash' parameter should be specified")
 
     amount = data.get('amount')
-    if not amount:
+    if amount is None:
         raise ValidationError("'amount' parameter should be specified")
+    else:
+        if currency == 'eth':
+            """
+                In case of eth the amount in the wei 1ETH = 10 ** 18 Wei,
+                so we should convert wei -> eth -> 10 Gwei (10 Gwei is like satoshi in bitcoin)
+            """
+            data['amount'] = convert(wei2eth(amount))
+        elif currency == 'btc':
+            """
+                In case of btc we get the amount in btc. so we should convert it in satoshi.
+            """
+            data['amount'] = convert(amount)
+        else:
+            raise ValidationError("Unknown currency")
 
-    if not address:
+    if address is None:
         raise ValidationError("Could not found address parameter in request")
 
     if currency:

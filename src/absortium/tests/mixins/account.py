@@ -2,10 +2,8 @@ from decimal import Decimal
 
 __author__ = 'andrew.shvv@gmail.com'
 
-
-
 from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK, HTTP_409_CONFLICT
-from absortium.utils import convert
+from absortium.utils import convert, eth2wei
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
@@ -53,4 +51,5 @@ class CreateAccountMixin():
         self.assertEqual(response.status_code, HTTP_200_OK)
 
         account = response.json()
+
         self.assertEqual(Decimal(account['amount']), Decimal(convert(amount)))
