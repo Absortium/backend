@@ -19,7 +19,7 @@ from absortium.model.models import Exchange, Offer, Test, MarketInfo
 from absortium.serializer.serializers import OfferSerializer, MarketInfoSerializer
 from core.utils.logging import getPrettyLogger
 
-logger = getPrettyLogger(__name__, level=logging.INFO)
+logger = getPrettyLogger(__name__)
 
 
 @receiver(post_save, sender=get_user_model(), dispatch_uid="user_post_save")

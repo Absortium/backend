@@ -107,6 +107,19 @@ class AccountViewSet(CreateCeleryMixin,
     def get_queryset(self):
         return self.request.user.accounts.all()
 
+    def list(self, request, *args, **kwargs):
+        currency = get_currency(self.request.GET, 'currency', throw=False)
+        queryset = self.filter_queryset(self.get_queryset())
+
+        if currency is not None:
+            queryset = queryset.filter(currency=currency).all()
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
     @init_account(pk_name="pk")
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
