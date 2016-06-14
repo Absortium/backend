@@ -4,13 +4,18 @@ from django.conf import settings
 from django.conf.urls import url, include
 from rest_framework_nested import routers
 
-from absortium.views import AccountViewSet, ExchangeViewSet, OfferListView, WithdrawalViewSet, DepositViewSet, \
-    TestViewSet, MarketInfoSet, notification_handler
+from absortium.views import \
+    AccountViewSet, \
+    ExchangeViewSet, \
+    OfferListView, \
+    WithdrawalViewSet, \
+    DepositViewSet, \
+    MarketInfoSet, \
+    notification_handler
 
 router = routers.SimpleRouter()
 router.register(prefix=r'accounts', viewset=AccountViewSet, base_name="Account")
 router.register(prefix=r'exchanges', viewset=ExchangeViewSet, base_name='Exchange')
-router.register(prefix=r'tests', viewset=TestViewSet, base_name="Test")
 
 accounts_router = routers.NestedSimpleRouter(router, "accounts", lookup="accounts")
 accounts_router.register(r"deposits", DepositViewSet, base_name='Deposits')

@@ -1,13 +1,10 @@
 __author__ = 'andrew.shvv@gmail.com'
 
-import decimal
-
 from django.conf import settings
 from django.db import models
 from rest_framework.exceptions import ValidationError
 
 from absortium import constants
-from absortium.wallet.base import get_wallet_client
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
@@ -241,9 +238,3 @@ class MarketInfo(models.Model):
 
     class Meta:
         ordering = ('-created',)
-
-
-class Test(models.Model):
-    amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
-                                 decimal_places=constants.DECIMAL_PLACES)
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="tests")

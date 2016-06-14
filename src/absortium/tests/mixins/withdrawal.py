@@ -1,4 +1,4 @@
-from absortium.utils import convert, ethToWei, btcToSatoshi
+from absortium.utils import convert
 
 __author__ = 'andrew.shvv@gmail.com'
 

@@ -5,7 +5,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from absortium import constants
-from absortium.model.models import Account, Exchange, Offer, Deposit, Withdrawal, Test, MarketInfo
+from absortium.model.models import Account, Exchange, Offer, Deposit, Withdrawal, MarketInfo
 from absortium.serializer.fields import MyChoiceField
 
 
@@ -144,9 +144,3 @@ class MarketInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = MarketInfo
         fields = ('rate', 'rate_24h_max', 'rate_24h_min', 'volume_24h', 'from_currency', 'to_currency')
-
-
-class TestSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Test
-        fields = ('pk', 'amount')

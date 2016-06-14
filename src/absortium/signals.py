@@ -4,8 +4,6 @@
 
 __author__ = 'andrew.shvv@gmail.com'
 
-import logging
-
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models.signals import post_delete, post_save
@@ -15,7 +13,7 @@ from django.dispatch.dispatcher import receiver
 from absortium import constants
 from absortium.celery import tasks
 from absortium.crossbarhttp import get_crossbar_client
-from absortium.model.models import Exchange, Offer, Test, MarketInfo
+from absortium.model.models import Exchange, Offer, MarketInfo
 from absortium.serializer.serializers import OfferSerializer, MarketInfoSerializer
 from core.utils.logging import getPrettyLogger
 
@@ -142,12 +140,3 @@ def market_info_post_save(sender, instance, *args, **kwargs):
 
     client = get_crossbar_client()
     client.publish(constants.TOPIC_MARKET_INFO, **publishment)
-
-
-@receiver(post_save, sender=Test, dispatch_uid="test_post_save")
-def test_post_save(sender, instance, created, *args, **kwargs):
-    offer = Offer(price=1,
-                  from_currency=0,
-                  to_currency=1,
-                  amount=2)
-    offer.save()

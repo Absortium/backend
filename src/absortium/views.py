@@ -10,10 +10,10 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.status import HTTP_201_CREATED
 from rest_framework.response import Response
 
-from absortium.utils import get_currency, weiToEth, convert, btcToSatoshi, ethTo10Gwei
+from absortium.utils import get_currency
 from absortium.celery import tasks
 from absortium.mixins import CreateCeleryMixin
-from absortium.model.models import Offer, Account, Test, MarketInfo
+from absortium.model.models import Offer, Account, MarketInfo
 from absortium.serializer.serializers import \
     UserSerializer, \
     GroupSerializer, \
@@ -22,7 +22,7 @@ from absortium.serializer.serializers import \
     ExchangeSerializer, \
     DepositSerializer, \
     WithdrawSerializer, \
-    TestSerializer, MarketInfoSerializer
+    MarketInfoSerializer
 
 from core.utils.logging import getPrettyLogger
 
@@ -263,17 +263,6 @@ class MarketInfoSet(mixins.ListModelMixin,
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
-
-
-class TestViewSet(mixins.CreateModelMixin,
-                  viewsets.GenericViewSet):
-    serializer_class = TestSerializer
-
-    def perform_create(self, serializer):
-        with transaction.atomic():
-            instance = serializer.save(owner_id=self.request.user.pk)
-            instance = Test.objects.select_for_update().get(pk=instance.pk)
-            instance = Test.objects.select_for_update().get(pk=instance.pk)
 
 
 @api_view(http_method_names=['POST'])
