@@ -293,20 +293,6 @@ def notification_handler(request, currency, *args, **kwargs):
     amount = data.get('amount')
     if amount is None:
         raise ValidationError("'amount' parameter should be specified")
-    else:
-        if currency == 'eth':
-            """
-                In case of eth the amount in the wei 1ETH = 10 ** 18 Wei,
-                so we should convert wei -> eth -> 10 Gwei (10 Gwei is like satoshi in bitcoin)
-            """
-            data['amount'] = ethTo10Gwei(weiToEth(amount))
-        elif currency == 'btc':
-            """
-                In case of btc we get the amount in btc. so we should convert it in satoshi.
-            """
-            data['amount'] = btcToSatoshi(amount)
-        else:
-            raise ValidationError("Unknown currency")
 
     if address is None:
         raise ValidationError("Could not found address parameter in request")

@@ -113,3 +113,14 @@ def convert(value):
             return round(v)
     except decimal.InvalidOperation:
         return value
+
+
+def deconvert(value):
+    try:
+        v = Decimal(value) / constants.VIABLE_UNIT
+        if type(value) == str:
+            return str(round(v))
+        else:
+            return round(v)
+    except decimal.InvalidOperation:
+        return value

@@ -120,25 +120,21 @@ class ExchangeSerializer(serializers.ModelSerializer):
 
 
 class DepositSerializer(serializers.ModelSerializer):
-    currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, read_only=True)
     address = serializers.ReadOnlyField(source='account.address')
-
     amount = serializers.IntegerField(min_value=constants.AMOUNT_MIN_VALUE)
 
     class Meta:
         model = Deposit
-        fields = ('pk', 'currency', 'address', 'amount', 'created')
+        fields = ('pk', 'address', 'amount', 'created')
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
-    currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, read_only=True)
-
     address = serializers.CharField()
     amount = serializers.IntegerField(min_value=constants.AMOUNT_MIN_VALUE)
 
     class Meta:
         model = Withdrawal
-        fields = ('pk', 'currency', 'address', 'amount', 'created')
+        fields = ('pk', 'address', 'amount', 'created')
 
 
 class MarketInfoSerializer(serializers.ModelSerializer):

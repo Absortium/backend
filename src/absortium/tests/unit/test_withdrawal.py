@@ -10,6 +10,34 @@ logger = getLogger(__name__)
 
 
 class WithdrawalTest(AbsoritumUnitTest):
+    def test_precision_btc(self, *args, **kwargs):
+        account = self.get_account('btc')
+        self.make_deposit(account, "10")
+        self.make_withdrawal(account, "10")
+        self.check_account_amount(account, "0")
+
+        self.make_deposit(account, "0.1")
+        self.make_withdrawal(account, "0.1")
+        self.check_account_amount(account, "0")
+
+        self.make_deposit(account, "0.000001")
+        self.make_withdrawal(account, "0.000001")
+        self.check_account_amount(account, "0")
+
+    def test_precision_eth(self, *args, **kwargs):
+        account = self.get_account('eth')
+        self.make_deposit(account, "10")
+        self.make_withdrawal(account, "10")
+        self.check_account_amount(account, "0")
+
+        self.make_deposit(account, "0.1")
+        self.make_withdrawal(account, "0.1")
+        self.check_account_amount(account, "0")
+
+        self.make_deposit(account, "0.000001")
+        self.make_withdrawal(account, "0.000001")
+        self.check_account_amount(account, "0")
+
     def test_permissions(self, *args, **kwargs):
         account = self.get_account('btc')
         self.make_deposit(account)

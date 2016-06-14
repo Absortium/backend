@@ -12,8 +12,13 @@ logger = getLogger(__name__)
 
 
 class DepositTest(AbsoritumUnitTest):
-    def test_precision(self, *args, **kwargs):
+    def test_precision_btc(self, *args, **kwargs):
         account = self.get_account('btc')
+        self.make_deposit(account, "10")
+        self.check_account_amount(account, "10")
+
+    def test_precision_eth(self, *args, **kwargs):
+        account = self.get_account('eth')
         self.make_deposit(account, "10")
         self.check_account_amount(account, "10")
 

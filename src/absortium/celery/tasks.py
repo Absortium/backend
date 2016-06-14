@@ -1,6 +1,9 @@
 from datetime import timedelta
 
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
+
+from absortium.utils import btcToSatoshi, ethTo10Gwei, deconvert, weiToEth
 
 __author__ = 'andrew.shvv@gmail.com'
 
@@ -31,11 +34,25 @@ def do_deposit(self, *args, **kwargs):
         with transaction.atomic():
             data = kwargs['data']
             account_pk = kwargs['account_pk']
+            account = Account.objects.select_for_update().get(pk=account_pk)
+
+            if account.currency == constants.ETH:
+                """
+                    In case of eth the amount in the wei 1ETH = 10 ** 18 Wei,
+                    so we should convert wei -> eth -> 10 Gwei (10 Gwei is like satoshi in bitcoin)
+                """
+                data['amount'] = ethTo10Gwei(weiToEth(data['amount']))
+            elif account.currency == constants.BTC:
+                """
+                    In case of btc we get the amount in btc. so we should convert it in satoshi.
+                """
+                data['amount'] = btcToSatoshi(data['amount'])
+            else:
+                raise ValidationError("Unknown currency")
 
             serializer = DepositSerializer(data=data)
             serializer.is_valid(raise_exception=True)
 
-            account = Account.objects.select_for_update().get(pk=account_pk)
             deposit = serializer.save(account=account)
 
             deposit.process_account()
@@ -58,7 +75,6 @@ def do_withdrawal(self, *args, **kwargs):
 
             account = Account.objects.select_for_update().get(pk=account_pk)
             withdrawal = serializer.save(account=account)
-
             withdrawal.process_account()
 
             return serializer.data
