@@ -17,6 +17,7 @@ class ExchangeTest(AbsoritumUnitTest):
         self.primary_eth_account = self.get_account("eth")
 
         self.make_deposit(self.primary_btc_account, amount="10.0")
+        self.check_account_amount(self.primary_btc_account, amount="10.0")
 
         # Create some another user
         User = get_user_model()
@@ -32,6 +33,7 @@ class ExchangeTest(AbsoritumUnitTest):
         self.some_btc_account = self.get_account("btc")
 
         self.make_deposit(self.some_eth_account, amount="20.0")
+        self.check_account_amount(self.some_eth_account, amount="20.0")
 
         self.client.force_authenticate(self.user)
 
@@ -80,7 +82,6 @@ class ExchangeTest(AbsoritumUnitTest):
         """
             Create exchanges which will be processed fully
         """
-        self.check_account_amount(self.primary_btc_account, amount="10.0")
 
         self.create_exchange(price="2.0", amount="5.0", status="init")
         self.create_exchange(price="2.0", amount="5.0", status="init")
@@ -131,11 +132,21 @@ class ExchangeTest(AbsoritumUnitTest):
         self.check_account_amount(self.primary_eth_account, amount="20.0")
 
     def test_exchange_status(self):
-        self.make_deposit(self.primary_btc_account, amount="20.0")
-
         # check that we can't set the exchange status
         extra_data = {
             'status': "pending"
         }
 
-        self.create_exchange(price="2.0", amount="20.0", status="init", extra_data=extra_data)
+        self.create_exchange(price="2.0", amount="10.0", status="init", extra_data=extra_data)
+
+    def test_eth_exchange_with_small_amount(self):
+        self.client.force_authenticate(self.some_user)
+
+        with self.assertRaises(AssertionError):
+            self.create_exchange(from_currency="eth", to_currency="btc", price="0.1", amount="0.0001")
+        self.check_account_amount(self.some_eth_account, amount="20.0")
+
+    def test_btc_exchange_with_small_amount(self):
+        with self.assertRaises(AssertionError):
+            self.create_exchange(price="0.1", amount="0.0001")
+        self.check_account_amount(self.primary_btc_account, amount="10.0")

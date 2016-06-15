@@ -41,13 +41,17 @@ class CreateAccountMixin():
 
         return response.json()
 
-    def check_account_amount(self, account, amount, user=None):
+    def check_account_amount(self, account, amount, user=None, debug=False):
         if user:
             # Authenticate normal user
             self.client.force_authenticate(user)
 
         # Create account
         response = self.client.get('/api/accounts/{account_pk}/'.format(account_pk=account['pk']), format='json')
+
+        if debug:
+            logger.debug(response.content)
+
         self.assertEqual(response.status_code, HTTP_200_OK)
 
         account = response.json()

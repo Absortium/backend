@@ -119,6 +119,9 @@ def do_exchange(self, *args, **kwargs):
 
             return history + [exchange]
 
+        if exchange.price * exchange.amount < constants.EXCHANGE_AMOUNT_MIN_VALUE:
+            raise ValidationError("Total amount lower than {}".format(deconvert(constants.EXCHANGE_AMOUNT_MIN_VALUE)))
+
         with publishment.atomic():
             with transaction.atomic():
                 with lockexchange(exchange):

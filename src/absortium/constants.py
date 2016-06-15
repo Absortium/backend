@@ -1,5 +1,7 @@
 __author__ = 'andrew.shvv@gmail.com'
 
+from absortium.utils import convert
+
 SELL = 0
 BUY = 1
 AVAILABLE_ORDER_TYPES = {
@@ -44,6 +46,7 @@ DEFAULT_AMOUNT = 0
 
 AMOUNT_MIN_VALUE = 1
 VIABLE_UNIT = 10 ** DECIMAL_PLACES
+EXCHANGE_AMOUNT_MIN_VALUE = convert(0.001)
 WEI_IN_ETH = 10 ** 18
 
 PRICE_MIN_VALUE = 1 / VIABLE_UNIT
