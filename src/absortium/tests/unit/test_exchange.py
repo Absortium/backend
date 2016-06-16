@@ -37,6 +37,16 @@ class ExchangeTest(AbsoritumUnitTest):
 
         self.client.force_authenticate(self.user)
 
+    def test_exhcanges_count(self):
+        """
+            Create create two exchanges with different price and then one opposite with smaller price.
+        """
+        self.create_exchange(price="2.0", amount="5.0", status="init")
+        self.create_exchange(price="1.0", amount="5.0", status="init")
+
+        exchanges = self.get_exchanges()
+        self.assertEqual(len(exchanges), 2)
+
     def test_malformed(self, *args, **kwargs):
         trash_exchange_pk = "972368423423"
 

@@ -27,7 +27,7 @@ class CreateExchangeMixin():
             self.client.force_authenticate(user)
 
         # Create exchange
-        url = '/api/exchanges/'.format()
+        url = '/api/exchanges/'
         response = self.client.post(url, data=data, format='json')
 
         if debug:
@@ -55,3 +55,17 @@ class CreateExchangeMixin():
             elif exchange['status'] == "COMPLETED":
                 # TODO: Add check that exchange has status COMPLETED
                 pass
+
+    def get_exchanges(self, debug=False):
+
+        # Create exchange
+        url = '/api/exchanges/'
+        response = self.client.get(url, format='json')
+
+        if debug:
+            logger.debug(response.content)
+
+        return response.json()
+
+
+
