@@ -14,6 +14,7 @@ from absortium.tests.mixins.bitcoin import BitcoinClientMockMixin
 from absortium.tests.mixins.deposit import CreateDepositMixin
 from absortium.tests.mixins.ethereum import EthereumClientMockMixin
 from absortium.tests.mixins.exchange import CreateExchangeMixin
+from absortium.tests.mixins.history import HistoryMixin
 from absortium.tests.mixins.market import MarketInfoMixin
 from absortium.tests.mixins.offer import CheckOfferMixin
 from absortium.tests.mixins.router import RouterMockMixin
@@ -48,7 +49,8 @@ class AbsoritumLiveTest(APITransactionTestCase,
                         CreateExchangeMixin,
                         CreateWithdrawalMixin,
                         CheckOfferMixin,
-                        MarketInfoMixin):
+                        MarketInfoMixin,
+                        HistoryMixin):
     def setUp(self):
         super().setUp()
         self.client = APIClient()
@@ -96,6 +98,7 @@ class AbsoritumUnitTest(AbsortiumTestMixin,
                         BitcoinClientMockMixin,
                         EthereumClientMockMixin,
                         MarketInfoMixin,
+                        HistoryMixin,
                         APITestCase):
     def setUp(self):
         super().setUp()

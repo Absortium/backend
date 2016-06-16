@@ -10,7 +10,7 @@ logger = getLogger(__name__)
 
 
 class CreateExchangeMixin():
-    def create_exchange(self, amount="0.00001", from_currency="btc", to_currency="eth", price="0.001",
+    def create_exchange(self, amount="1", from_currency="btc", to_currency="eth", price="1",
                         status="completed", user=None, with_checks=True, debug=False, extra_data={}):
         data = {
             'to_currency': to_currency,

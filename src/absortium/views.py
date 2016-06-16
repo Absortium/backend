@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from absortium.utils import get_currency
 from absortium.celery import tasks
 from absortium.mixins import CreateCeleryMixin
-from absortium.model.models import Offer, Account, MarketInfo
+from absortium.model.models import Offer, Exchange, Account, MarketInfo
 from absortium.serializer.serializers import \
     UserSerializer, \
     GroupSerializer, \
@@ -209,6 +209,33 @@ class ExchangeViewSet(CreateCeleryMixin,
         }
 
         return tasks.do_exchange.delay(**context)
+
+
+class HistoryViewSet(generics.GenericAPIView,
+                     mixins.ListModelMixin):
+    serializer_class = ExchangeSerializer
+    queryset = Exchange.objects.all()
+    permission_classes = ()
+    authentication_classes = ()
+
+    def filter_queryset(self, queryset):
+        """
+            This method used for filter origin exchanges queryset by the given from/to currency.
+        """
+        fields = {"status": constants.EXCHANGE_COMPLETED}
+
+        to_currency = get_currency(self.request.GET, 'to_currency', throw=False)
+        if to_currency is not None:
+            fields.update(to_currency=to_currency)
+
+        from_currency = get_currency(self.request.GET, 'from_currency', throw=False)
+        if from_currency is not None:
+            fields.update(from_currency=from_currency)
+
+        return queryset.filter(**fields)
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
 
 
 class MarketInfoSet(mixins.ListModelMixin,
