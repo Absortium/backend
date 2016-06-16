@@ -65,11 +65,13 @@ class OfferListView(mixins.ListModelMixin,
         """
         fields = {}
 
-        to_currency = get_currency(self.request.GET, 'to_currency')
-        fields.update(to_currency=to_currency)
+        to_currency = get_currency(self.request.GET, 'to_currency', throw=False)
+        if to_currency is not None:
+            fields.update(to_currency=to_currency)
 
-        from_currency = get_currency(self.request.GET, 'from_currency')
-        fields.update(from_currency=from_currency)
+        from_currency = get_currency(self.request.GET, 'from_currency', throw=False)
+        if from_currency is not None:
+            fields.update(from_currency=from_currency)
 
         return queryset.filter(**fields)
 

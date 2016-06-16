@@ -103,6 +103,36 @@ class OfferTest(AbsoritumUnitTest):
 
         self.check_offer(amount="0.5", price="2.0", should_exist=False)
 
+    def test_with_two_exchanges_with_diff_price(self):
+        """
+            Create create two exchanges with different price and then one opposite with smaller price
+            and check that offers are not exist
+        """
+
+        self.make_deposit(self.get_account('btc'), amount="10.0")
+
+        self.create_exchange(price="2.0", amount="5.0", status="init")
+        self.create_exchange(price="1.0", amount="5.0", status="init")
+        self.check_account_amount(self.get_account('btc'), amount="0.0")
+        self.check_account_amount(self.get_account('eth'), amount="0.0")
+
+        # Create some another user
+        User = get_user_model()
+        some_user = User(username="some_user")
+        some_user.save()
+        self.client.force_authenticate(some_user)
+        self.make_deposit(self.get_account('eth'), amount="20.0")
+
+        self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", amount="15.0", status="completed")
+        self.check_account_amount(self.get_account('eth'), amount="5.0")
+        self.check_account_amount(self.get_account('btc'), amount="10.0")
+
+        self.client.force_authenticate(self.user)
+        self.check_account_amount(self.get_account('btc'), amount="0.0")
+        self.check_account_amount(self.get_account('eth'), amount="15.0")
+
+        self.check_offers_empty()
+
     def test_malformed(self):
         malformed_from_currency = "asdasd907867t67g"
         with self.assertRaises(AssertionError):

@@ -41,3 +41,14 @@ class CheckOfferMixin():
             self.assertEqual(offer_amount, convert(amount))
         else:
             self.assertTrue(not is_offer_exist)
+
+    def check_offers_empty(self, debug=False):
+
+        response = self.client.get('/api/offers/', format='json')
+        if debug:
+            logger.debug(response.content)
+
+        self.assertEqual(response.status_code, HTTP_200_OK)
+        offers = response.json()
+
+        self.assertEqual(len(offers), 0)

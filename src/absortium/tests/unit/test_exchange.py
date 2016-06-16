@@ -128,8 +128,25 @@ class ExchangeTest(AbsoritumUnitTest):
 
         self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", amount="20.0")
 
-        self.check_account_amount(self.primary_btc_account, amount="10.0")
         self.check_account_amount(self.primary_eth_account, amount="20.0")
+
+    def test_with_two_exchanges_with_diff_price(self):
+        """
+            Create create two exchanges with different price and then one opposite with smaller price.
+        """
+        self.create_exchange(price="2.0", amount="5.0", status="init")
+        self.create_exchange(price="1.0", amount="5.0", status="init")
+        self.check_account_amount(self.primary_btc_account, amount="0.0")
+
+        self.client.force_authenticate(self.some_user)
+        self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", amount="15.0", status="completed")
+        self.check_account_amount(self.some_eth_account, amount="5.0")
+
+        self.check_account_amount(self.some_btc_account, amount="10.0")
+
+        self.client.force_authenticate(self.user)
+        self.check_account_amount(self.primary_btc_account, amount="0.0")
+        self.check_account_amount(self.primary_eth_account, amount="15.0")
 
     def test_exchange_status(self):
         # check that we can't set the exchange status
