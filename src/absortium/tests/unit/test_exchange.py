@@ -48,6 +48,21 @@ class ExchangeTest(AbsoritumUnitTest):
         self.client.force_authenticate(self.some_user)
         self.assertEqual(len(self.get_exchanges()), 0)
 
+    def test_exchanges_count_with_different_currency(self):
+        """
+            Check that we get only exchanges which belong to the user.
+        """
+        self.make_deposit(self.primary_eth_account, amount="10.0")
+
+        self.create_exchange(price="1", status="init")
+        self.assertEqual(len(self.get_exchanges("btc", "eth")), 1)
+        self.assertEqual(len(self.get_exchanges("eth", "btc")), 0)
+
+        self.create_exchange(from_currency="eth", to_currency="btc", price="2", status="init")
+        self.assertEqual(len(self.get_exchanges("btc", "eth")), 1)
+        self.assertEqual(len(self.get_exchanges("eth", "btc")), 1)
+
+
     def test_malformed(self, *args, **kwargs):
         trash_exchange_pk = "972368423423"
 

@@ -56,11 +56,18 @@ class CreateExchangeMixin():
                 # TODO: Add check that exchange has status COMPLETED
                 pass
 
-    def get_exchanges(self, debug=False):
+    def get_exchanges(self, from_currency=None, to_currency=None, debug=False):
+
+        data = {}
+        if from_currency is not None:
+            data["from_currency"] = from_currency
+
+        if to_currency is not None:
+            data["to_currency"] = to_currency
 
         # Create exchange
         url = '/api/exchanges/'
-        response = self.client.get(url, format='json')
+        response = self.client.get(url, data, format='json')
 
         if debug:
             logger.debug(response.content)

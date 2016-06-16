@@ -196,6 +196,22 @@ class ExchangeViewSet(CreateCeleryMixin,
     def get_queryset(self):
         return self.request.user.exchanges.all()
 
+    def filter_queryset(self, queryset):
+        """
+            This method used for filter origin exchanges queryset by the given from/to currency.
+        """
+        fields = {}
+
+        to_currency = get_currency(self.request.GET, 'to_currency', throw=False)
+        if to_currency is not None:
+            fields.update(to_currency=to_currency)
+
+        from_currency = get_currency(self.request.GET, 'from_currency', throw=False)
+        if from_currency is not None:
+            fields.update(from_currency=from_currency)
+
+        return queryset.filter(**fields)
+
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
 
