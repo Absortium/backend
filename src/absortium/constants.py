@@ -40,7 +40,10 @@ USERNAME_LENGTH = 30
 MARKET_INFO_DELTA = 24
 MARKET_INFO_COUNT_OF_EXCHANGES = 10
 
+
+TOPIC_OFFERS = "offers_{from_currency}_{to_currency}"
 TOPIC_MARKET_INFO = "marketinfo"
+TOPIC_HISTORY = "history_{from_currency}_{to_currency}"
 
 DEFAULT_AMOUNT = 0
 

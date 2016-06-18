@@ -14,7 +14,7 @@ from absortium import constants
 from absortium.celery import tasks
 from absortium.crossbarhttp import get_crossbar_client
 from absortium.model.models import Exchange, Offer, MarketInfo
-from absortium.serializer.serializers import OfferSerializer, MarketInfoSerializer
+from absortium.serializer.serializers import OfferSerializer, MarketInfoSerializer, ExchangeSerializer
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)
@@ -35,8 +35,8 @@ def user_post_save(sender, instance, *args, **kwargs):
         tasks.create_account.delay(**context)
 
 
-@receiver(post_save, sender=Exchange, dispatch_uid="exchange_pre_save")
-def exchange_pre_save(sender, instance, *args, **kwargs):
+@receiver(post_save, sender=Exchange, dispatch_uid="exchange_post_save")
+def exchange_post_save(sender, instance, *args, **kwargs):
     """
         Create or change offer object if exchange object is received and saved.
     """
@@ -92,6 +92,17 @@ def exchange_pre_save(sender, instance, *args, **kwargs):
                 offer.amount -= new_exchange.amount
                 offer.save()
 
+            to_repr = {value: key for key, value in constants.AVAILABLE_CURRENCIES.items()}
+
+            serializer = ExchangeSerializer(new_exchange)
+            publishment = serializer.data
+
+            topic = constants.TOPIC_HISTORY.format(from_currency=to_repr[new_exchange.from_currency],
+                                                   to_currency=to_repr[new_exchange.to_currency])
+
+            client = get_crossbar_client()
+            client.publish(topic, **publishment)
+
 
 @receiver(post_save, sender=Offer, dispatch_uid="offer_post_save")
 def offer_post_save(sender, instance, *args, **kwargs):
@@ -103,8 +114,8 @@ def offer_post_save(sender, instance, *args, **kwargs):
 
     publishment = serializer.data
     to_repr = {value: key for key, value in constants.AVAILABLE_CURRENCIES.items()}
-    topic = "{from_currency}_{to_currency}".format(from_currency=to_repr[offer.from_currency],
-                                                   to_currency=to_repr[offer.to_currency])
+    topic = constants.TOPIC_OFFERS.format(from_currency=to_repr[offer.from_currency],
+                                          to_currency=to_repr[offer.to_currency])
 
     client = get_crossbar_client()
     client.publish(topic, **publishment)
@@ -121,8 +132,8 @@ def offer_post_delete(sender, instance, *args, **kwargs):
     publishment = serializer.data
     to_repr = {value: key for key, value in constants.AVAILABLE_CURRENCIES.items()}
 
-    topic = "{from_currency}_{to_currency}".format(from_currency=to_repr[offer.from_currency],
-                                                   to_currency=to_repr[offer.to_currency])
+    topic = constants.TOPIC_OFFERS.format(from_currency=to_repr[offer.from_currency],
+                                          to_currency=to_repr[offer.to_currency])
 
     publishment['amount'] = 0
     client = get_crossbar_client()

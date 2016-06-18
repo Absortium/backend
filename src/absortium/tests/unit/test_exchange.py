@@ -12,6 +12,7 @@ logger = getLogger(__name__)
 class ExchangeTest(AbsoritumUnitTest):
     def setUp(self):
         super().setUp()
+        self.pubsliments_flush()
 
         self.primary_btc_account = self.get_account("btc")
         self.primary_eth_account = self.get_account("eth")
@@ -61,7 +62,6 @@ class ExchangeTest(AbsoritumUnitTest):
         self.create_exchange(from_currency="eth", to_currency="btc", price="2", status="init")
         self.assertEqual(len(self.get_exchanges("btc", "eth")), 1)
         self.assertEqual(len(self.get_exchanges("eth", "btc")), 1)
-
 
     def test_malformed(self, *args, **kwargs):
         trash_exchange_pk = "972368423423"
@@ -193,3 +193,20 @@ class ExchangeTest(AbsoritumUnitTest):
         with self.assertRaises(AssertionError):
             self.create_exchange(price="0.1", amount="0.0001")
         self.check_account_amount(self.primary_btc_account, amount="10.0")
+
+    def test_notification(self):
+        self.create_exchange(price="2.0", amount="5.0", status="init")
+        self.create_exchange(price="2.0", amount="5.0", status="init")
+
+        self.client.force_authenticate(self.some_user)
+        self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", amount="20.0")
+
+        self.check_account_amount(self.some_btc_account, amount="10.0")
+        self.check_account_amount(self.some_eth_account, amount="0.0")
+
+        self.client.force_authenticate(self.user)
+        self.check_account_amount(self.primary_btc_account, amount="0.0")
+        self.check_account_amount(self.primary_eth_account, amount="20.0")
+
+        self.assertEqual(len(self.get_publishments("history_btc_eth")), 2)
+        self.assertEqual(len(self.get_publishments("history_eth_btc")), 2)
