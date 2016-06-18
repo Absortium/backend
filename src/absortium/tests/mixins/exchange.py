@@ -1,3 +1,5 @@
+import decimal
+
 __author__ = 'andrew.shvv@gmail.com'
 
 from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
@@ -56,6 +58,22 @@ class CreateExchangeMixin():
                 # TODO: Add check that exchange has status COMPLETED
                 pass
 
+    def check_exchange(self, price, amount, from_currency="btc", to_currency="eth", should_exist=True, debug=False):
+        exchanges = self.get_exchanges(from_currency, to_currency)
+
+        if debug:
+            logger.debug(exchanges)
+
+        is_exist = False
+        for exchange in exchanges:
+            logger.debug(decimal.Decimal(exchange['price']) == decimal.Decimal(price))
+            logger.debug(exchange['amount'] == convert(amount))
+
+            if decimal.Decimal(exchange['price']) == decimal.Decimal(price) and exchange['amount'] == int(convert(amount)):
+                is_exist = True
+
+        self.assertEqual(is_exist, should_exist)
+
     def get_exchanges(self, from_currency=None, to_currency=None, debug=False):
 
         data = {}
@@ -73,6 +91,3 @@ class CreateExchangeMixin():
             logger.debug(response.content)
 
         return response.json()
-
-
-

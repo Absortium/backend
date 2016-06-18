@@ -108,9 +108,9 @@ def convert(value):
     try:
         v = Decimal(value) * constants.VIABLE_UNIT
         if type(value) == str:
-            return str(round(v))
+            return str(int(v))
         else:
-            return round(v)
+            return int(v)
     except decimal.InvalidOperation:
         return value
 
