@@ -65,9 +65,6 @@ class CreateExchangeMixin():
 
         is_exist = False
         for exchange in exchanges:
-            logger.debug(decimal.Decimal(exchange['price']) == decimal.Decimal(price))
-            logger.debug(exchange['amount'] == amount)
-
             if decimal.Decimal(exchange['price']) == decimal.Decimal(price) and exchange['amount'] == amount:
                 is_exist = True
 

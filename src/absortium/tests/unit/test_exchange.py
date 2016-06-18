@@ -194,24 +194,20 @@ class ExchangeTest(AbsoritumUnitTest):
             self.create_exchange(price="0.1", amount="0.0001")
         self.check_account_amount(self.primary_btc_account, amount="10.0")
 
-    # def test_exchange_with_small_diff(self):
-    #     self.client.force_authenticate(self.some_user)
-    #     self.create_exchange(from_currency="eth", to_currency="btc", amount="2.0", price="0.05", status="init")
-    #
-    #     self.client.force_authenticate(self.user)
-    #     self.create_exchange(from_currency="btc", to_currency="eth",
-    #                          amount="0.099999999",
-    #                          price="20.0",
-    #                          status="completed")
-    #
-    #     logger.debug(self.get_exchanges())
-    #     self.check_account_amount(self.primary_eth_account, amount="0.199999980")
-    #
-    #     # self.client.force_authenticate(self.some_user)
-    #     # self.check_exchange(from_currency="eth", to_currency="btc", price="0.05", amount="0.00000002", debug=True)
-    #
-    #     # There problem - is after this remaining exchange will be proceed the amount of opposite exchange will
-    #     # zero, because 0.5 * 0.00000002 = 0,[00000001
+    def test_exchange_with_small_diff(self):
+        self.client.force_authenticate(self.some_user)
+        self.create_exchange(from_currency="eth", to_currency="btc", amount="2.0", price="0.01", status="init")
+
+        self.client.force_authenticate(self.user)
+        self.create_exchange(from_currency="btc", to_currency="eth",
+                             amount="0.01999999",
+                             price="100",
+                             status="completed")
+
+        self.check_account_amount(self.primary_eth_account, amount="1.99999900")
+
+        self.client.force_authenticate(self.some_user)
+        self.check_exchange(from_currency="eth", to_currency="btc", price="0.01", amount="0.00000100")
 
     def test_notification(self):
         self.create_exchange(price="2.0", amount="5.0", status="init")
