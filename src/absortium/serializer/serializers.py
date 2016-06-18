@@ -47,7 +47,6 @@ class OfferSerializer(DynamicFieldsModelSerializer):
     to_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, write_only=True)
 
     amount = serializers.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
-                                      min_value=constants.AMOUNT_MIN_VALUE,
                                       decimal_places=constants.DECIMAL_PLACES)
     price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                      decimal_places=constants.DECIMAL_PLACES,
@@ -88,7 +87,7 @@ class ExchangeSerializer(serializers.ModelSerializer):
     """
     status = MyChoiceField(choices=constants.AVAILABLE_TASK_STATUS, default=constants.EXCHANGE_INIT, read_only=True)
     amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
-                                      min_value=constants.AMOUNT_MIN_VALUE,
+                                      min_value=constants.WITHDRAW_AMOUNT_MIN_VALUE,
                                       decimal_places=constants.DECIMAL_PLACES)
 
     price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
@@ -127,7 +126,7 @@ class ExchangeSerializer(serializers.ModelSerializer):
 class DepositSerializer(serializers.ModelSerializer):
     address = serializers.ReadOnlyField(source='account.address')
     amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
-                                      min_value=constants.AMOUNT_MIN_VALUE,
+                                      min_value=constants.DEPOSIT_AMOUNT_MIN_VALUE,
                                       decimal_places=constants.DECIMAL_PLACES)
 
     class Meta:
@@ -138,7 +137,7 @@ class DepositSerializer(serializers.ModelSerializer):
 class WithdrawSerializer(serializers.ModelSerializer):
     address = serializers.CharField()
     amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
-                                      min_value=constants.AMOUNT_MIN_VALUE,
+                                      min_value=constants.WITHDRAW_AMOUNT_MIN_VALUE,
                                       decimal_places=constants.DECIMAL_PLACES)
 
     class Meta:

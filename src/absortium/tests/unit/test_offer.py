@@ -19,7 +19,7 @@ class OfferTest(AbsoritumUnitTest):
     def random_amount(self):
         amount = -1
 
-        while amount < constants.AMOUNT_MIN_VALUE:
+        while amount < constants.DEPOSIT_AMOUNT_MIN_VALUE:
             amount = decimal.Decimal('%d.%d' % (random.randint(0, self.before_dot), random.randint(0, self.after_dot)))
         return amount
 
@@ -30,11 +30,11 @@ class OfferTest(AbsoritumUnitTest):
 
         should_be = 0
         for amount in amounts:
+            should_be += amount
+
             self.make_deposit(account, amount=amount)
             self.check_account_amount(account=account, amount=amount)
             self.create_exchange(amount=str(amount), price="0.1", status="init")
-
-            should_be += amount
             self.check_offer(amount=should_be, price="0.1")
 
     def test_different_price(self, *args, **kwargs):

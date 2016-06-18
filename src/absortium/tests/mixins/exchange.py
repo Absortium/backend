@@ -38,6 +38,7 @@ class CreateExchangeMixin():
 
         if with_checks:
             history = response.json()
+
             exchange = history[-1]
             self.assertEqual(exchange['status'], status)
 
@@ -65,7 +66,7 @@ class CreateExchangeMixin():
 
         is_exist = False
         for exchange in exchanges:
-            if decimal.Decimal(exchange['price']) == decimal.Decimal(price) and exchange['amount'] == amount:
+            if decimal.Decimal(exchange['price']) == decimal.Decimal(price) and decimal.Decimal(exchange['amount']) == decimal.Decimal(amount):
                 is_exist = True
 
         self.assertEqual(is_exist, should_exist)

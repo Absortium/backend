@@ -1,3 +1,5 @@
+from absortium import constants
+
 __author__ = 'andrew.shvv@gmail.com'
 
 from django.contrib.auth import get_user_model
@@ -20,10 +22,12 @@ class DepositTest(AbsoritumUnitTest):
         self.make_deposit(account, "10")
         self.check_account_amount(account, "10")
 
-    def test_smaller_than_min(self):
-        account = self.get_account('btc')
-        with self.assertRaises(AssertionError):
-            self.make_deposit(account, "0.000000001")
+    def test_accuracy(self, *args, **kwargs):
+        account = self.get_account('eth')
+
+        amount = "1" * (constants.MAX_DIGITS - constants.DECIMAL_PLACES) + "." + "2" * constants.DECIMAL_PLACES
+        self.make_deposit(account, amount)
+        self.check_account_amount(account, amount)
 
     def test_permissions(self, *args, **kwargs):
         account = self.get_account('btc')

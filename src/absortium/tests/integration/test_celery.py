@@ -130,7 +130,7 @@ class AccuracyTest(AbsoritumLiveTest):
 
     def random_amount(self):
         amount = -1
-        while amount < constants.AMOUNT_MIN_VALUE:
+        while amount < constants.WITHDRAW_AMOUNT_MIN_VALUE:
             amount = decimal.Decimal('%d.%d' % (random.randint(0, self.before_dot), random.randint(0, self.after_dot)))
         return amount
 

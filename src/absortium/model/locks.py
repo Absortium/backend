@@ -63,7 +63,7 @@ class opposites:
 
     def __init__(self, exchange):
         self.exchange = exchange
-        self.converted_price = decimal.Decimal("1.0") / self.exchange.price
+        self.converted_price = round(decimal.Decimal("1.0") / self.exchange.price, constants.DECIMAL_PLACES)
         self.times = 3
 
     def __iter__(self):
@@ -77,10 +77,13 @@ class opposites:
                 """
                 opposite = Exchange.objects.raw(' SELECT *'
                                                 ' FROM absortium_exchange'
-                                                ' WHERE (status = %s OR status = %s) AND pg_try_advisory_xact_lock(id) AND price <= %s AND from_currency = %s'
+                                                ' WHERE (status = %s OR status = %s) '
+                                                'AND pg_try_advisory_xact_lock(id) '
+                                                'AND price <= %s '
+                                                'AND from_currency = %s'
                                                 ' FOR UPDATE'
                                                 ' LIMIT 1', [constants.EXCHANGE_PENDING, constants.EXCHANGE_INIT,
-                                                             self.converted_price,
+                                                             self.converted_price + constants.EPS,
                                                              self.exchange.to_currency])[0]
 
             except IndexError:

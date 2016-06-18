@@ -2,7 +2,6 @@ __author__ = 'andrew.shvv@gmail.com'
 
 from django.apps import AppConfig
 
-
 class AbsortiumConfig(AppConfig):
     name = 'absortium'
     verbose_name = "Absortium"

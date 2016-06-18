@@ -209,6 +209,21 @@ class ExchangeTest(AbsoritumUnitTest):
         self.client.force_authenticate(self.some_user)
         self.check_exchange(from_currency="eth", to_currency="btc", price="0.01", amount="0.00000100")
 
+    def test_equality(self):
+        self.create_exchange(amount="0.071428571429", price="14", status="init")
+
+        self.client.force_authenticate(self.some_user)
+        self.create_exchange(from_currency="eth", to_currency="btc",
+                             amount="1",
+                             price="0.071428571429",
+                             status="completed")
+
+        self.check_account_amount(self.some_btc_account, amount="0.071428571429")
+
+        self.client.force_authenticate(self.user)
+        self.check_account_amount(self.primary_eth_account, amount="1")
+
+
     def test_notification(self):
         self.create_exchange(price="2.0", amount="5.0", status="init")
         self.create_exchange(price="2.0", amount="5.0", status="init")

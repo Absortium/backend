@@ -103,7 +103,7 @@ def do_exchange(self, *args, **kwargs):
 
             return history + [exchange]
 
-        if exchange.price * exchange.amount < constants.EXCHANGE_AMOUNT_MIN_VALUE:
+        if exchange.price * exchange.amount <= constants.EXCHANGE_AMOUNT_MIN_VALUE:
             raise ValidationError("Total amount lower than {}".format(constants.EXCHANGE_AMOUNT_MIN_VALUE))
 
         with publishment.atomic():

@@ -45,6 +45,9 @@ class CreateAccountMixin():
             # Authenticate normal user
             self.client.force_authenticate(user)
 
+        if type(amount) == str:
+            amount = Decimal(amount)
+
         # Create account
         response = self.client.get('/api/accounts/{account_pk}/'.format(account_pk=account['pk']), format='json')
 
@@ -55,4 +58,4 @@ class CreateAccountMixin():
 
         account = response.json()
 
-        self.assertEqual(Decimal(account['amount']), Decimal(amount))
+        self.assertEqual(Decimal(account['amount']),amount)

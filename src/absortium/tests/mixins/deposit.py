@@ -13,7 +13,7 @@ logger = getPrettyLogger(__name__)
 class CreateDepositMixin():
     def make_deposit(self, account, amount="99999", with_checks=True, user=None, debug=False):
         data = {
-            'amount': amount,
+            'amount': str(amount),
             'address': account['address'],
             'tx_hash': random_string()
         }

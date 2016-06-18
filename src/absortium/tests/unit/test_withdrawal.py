@@ -20,9 +20,6 @@ class WithdrawalTest(AbsoritumUnitTest):
         self.make_withdrawal(account, "0.1")
         self.check_account_amount(account, "0")
 
-        self.make_deposit(account, "0.000001")
-        self.make_withdrawal(account, "0.000001")
-        self.check_account_amount(account, "0")
 
     def test_precision_eth(self, *args, **kwargs):
         account = self.get_account('eth')
@@ -34,9 +31,11 @@ class WithdrawalTest(AbsoritumUnitTest):
         self.make_withdrawal(account, "0.1")
         self.check_account_amount(account, "0")
 
-        self.make_deposit(account, "0.000001")
-        self.make_withdrawal(account, "0.000001")
-        self.check_account_amount(account, "0")
+    def test_smaller_than_min(self):
+        account = self.get_account('btc')
+        self.make_deposit(account, "1")
+        with self.assertRaises(AssertionError):
+            self.make_withdrawal(account, "0.000000001")
 
     def test_permissions(self, *args, **kwargs):
         account = self.get_account('btc')
