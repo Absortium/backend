@@ -23,4 +23,3 @@ class HistoryMixin():
 
         self.assertEqual(response.status_code, HTTP_200_OK)
         return response.json()
-

@@ -8,7 +8,6 @@ from django.core.management.base import BaseCommand, CommandError
 
 from absortium import constants
 from absortium.model.models import Account
-from absortium.utils import ethToWei, btcToSatoshi
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)
@@ -17,7 +16,7 @@ __author__ = 'andrew.shvv@gmail.com'
 
 TIMEDELTA = 20
 DEFAULT_BTC_AMOUNT = 4
-DEFAULT_ETH_AMOUNT = ethToWei(4)
+DEFAULT_ETH_AMOUNT = 4
 
 
 def random_string(length=30):

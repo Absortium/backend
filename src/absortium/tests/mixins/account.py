@@ -3,7 +3,6 @@ from decimal import Decimal
 __author__ = 'andrew.shvv@gmail.com'
 
 from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK, HTTP_409_CONFLICT
-from absortium.utils import convert, ethToWei
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
@@ -56,4 +55,4 @@ class CreateAccountMixin():
 
         account = response.json()
 
-        self.assertEqual(Decimal(account['amount']), Decimal(convert(amount)))
+        self.assertEqual(Decimal(account['amount']), Decimal(amount))

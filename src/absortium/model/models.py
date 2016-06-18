@@ -25,7 +25,9 @@ class Offer(models.Model):
 
     from_currency = models.IntegerField()
     to_currency = models.IntegerField()
-    amount = models.BigIntegerField(default=0)
+    amount = models.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
+                                 decimal_places=constants.DECIMAL_PLACES,
+                                 default=0)
     price = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                 decimal_places=constants.DECIMAL_PLACES)
 
@@ -38,7 +40,9 @@ class Account(models.Model):
     """
         Comment me!
     """
-    amount = models.BigIntegerField(default=0)
+    amount = models.DecimalField(max_digits=constants.ACCOUNT_MAX_DIGITS,
+                                 decimal_places=constants.DECIMAL_PLACES,
+                                 default=0)
 
     address = models.CharField(max_length=50)
     currency = models.IntegerField()
@@ -96,7 +100,9 @@ class Exchange(models.Model):
 
     status = models.IntegerField()
 
-    amount = models.BigIntegerField()
+    amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                 decimal_places=constants.DECIMAL_PLACES,
+                                 default=0)
     price = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                 decimal_places=constants.DECIMAL_PLACES)
 
@@ -201,7 +207,8 @@ class Exchange(models.Model):
 class Deposit(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(Account, related_name="deposits")
-    amount = models.BigIntegerField()
+    amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                 decimal_places=constants.DECIMAL_PLACES, default=0)
 
     def process_account(self):
         amount = self.account.amount + self.amount
@@ -211,7 +218,8 @@ class Deposit(models.Model):
 class Withdrawal(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     account = models.ForeignKey(Account, related_name="withdrawals")
-    amount = models.BigIntegerField()
+    amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                 decimal_places=constants.DECIMAL_PLACES, default=0)
 
     address = models.CharField(max_length=50)
 
@@ -231,7 +239,8 @@ class MarketInfo(models.Model):
                                        decimal_places=constants.DECIMAL_PLACES)
     rate_24h_min = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                        decimal_places=constants.DECIMAL_PLACES)
-    volume_24h = models.BigIntegerField()
+    volume_24h = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                     decimal_places=constants.DECIMAL_PLACES, default=0)
 
     from_currency = models.IntegerField()
     to_currency = models.IntegerField()

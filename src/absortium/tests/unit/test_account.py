@@ -80,4 +80,4 @@ class AccountTest(AbsoritumUnitTest):
         account = self.get_account('btc')
         self.assertEqual(account['amount'], decimal.Decimal('0'))
 
-        self.assertEqual(len(self.get_accounts()) , 1)
+        self.assertEqual(len(self.get_accounts()), 1)

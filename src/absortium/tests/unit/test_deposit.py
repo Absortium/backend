@@ -1,5 +1,3 @@
-from absortium.utils import ethToWei
-
 __author__ = 'andrew.shvv@gmail.com'
 
 from django.contrib.auth import get_user_model

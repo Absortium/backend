@@ -5,7 +5,6 @@ __author__ = 'andrew.shvv@gmail.com'
 from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 from absortium.model.models import Exchange
-from absortium.utils import convert
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
@@ -17,7 +16,7 @@ class CreateExchangeMixin():
         data = {
             'to_currency': to_currency,
             'from_currency': from_currency,
-            'amount': convert(amount),
+            'amount': amount,
             'price': price
         }
 
@@ -67,9 +66,9 @@ class CreateExchangeMixin():
         is_exist = False
         for exchange in exchanges:
             logger.debug(decimal.Decimal(exchange['price']) == decimal.Decimal(price))
-            logger.debug(exchange['amount'] == convert(amount))
+            logger.debug(exchange['amount'] == amount)
 
-            if decimal.Decimal(exchange['price']) == decimal.Decimal(price) and exchange['amount'] == int(convert(amount)):
+            if decimal.Decimal(exchange['price']) == decimal.Decimal(price) and exchange['amount'] == amount:
                 is_exist = True
 
         self.assertEqual(is_exist, should_exist)

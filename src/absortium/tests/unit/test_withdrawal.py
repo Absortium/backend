@@ -30,7 +30,7 @@ class WithdrawalTest(AbsoritumUnitTest):
         self.make_withdrawal(account, "10")
         self.check_account_amount(account, "0")
 
-        self.make_deposit(account, "0.1")
+        self.make_deposit(account, "0.1", debug=True)
         self.make_withdrawal(account, "0.1")
         self.check_account_amount(account, "0")
 

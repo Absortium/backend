@@ -3,7 +3,6 @@ from decimal import Decimal
 __author__ = 'andrew.shvv@gmail.com'
 
 from rest_framework.status import HTTP_200_OK
-from absortium.utils import convert
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
@@ -38,7 +37,7 @@ class CheckOfferMixin():
 
         if should_exist:
             self.assertTrue(is_offer_exist)
-            self.assertEqual(offer_amount, convert(amount))
+            self.assertEqual(offer_amount, amount)
         else:
             self.assertTrue(not is_offer_exist)
 

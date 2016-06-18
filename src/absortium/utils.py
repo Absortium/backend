@@ -1,6 +1,3 @@
-import decimal
-from decimal import Decimal
-
 __author__ = 'andrew.shvv@gmail.com'
 
 from random import choice
@@ -58,69 +55,3 @@ def get_currency(data, name, throw=True):
             raise ValidationError("You should specify '{}' field'".format(name))
         else:
             return None
-
-
-def ethToWei(value):
-    try:
-        v = Decimal(value) * constants.WEI_IN_ETH
-        if type(value) == str:
-            return str(round(v))
-        else:
-            return round(v)
-
-    except decimal.InvalidOperation:
-        return value
-
-
-def weiToEth(value):
-    try:
-        v = Decimal(value) / constants.WEI_IN_ETH
-        if type(value) == str:
-            return str(v)
-        else:
-            return v
-    except decimal.InvalidOperation:
-        return value
-
-
-def ethTo10Gwei(value):
-    return convert(value)
-
-
-def btcToSatoshi(value):
-    return convert(value)
-
-
-def convert(value):
-    """
-    Args:
-        value: Count of ethereum, btc whihch we want to convert to inner representation. In case of bitcoin
-        it will satoshi in case of eth it will be 10 gwei. The point is we divide every currency BTC,ETH on 10 ** 8, so
-        we have 8 digits precision.
-
-    Returns:
-        In case of BTC the smallest part of this currency is Satoshi => 1BTC = 10 ** 8 Satoshi
-        In case of ETH the smallest part is Wei => 1ETH = 10 ** 18 Wei, but we don't want to have such precision, and
-        instead of Wei we store 10Gwei (1ETH = 10 ** 9 Gwey = 10 ** 8 * 10Gwei), so 10Gwei in this case is like Satoshi in
-        bitcoin.
-
-    """
-    try:
-        v = Decimal(value) * constants.VIABLE_UNIT
-        if type(value) == str:
-            return str(int(v))
-        else:
-            return int(v)
-    except decimal.InvalidOperation:
-        return value
-
-
-def deconvert(value):
-    try:
-        v = Decimal(value) / constants.VIABLE_UNIT
-        if type(value) == str:
-            return str(v)
-        else:
-            return v
-    except decimal.InvalidOperation:
-        return value

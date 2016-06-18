@@ -4,7 +4,6 @@ from django.conf import settings
 from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 from absortium.model.models import Deposit
-from absortium.utils import ethToWei
 from absortium.utils import random_string
 from core.utils.logging import getPrettyLogger
 
@@ -13,19 +12,6 @@ logger = getPrettyLogger(__name__)
 
 class CreateDepositMixin():
     def make_deposit(self, account, amount="99999", with_checks=True, user=None, debug=False):
-        if account['currency'] == 'btc':
-            """
-                In case of btc we should emulate coinbase => send amount in btc.
-            """
-            amount = amount
-        elif account['currency'] == 'eth':
-            """
-                In case of eth we should emulate ethwallet and send eth in wei.
-            """
-            amount = ethToWei(amount)
-        else:
-            raise Exception("Unknown currency!")
-
         data = {
             'amount': amount,
             'address': account['address'],

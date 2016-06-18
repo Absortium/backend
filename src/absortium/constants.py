@@ -1,6 +1,6 @@
-__author__ = 'andrew.shvv@gmail.com'
+import decimal
 
-from absortium.utils import convert
+__author__ = 'andrew.shvv@gmail.com'
 
 SELL = 0
 BUY = 1
@@ -40,17 +40,15 @@ USERNAME_LENGTH = 30
 MARKET_INFO_DELTA = 24
 MARKET_INFO_COUNT_OF_EXCHANGES = 10
 
-
 TOPIC_OFFERS = "offers_{from_currency}_{to_currency}"
-TOPIC_MARKET_INFO = "marketinfo"
 TOPIC_HISTORY = "history_{from_currency}_{to_currency}"
+TOPIC_MARKET_INFO = "marketinfo"
 
 DEFAULT_AMOUNT = 0
 
-AMOUNT_MIN_VALUE = 1
-VIABLE_UNIT = 10 ** DECIMAL_PLACES
-EXCHANGE_AMOUNT_MIN_VALUE = convert(0.001)
-WEI_IN_ETH = 10 ** 18
 
-PRICE_MIN_VALUE = 1 / VIABLE_UNIT
+AMOUNT_MIN_VALUE = 1 / 10 ** DECIMAL_PLACES
+PRICE_MIN_VALUE = 1 / 10 ** DECIMAL_PLACES
 PRICE_MAX_VALUE = 5000
+EXCHANGE_AMOUNT_MIN_VALUE = decimal.Decimal(0.001)
+WEI_IN_ETH = 10 ** 18

@@ -46,7 +46,9 @@ class OfferSerializer(DynamicFieldsModelSerializer):
     from_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, write_only=True)
     to_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, write_only=True)
 
-    amount = serializers.IntegerField(min_value=constants.AMOUNT_MIN_VALUE)
+    amount = serializers.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
+                                      min_value=constants.AMOUNT_MIN_VALUE,
+                                      decimal_places=constants.DECIMAL_PLACES)
     price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                      decimal_places=constants.DECIMAL_PLACES,
                                      min_value=constants.PRICE_MIN_VALUE)
@@ -85,7 +87,10 @@ class ExchangeSerializer(serializers.ModelSerializer):
         WARNING: STATUS FIELD ALWAYS SHOULD BE READ ONLY!
     """
     status = MyChoiceField(choices=constants.AVAILABLE_TASK_STATUS, default=constants.EXCHANGE_INIT, read_only=True)
-    amount = serializers.IntegerField(min_value=constants.AMOUNT_MIN_VALUE)
+    amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
+                                      min_value=constants.AMOUNT_MIN_VALUE,
+                                      decimal_places=constants.DECIMAL_PLACES)
+
     price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                      decimal_places=constants.DECIMAL_PLACES,
                                      min_value=constants.PRICE_MIN_VALUE,
@@ -121,7 +126,9 @@ class ExchangeSerializer(serializers.ModelSerializer):
 
 class DepositSerializer(serializers.ModelSerializer):
     address = serializers.ReadOnlyField(source='account.address')
-    amount = serializers.IntegerField(min_value=constants.AMOUNT_MIN_VALUE)
+    amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
+                                      min_value=constants.AMOUNT_MIN_VALUE,
+                                      decimal_places=constants.DECIMAL_PLACES)
 
     class Meta:
         model = Deposit
@@ -130,7 +137,9 @@ class DepositSerializer(serializers.ModelSerializer):
 
 class WithdrawSerializer(serializers.ModelSerializer):
     address = serializers.CharField()
-    amount = serializers.IntegerField(min_value=constants.AMOUNT_MIN_VALUE)
+    amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
+                                      min_value=constants.AMOUNT_MIN_VALUE,
+                                      decimal_places=constants.DECIMAL_PLACES)
 
     class Meta:
         model = Withdrawal
