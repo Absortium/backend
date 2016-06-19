@@ -5,6 +5,7 @@ import hashlib
 
 import jwt
 from django.contrib.auth import get_user_model
+from django.db.utils import IntegrityError
 from rest_framework_jwt.settings import api_settings
 
 from absortium.constants import USERNAME_LENGTH
@@ -48,6 +49,17 @@ def jwt_get_username_from_payload(payload):
 
         user = User(username=username,
                     email=email)
-        user.save()
+
+        try:
+            user.save()
+        except IntegrityError:
+            """
+                IntegrityError might happen if two parallel request trying to do something in
+                system and user not registered yet. So, they check - "Are user is registered?" and got DoesNotExist
+                then they are simulteniosly trying to create it. Than one of the process get IntegrityError postgres
+                "username is already exist".
+
+            """
+            user = User.objects.get(username=username)
 
     return user.username
