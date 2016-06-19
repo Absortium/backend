@@ -142,7 +142,7 @@ class Exchange(models.Model):
             Divide exchange on two parts - completed part and remain part
         """
 
-        if self.amount == converted_amount:
+        if (self.amount - converted_amount) * self.price <= constants.EPS:
             self.status = constants.EXCHANGE_COMPLETED
             completed = self
         else:

@@ -51,3 +51,11 @@ class CheckOfferMixin():
         offers = response.json()
 
         self.assertEqual(len(offers), 0)
+
+    def get_offers(self, debug=False):
+        response = self.client.get('/api/offers/', format='json')
+        if debug:
+            logger.debug(response.content)
+
+        self.assertEqual(response.status_code, HTTP_200_OK)
+        return response.json()

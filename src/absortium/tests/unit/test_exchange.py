@@ -207,21 +207,26 @@ class ExchangeTest(AbsoritumUnitTest):
         self.check_account_amount(self.primary_eth_account, amount="1.99999900")
 
         self.client.force_authenticate(self.some_user)
-        self.check_exchange(from_currency="eth", to_currency="btc", price="0.01", amount="0.00000100")
+        self.check_exchange(from_currency="eth", to_currency="btc", price="0.01", amount="0.00000100", should_exist=False)
 
-    def test_equality(self):
+    def test_eps_equality(self):
         self.create_exchange(amount="0.071428571429", price="14", status="init")
 
         self.client.force_authenticate(self.some_user)
         self.create_exchange(from_currency="eth", to_currency="btc",
-                             amount="1",
+                             amount="1.000000000007",
                              price="0.071428571429",
                              status="completed")
 
         self.check_account_amount(self.some_btc_account, amount="0.071428571429")
 
         self.client.force_authenticate(self.user)
-        self.check_account_amount(self.primary_eth_account, amount="1")
+
+        # amount equal to 1.000000000006 because 0.071428571429 * 14 it is actually is 1.000000000006
+        # and within the epsilon which is 10 ** 8 this exchanges are equal.
+        self.check_account_amount(self.primary_eth_account, amount="1.000000000006")
+
+        self.check_offers_empty()
 
 
     def test_notification(self):
