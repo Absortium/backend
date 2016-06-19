@@ -85,7 +85,8 @@ def exchange_post_save(sender, instance, *args, **kwargs):
             # Example: Due to inaccuracies in the calculation of the float number offer.amount - order.amount
             # could be great than zero but actually there is no orders with such price anymore.
             if offer.amount - new_exchange.amount < 0:
-                raise Exception('offer.amount - order.amount < 0')
+                # TODO: Inaccuracy warning!
+                offer.delete()
             elif offer.amount - new_exchange.amount == 0:
                 offer.delete()
             else:
