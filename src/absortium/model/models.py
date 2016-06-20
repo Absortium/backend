@@ -48,7 +48,7 @@ class Account(models.Model):
     currency = models.IntegerField()
 
     created = models.DateTimeField(auto_now_add=True)
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="accounts")
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="accounts", null=True)
 
     class Meta:
         unique_together = ('currency', 'owner', 'address')

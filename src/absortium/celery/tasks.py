@@ -10,6 +10,7 @@ from django.db import transaction
 from django.db.utils import OperationalError
 
 from absortium import constants
+from absortium.wallet.pool import AccountPool
 from absortium.celery.base import get_base_class
 from absortium.crossbarhttp import publishment
 from absortium.exceptions import AlreadyExistError
@@ -20,7 +21,6 @@ from absortium.serializer.serializers import \
     WithdrawSerializer, \
     DepositSerializer, \
     AccountSerializer
-from absortium.wallet.base import get_wallet_client
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)
@@ -126,17 +126,17 @@ def create_account(self, *args, **kwargs):
     with publishment.atomic():
         serializer = AccountSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        account = serializer.object(owner_id=user_pk)
+
+        currency = serializer.validated_data["currency"]
 
         try:
-            obj = Account.objects.filter(owner_id=user_pk, currency=account.currency).all()[0]
+            obj = Account.objects.filter(owner_id=user_pk, currency=currency).all()[0]
             data = AccountSerializer(obj).data
             raise AlreadyExistError(data)
+
         except IndexError:
             with transaction.atomic():
-                client = get_wallet_client(currency=account.currency)
-                account.address = client.create_address()
-                account.save()
+                account = AccountPool(currency).assign_account(user_pk=user_pk)
                 return AccountSerializer(account).data
 
 
@@ -192,3 +192,18 @@ def calculate_market_info(self, *args, **kwargs):
 
                 info.rate = average_price
                 info.save()
+
+
+@shared_task(bind=True, base=get_base_class())
+def pregenerate_accounts(self, *args, **kwargs):
+    with transaction.atomic():
+        currencies = constants.AVAILABLE_CURRENCIES.values()
+
+        for currency in currencies:
+            pool = AccountPool(currency)
+            count = constants.ACCOUNT_POOL_LENGTH - len(pool)
+
+            while count > 0:
+                account = pool.create_account()
+                account.save()
+                count -= 1

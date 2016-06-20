@@ -115,6 +115,10 @@ CELERYBEAT_SCHEDULE = {
         'task': 'absortium.celery.tasks.calculate_market_info',
         'schedule': timedelta(seconds=20)
     },
+    'pregenerate-accounts-every-20-seconds': {
+        'task': 'absortium.celery.tasks.pregenerate_accounts',
+        'schedule': timedelta(seconds=20)
+    },
 }
 
 WSGI_APPLICATION = 'wsgi.application'

@@ -1,8 +1,11 @@
+from absortium.wallet.pool import AccountPool
+
 __author__ = "andrew.shvv@gmail.com"
 
 from absortium import constants, wallet
 from absortium.tests.base import AbsoritumUnitTest
 from absortium.wallet.base import get_wallet_client
+from absortium.celery import tasks
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
@@ -55,3 +58,15 @@ class WalletAtomicTest(AbsoritumUnitTest):
         # Check that if exception was raised 'send' operation wasn't executed
         self.assertIn('send', [operation['func'] for operation in self.get_bitcoin_wallet_operations()])
         self.assertIn('send', [operation['func'] for operation in self.get_ethereum_wallet_operations()])
+
+    def test_account_pregeneration(self):
+        """
+            Test pool account pregeneration.
+        """
+
+        tasks.pregenerate_accounts()
+        currencies = constants.AVAILABLE_CURRENCIES.values()
+
+        for currency in currencies:
+            count = constants.ACCOUNT_POOL_LENGTH - len(AccountPool(currency))
+            self.assertEqual(count, 0)
