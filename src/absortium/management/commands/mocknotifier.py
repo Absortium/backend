@@ -30,7 +30,7 @@ class Command(BaseCommand):
         to_repr = {value: key for key, value in constants.AVAILABLE_CURRENCIES.items()}
 
         while True:
-            accounts = Account.objects.all()
+            accounts = Account.objects.filter(owner__isnull=False).all()
             for account in accounts:
 
                 if account.currency == constants.BTC:
