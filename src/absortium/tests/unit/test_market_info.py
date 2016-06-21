@@ -13,7 +13,7 @@ logger = getLogger(__name__)
 class MarketInfoTest(AbsoritumUnitTest):
     def setUp(self):
         super().setUp()
-        self.pubsliments_flush()
+        self.publishments_flush()
 
     def count_of_pairs(self):
         currencies = constants.AVAILABLE_CURRENCIES.values()

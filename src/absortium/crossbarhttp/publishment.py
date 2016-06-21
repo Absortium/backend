@@ -3,22 +3,18 @@ __author__ = 'andrew.shvv@gmail.com'
 from absortium.crossbarhttp.client import set_crossbar_client, get_crossbar_client
 
 
-class Atomic():
+class atomic:
     """
         Replace real client with mock one and consume all publishments which was made during block execution. Then
         if exceptions was not raised - publish them with real client.
     """
 
-    def __init__(self, *args, **kwargs):
-        self.topics = {}
-        self.client = get_crossbar_client()
-
-    def publish(self, topic, **publishment):
-        if not topic in self.topics:
-            self.topics[topic] = []
-        self.topics[topic].append(publishment)
+    topics = None
+    client = None
 
     def __enter__(self):
+        self.topics = {}
+        self.client = get_crossbar_client()
         set_crossbar_client(self)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -29,7 +25,7 @@ class Atomic():
 
         set_crossbar_client(self.client)
 
-
-def atomic(*args, **kwargs):
-    # Why I create a function rather than just use Atomic? See django.db.transaction.atomic
-    return Atomic(*args, **kwargs)
+    def publish(self, topic, **publishment):
+        if not topic in self.topics:
+            self.topics[topic] = []
+        self.topics[topic].append(publishment)

@@ -24,15 +24,18 @@ class RouterMockMixin():
     def unmock_router(self):
         self._router_patcher.stop()
 
-    def get_publishments(self, topic):
+    def get_publishments(self, topic=None):
         global _topics
 
-        try:
-            return _topics[topic]
-        except KeyError:
-            return None
+        if topic is None:
+            return _topics
+        else:
+            try:
+                return _topics[topic]
+            except KeyError:
+                return None
 
-    def pubsliments_flush(self):
+    def publishments_flush(self):
         global _topics
         _topics = {}
 
@@ -44,17 +47,19 @@ class RouterMockMixin():
             return None
 
     def get_publishment_by_task_id(self, task_id):
+        global _topics
+
         self.assertTrue(type(task_id) == str)
 
-        for _, publishments in self._router_client._topics.items():
+        for _, publishments in _topics.items():
             for pubslishment in publishments:
                 if 'task_id' in pubslishment and pubslishment['task_id'] == task_id:
                     return pubslishment
         return None
 
     def is_published(self, topic):
-        topics = self._router_client._topics
-        return topic in topics
+        global _topics
+        return topic in _topics
 
 
 class MockClient():

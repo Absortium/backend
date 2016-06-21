@@ -12,7 +12,7 @@ logger = getLogger(__name__)
 class ExchangeTest(AbsoritumUnitTest):
     def setUp(self):
         super().setUp()
-        self.pubsliments_flush()
+        self.publishments_flush()
 
         self.primary_btc_account = self.get_account("btc")
         self.primary_eth_account = self.get_account("eth")
