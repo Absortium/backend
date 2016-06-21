@@ -53,7 +53,7 @@ class Command(BaseCommand):
                 else:
                     raise CommandError("Could not match currency")
 
-                url = 'http://docker.backend:3000/notifications/{currency}/{token}'.format(
+                url = 'http://docker.backend:3001/notifications/{currency}/{token}'.format(
                     currency=to_repr[account.currency],
                     token=token)
                 response = requests.post(url, data)
