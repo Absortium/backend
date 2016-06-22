@@ -12,7 +12,8 @@ from absortium.views import \
     DepositViewSet, \
     MarketInfoSet, \
     HistoryViewSet, \
-    notification_handler
+    btc_notification_handler, \
+    eth_notification_handler
 
 router = routers.SimpleRouter()
 router.register(prefix=r'accounts', viewset=AccountViewSet, base_name="Account")
@@ -23,12 +24,11 @@ accounts_router.register(r"deposits", DepositViewSet, base_name='Deposits')
 accounts_router.register(r"withdrawals", WithdrawalViewSet, base_name='Withdrawals')
 
 urlpatterns = [
-
     url(r'^api/', include(router.urls)),
     url(r'^api/', include(accounts_router.urls)),
     url(r'^api/offers/$', OfferListView.as_view()),
     url(r'^api/marketinfo/$', MarketInfoSet.as_view()),
     url(r'^api/history/$', HistoryViewSet.as_view()),
-    url(r'^notifications/(?P<currency>eth)/' + settings.ETH_NOTIFICATION_TOKEN, notification_handler),
-    url(r'^notifications/(?P<currency>btc)/' + settings.BTC_NOTIFICATION_TOKEN, notification_handler)
+    url(r'^notifications/' + settings.ETH_NOTIFICATION_TOKEN, eth_notification_handler),
+    url(r'^notifications/' + settings.BTC_NOTIFICATION_TOKEN, btc_notification_handler)
 ]

@@ -7,7 +7,7 @@ from django.db import transaction
 from rest_framework import generics, mixins, viewsets
 from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.status import HTTP_201_CREATED
+from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK
 from rest_framework.response import Response
 
 from absortium.utils import get_currency
@@ -313,39 +313,44 @@ class MarketInfoSet(mixins.ListModelMixin,
 @api_view(http_method_names=['POST'])
 @authentication_classes([])
 @permission_classes([])
-def notification_handler(request, currency, *args, **kwargs):
-    data = request.data.copy()
+def btc_notification_handler(request, *args, **kwargs):
+    if request.data.get('type') == constants.COINBASE_PAYMENT_NOTIFICATION:
+        data = {}
 
-    address = data.get('address')
-    if address is None:
+        address = request.data.get('data').get('address')
+        if address is None:
+            raise ValidationError("'address' parameter should be specified")
+        data['address'] = address
+
+        amount = request.data.get('additional_data').get('amount').get('amount')
+        if amount is None:
+            raise ValidationError("'amount' parameter should be specified")
+        data['amount'] = amount
+
+        return base_notification_handler(constants.BTC, data)
+    else:
+        # Skip notification
+        return Response(status=HTTP_200_OK)
+
+
+@api_view(http_method_names=['POST'])
+@authentication_classes([])
+@permission_classes([])
+def eth_notification_handler(request, *args, **kwargs):
+    if request.data.get('address') is None:
         raise ValidationError("'address' parameter should be specified")
 
-    tx_hash = data.get('tx_hash')
-    if tx_hash is None:
-        raise ValidationError("'tx_hash' parameter should be specified")
-
-    amount = data.get('amount')
-    if amount is None:
+    if request.data.get('amount') is None:
         raise ValidationError("'amount' parameter should be specified")
 
-    if address is None:
-        raise ValidationError("Could not found address parameter in request")
+    return base_notification_handler(constants.ETH, request.data)
 
-    if currency:
-        currency = currency.lower()
 
-        if currency in constants.AVAILABLE_CURRENCIES.keys():
-            currency = constants.AVAILABLE_CURRENCIES[currency]
-            data.update(currency=currency)
-        else:
-            raise ValidationError("Not available currency '{}'".format(currency))
-    else:
-        raise ValidationError("'currency' should be specified in the url")
-
+def base_notification_handler(currency, data):
     try:
-        account = Account.objects.get(currency=currency, address=address)
+        account = Account.objects.get(currency=currency, address=data.get('address'))
     except Account.DoesNotExist:
-        raise NotFound("Could not found account with such address: {}".format(address))
+        raise NotFound("Could not found account with such address: {}".format(data.get('address')))
 
     context = {
         "data": data,

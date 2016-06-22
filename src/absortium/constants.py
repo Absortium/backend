@@ -56,3 +56,5 @@ PRICE_MIN_VALUE = decimal.Decimal(1 / 10 ** 8)
 PRICE_MAX_VALUE = 5000
 EXCHANGE_AMOUNT_MIN_VALUE = decimal.Decimal(0.001)
 WEI_IN_ETH = 10 ** 18
+
+COINBASE_PAYMENT_NOTIFICATION = "wallet:addresses:new-payment"
