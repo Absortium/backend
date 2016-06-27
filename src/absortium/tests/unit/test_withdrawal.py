@@ -10,6 +10,12 @@ logger = getLogger(__name__)
 
 
 class WithdrawalTest(AbsoritumUnitTest):
+    def setUp(self):
+        super().setUp()
+
+        self.flush_bitcoin_client_operations()
+        self.flush_ethereum_client_operations()
+
     def test_precision_btc(self, *args, **kwargs):
         account = self.get_account('btc')
         self.make_deposit(account, "10")
@@ -19,7 +25,6 @@ class WithdrawalTest(AbsoritumUnitTest):
         self.make_deposit(account, "0.1")
         self.make_withdrawal(account, "0.1")
         self.check_account_amount(account, "0")
-
 
     def test_precision_eth(self, *args, **kwargs):
         account = self.get_account('eth')
@@ -105,3 +110,19 @@ class WithdrawalTest(AbsoritumUnitTest):
         malformed_amount = "-1"
         with self.assertRaises(AssertionError):
             self.make_withdrawal(account, amount=malformed_amount)
+
+    def test_send_btc(self, *args, **kwargs):
+        account = self.get_account('btc')
+        self.make_deposit(account, "10")
+        self.make_withdrawal(account, "10")
+        self.check_account_amount(account, "0")
+
+        self.assertEqual(len(self.get_bitcoin_wallet_operations()), 1)
+
+    def test_send_eth(self, *args, **kwargs):
+        account = self.get_account('eth')
+        self.make_deposit(account, "10")
+        self.make_withdrawal(account, "10")
+        self.check_account_amount(account, "0")
+
+        self.assertEqual(len(self.get_ethereum_wallet_operations()), 1)

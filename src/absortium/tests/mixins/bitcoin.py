@@ -6,14 +6,20 @@ from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
+operations = []
 
 class BitcoinClientMockMixin():
     """
         BitcoinClientMockMixin substitute original bitcoin client and return mock btc addresses
     """
 
+    def flush_bitcoin_client_operations(self):
+        global operations
+        operations = []
+
     def get_bitcoin_wallet_operations(self):
-        return self._bitcoin_mock_wallet_client.operations
+        global operations
+        return operations
 
     def mock_bitcoin_client(self):
         # WARNING!: Be careful with names you may override variables in the class that inherit this mixin!
@@ -31,10 +37,11 @@ class MockClient(Mock):
     """
         Mock wallet client which rather than sends requests to the main server, collect it in 'operations' value.
     """
-    operations = []
 
     def create_address(self, *args, **kwargs):
-        self.operations.append({
+        global operations
+
+        operations.append({
             'func': 'create_address',
             'args': args,
             'kwargs': kwargs
@@ -46,7 +53,9 @@ class MockClient(Mock):
         return "".join([choice(s) for _ in range(30)])
 
     def send(self, *args, **kwargs):
-        self.operations.append({
+        global operations
+
+        operations.append({
             'func': 'send',
             'args': args,
             'kwargs': kwargs

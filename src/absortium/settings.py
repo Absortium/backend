@@ -69,13 +69,15 @@ CELERY_QUEUES = (
     Queue('absortium', Exchange('absortium'), routing_key='absortium'),
 )
 
+MODE = getattr(settings_module, 'MODE')
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = MODE not in ["testnet", "realnet"]
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 # Application definition
 
@@ -124,7 +126,7 @@ CELERYBEAT_SCHEDULE = {
 WSGI_APPLICATION = 'wsgi.application'
 
 # Very dirty hack for forcing celery to connect to the test_postgres db while integration test.
-NEED_TEST_DB = getattr(settings_module, 'MODE') in ['integration']
+NEED_TEST_DB = MODE in ['integration']
 dbname = 'test_postgres' if NEED_TEST_DB else 'postgres'
 
 DATABASES = {

@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import models
 from rest_framework.exceptions import ValidationError
 
+from absortium.wallet.base import get_wallet_client
 from absortium import constants
 from core.utils.logging import getLogger
 
@@ -227,6 +228,9 @@ class Withdrawal(models.Model):
         if self.account.amount - self.amount >= 0:
             amount = self.account.amount - self.amount
             self.account.update(amount=amount)
+
+            client = get_wallet_client(self.account.currency)
+            client.send(self.amount, self.address)
         else:
             raise ValidationError("Not enough money for withdrawal")
 
