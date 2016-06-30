@@ -14,7 +14,7 @@ from absortium.utils import get_currency
 from absortium.celery import tasks
 from absortium.mixins import CreateCeleryMixin
 from absortium.model.models import Offer, Exchange, Account, MarketInfo
-from absortium.serializer.serializers import \
+from absortium.serializers import \
     UserSerializer, \
     GroupSerializer, \
     OfferSerializer, \

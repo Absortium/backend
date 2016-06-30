@@ -1,14 +1,12 @@
 __author__ = 'andrew.shvv@gmail.com'
 
 from django.conf import settings
-
-from core.utils.logging import getPrettyLogger
 from ethwallet.client import Client
 from ethwallet.error import NotFoundError
 
-logger = getPrettyLogger(__name__)
+from core.utils.logging import getPrettyLogger
 
-_client = None
+logger = getPrettyLogger(__name__)
 
 
 class EthereumClient():

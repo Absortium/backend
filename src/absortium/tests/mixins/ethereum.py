@@ -8,6 +8,7 @@ logger = getLogger(__name__)
 
 operations = []
 
+
 class EthereumClientMockMixin():
     """
         EthereumClientMockMixin substitute original ethereum client and return mock eth addresses

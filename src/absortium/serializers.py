@@ -6,7 +6,8 @@ from rest_framework.exceptions import ValidationError
 
 from absortium import constants
 from absortium.model.models import Account, Exchange, Offer, Deposit, Withdrawal, MarketInfo
-from absortium.serializer.fields import MyChoiceField
+from core.serializer.fields import MyChoiceField
+from core.serializer.serializers import DynamicFieldsModelSerializer
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -19,27 +20,6 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Group
         fields = ('url', 'name')
-
-
-class DynamicFieldsModelSerializer(serializers.ModelSerializer):
-    """
-    A ModelSerializer that takes an additional `exclude_fields` argument that
-    controls which fields should be excluded from serialization.
-    """
-
-    def __init__(self, *args, **kwargs):
-        # Don't pass the 'fields' arg up to the superclass
-        exclude_fields = kwargs.pop('exclude_fields', None)
-
-        # Instantiate the superclass normally
-        super(DynamicFieldsModelSerializer, self).__init__(*args, **kwargs)
-
-        if exclude_fields:
-            # Drop any fields that are not specified in the `fields` argument.
-            disallowed = set(exclude_fields)
-
-            for field_name in disallowed:
-                self.fields.pop(field_name)
 
 
 class OfferSerializer(DynamicFieldsModelSerializer):

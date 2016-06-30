@@ -14,6 +14,7 @@ setup(
     packages=[
         'core',
         'core.utils',
+        'core.serializer',
     ],
     include_package_data=True,
     description='Deluge Core module',
@@ -22,7 +23,10 @@ setup(
     author='Andrey Samokhvalov',
     author_email='andrew.shvv@gmail.com',
     install_requires=[
-        'pp-ez'
+        'pp-ez',
+        'Django==1.9.5',
+        'djangorestframework==3.3.3',
+        'six'
     ],
     classifiers=[
         'Operating System :: OS Independent',

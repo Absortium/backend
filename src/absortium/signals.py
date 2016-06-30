@@ -14,7 +14,7 @@ from absortium import constants
 from absortium.celery import tasks
 from absortium.crossbarhttp import get_crossbar_client
 from absortium.model.models import Exchange, Offer, MarketInfo
-from absortium.serializer.serializers import OfferSerializer, MarketInfoSerializer, ExchangeSerializer
+from absortium.serializers import OfferSerializer, MarketInfoSerializer, ExchangeSerializer
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)

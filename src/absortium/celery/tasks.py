@@ -16,7 +16,7 @@ from absortium.crossbarhttp import publishment
 from absortium.exceptions import AlreadyExistError
 from absortium.model.locks import lockexchange, opposites
 from absortium.model.models import Account, Exchange, MarketInfo
-from absortium.serializer.serializers import \
+from absortium.serializers import \
     ExchangeSerializer, \
     WithdrawSerializer, \
     DepositSerializer, \

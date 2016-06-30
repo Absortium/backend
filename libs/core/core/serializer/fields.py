@@ -1,7 +1,7 @@
-__author__ = 'andrew.shvv@gmail.com'
-
 import six
 from rest_framework import serializers
+
+__author__ = 'andrew.shvv@gmail.com'
 
 
 class MyChoiceField(serializers.Field):

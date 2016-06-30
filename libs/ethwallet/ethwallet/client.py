@@ -100,12 +100,6 @@ class Client(object):
 
     # Addresses API
     # -----------------------------------------------------------
-    def get_addresses(self, **params):
-        return self._get('v1', 'addresses', data=params)
-
-    def get_address(self, address_id, **params):
-        response = self._get('v1', 'addresses', address_id, data=params)
-        return response
 
     def create_address(self):
         response = self._post('v1', 'addresses')
@@ -116,5 +110,5 @@ class Client(object):
             'amount': amount,
             'address': address
         }
-        response = self._post('v1', 'addresses', 'send', data=params)
+        response = self._post('v1', 'send', data=params)
         return response
