@@ -32,13 +32,12 @@ def do_deposit(self, *args, **kwargs):
         with transaction.atomic():
             data = kwargs['data']
             account_pk = kwargs['account_pk']
-            account = Account.objects.select_for_update().get(pk=account_pk)
 
             serializer = DepositSerializer(data=data)
             serializer.is_valid(raise_exception=True)
 
+            account = Account.objects.select_for_update().get(pk=account_pk)
             deposit = serializer.save(account=account)
-
             deposit.process_account()
 
             return serializer.data

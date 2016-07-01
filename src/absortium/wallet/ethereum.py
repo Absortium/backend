@@ -28,4 +28,4 @@ class EthereumClient():
             logger.debug(e)
 
     def send(self, amount, address):
-        self.client.send(amount, address)
+        self.client.send(str(amount), address)
