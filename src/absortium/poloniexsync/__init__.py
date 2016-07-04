@@ -1,3 +1,3 @@
 __author__ = 'andrew.shvv@gmail.com'
 
-from .main import App
+from .main import PoloniexApp

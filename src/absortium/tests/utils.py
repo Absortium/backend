@@ -1,6 +1,10 @@
-__author__ = 'andrew.shvv@gmail.com'
+import asyncio
+from functools import wraps
+
 from absortium.tests.data.coinbase import payment_notification
 from absortium.utils import random_string
+
+__author__ = 'andrew.shvv@gmail.com'
 
 
 def create_btc_notification(address, amount):

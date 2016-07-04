@@ -4,8 +4,8 @@ from django.conf import settings
 from django.db import models
 from rest_framework.exceptions import ValidationError
 
-from absortium.wallet.base import get_wallet_client
 from absortium import constants
+from absortium.wallet.base import get_wallet_client
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
@@ -23,6 +23,7 @@ class Offer(models.Model):
 
     price - represent the price for the 1 amount of primary currency represented in secondary currency.
     """
+    system = models.IntegerField(default=constants.SYSTEM_OWN)
 
     from_currency = models.IntegerField()
     to_currency = models.IntegerField()
@@ -34,7 +35,12 @@ class Offer(models.Model):
 
     class Meta:
         ordering = ('price',)
-        unique_together = ('to_currency', 'from_currency', 'price')
+        unique_together = ('to_currency', 'from_currency', 'price', 'system')
+
+    def update(self, **kwargs):
+        # update() is converted directly to an SQL statement; it doesn't exec save() on the model
+        # instances, and so the pre_save and post_save signals aren't emitted.
+        Offer.objects.filter(pk=self.pk).update(**kwargs)
 
 
 class Account(models.Model):
@@ -99,7 +105,8 @@ class Exchange(models.Model):
 
     """
 
-    status = models.IntegerField()
+    status = models.IntegerField(default=constants.EXCHANGE_INIT)
+    system = models.IntegerField(default=constants.SYSTEM_OWN)
 
     amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                  decimal_places=constants.DECIMAL_PLACES,

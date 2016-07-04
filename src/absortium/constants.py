@@ -19,6 +19,14 @@ AVAILABLE_TASK_STATUS = {
     'completed': EXCHANGE_COMPLETED
 }
 
+SYSTEM_OWN = 0
+SYSTEM_POLONIEX = 1
+
+AVAILABLE_SYSTEMS = {
+    'own': SYSTEM_OWN,
+    'poloniex': SYSTEM_POLONIEX,
+}
+
 CELERY_RETRY_COUNTDOWN = 0.1
 CELERY_MAX_RETRIES = 1000
 
@@ -28,6 +36,10 @@ AVAILABLE_CURRENCIES = {
     'btc': BTC,
     'eth': ETH
 }
+
+POLONIEX_OFFER_MODIFIED = "orderBookModify"
+POLONIEX_OFFER_CREATED = "newTrade"
+POLONIEX_OFFER_REMOVED = "orderBookRemove"
 
 EPS = decimal.Decimal(1 / 10 ** 8)
 

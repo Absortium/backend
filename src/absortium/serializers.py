@@ -23,19 +23,25 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class OfferSerializer(DynamicFieldsModelSerializer):
+    system = MyChoiceField(choices=constants.AVAILABLE_SYSTEMS,
+                           default=constants.SYSTEM_OWN,
+                           read_only=True)
+
     from_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, write_only=True)
     to_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, write_only=True)
 
     amount = serializers.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
-                                      decimal_places=constants.DECIMAL_PLACES)
+                                      decimal_places=constants.DECIMAL_PLACES,
+                                      read_only=True)
+
     price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                      decimal_places=constants.DECIMAL_PLACES,
-                                     min_value=constants.PRICE_MIN_VALUE)
+                                     min_value=constants.PRICE_MIN_VALUE,
+                                     read_only=True)
 
     class Meta:
         model = Offer
-        fields = ('from_currency', 'to_currency', 'amount', 'price')
-        read_only_fields = ('amount', 'price')
+        fields = ('from_currency', 'to_currency', 'amount', 'price', 'system')
 
 
 class AccountSerializer(serializers.ModelSerializer):
@@ -63,9 +69,11 @@ class AccountSerializer(serializers.ModelSerializer):
 
 class ExchangeSerializer(serializers.ModelSerializer):
     """
-        WARNING: STATUS FIELD ALWAYS SHOULD BE READ ONLY!
+        WARNING: 'status' AND 'type' FIELDS SHOULD ALWAYS BE READ ONLY!
     """
     status = MyChoiceField(choices=constants.AVAILABLE_TASK_STATUS, default=constants.EXCHANGE_INIT, read_only=True)
+    system = MyChoiceField(choices=constants.AVAILABLE_SYSTEMS, default=constants.SYSTEM_OWN, read_only=True)
+
     amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                       min_value=constants.WITHDRAW_AMOUNT_MIN_VALUE,
                                       decimal_places=constants.DECIMAL_PLACES)
@@ -80,7 +88,7 @@ class ExchangeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Exchange
-        fields = ('pk', 'amount', 'price', 'from_currency', 'to_currency', 'created', 'status')
+        fields = ('pk', 'amount', 'price', 'from_currency', 'to_currency', 'created', 'status', 'system')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

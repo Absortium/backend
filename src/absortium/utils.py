@@ -1,3 +1,9 @@
+from sqlite3 import IntegrityError
+
+from django.db import transaction
+
+from absortium.model.models import Offer
+
 __author__ = 'andrew.shvv@gmail.com'
 
 from random import choice
@@ -55,3 +61,51 @@ def get_currency(data, name, throw=True):
             raise ValidationError("You should specify '{}' field'".format(name))
         else:
             return None
+
+
+def get_or_create_offer(price, from_currency, to_currency, should_exist=False, system=constants.SYSTEM_OWN):
+    try:
+        with transaction.atomic():
+            offer = Offer.objects.select_for_update().get(price=price,
+                                                          from_currency=from_currency,
+                                                          to_currency=to_currency,
+                                                          system=system)
+    except Offer.DoesNotExist:
+        if should_exist:
+            raise
+        else:
+            offer = Offer(price=price,
+                          from_currency=from_currency,
+                          to_currency=to_currency,
+                          system=system)
+
+    return offer
+
+
+def safe_offer_update(price, from_currency, to_currency, update, system=constants.SYSTEM_OWN):
+    def do():
+        with transaction.atomic():
+            offer = get_or_create_offer(price=price,
+                                        from_currency=from_currency,
+                                        to_currency=to_currency,
+                                        system=system)
+
+            offer.amount = update(offer.amount)
+
+            if offer.amount > 0:
+                offer.save()
+            else:
+                if offer.pk:
+                    offer.delete()
+
+    try:
+        do()
+
+    except IntegrityError:
+        """
+            Multiple offer with the same price might be created if threads/processes simultaneously trying to create
+            not existing offer object with similar price. If this happen, duplication integrity error will be thrown,
+            this means that thread/process tried to find offer, didn't find it, and then create new one, but another
+            thread/process do the same thing. So if we encounter this exception try to get_or_create_offer() second time.
+        """
+        do()

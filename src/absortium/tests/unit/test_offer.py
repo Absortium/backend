@@ -1,13 +1,15 @@
-__author__ = 'andrew.shvv@gmail.com'
-
 import decimal
 import random
 
 from django.contrib.auth import get_user_model
 
 from absortium import constants
+from absortium.poloniexsync import PoloniexApp
 from absortium.tests.base import AbsoritumUnitTest
+from absortium.tests.data.poloniex import create_poloniex_update
 from core.utils.logging import getLogger
+
+__author__ = 'andrew.shvv@gmail.com'
 
 logger = getLogger(__name__)
 
@@ -125,6 +127,69 @@ class OfferTest(AbsoritumUnitTest):
         self.check_account_amount(self.get_account('eth'), amount="15.0")
 
         self.check_offers_empty()
+
+    def test_poloniex_update(self):
+        """
+            For example Poloniex Sync service subscribed on topic BTC_ETH.
+            When we receive update with order_type="newTrade" and offer_type="buy" it means
+            that someone create ETH buy order. == BTC-> ETH exchange.
+        """
+        PoloniexApp.update_offers(**create_poloniex_update(order_type=constants.POLONIEX_OFFER_CREATED,
+                                                           offer_type="buy",
+                                                           price="1",
+                                                           amount="1"))
+        self.check_offer(price="1",
+                         amount="1",
+                         system="poloniex")
+
+    def test_poloniex_two_updates(self):
+        """
+            For example Poloniex Sync service subscribed on topic BTC_ETH.
+            When we receive update with order_type="newTrade" and offer_type="buy" it means
+            that someone create ETH buy order. == BTC-> ETH exchange.
+        """
+        PoloniexApp.update_offers(**create_poloniex_update(order_type=constants.POLONIEX_OFFER_CREATED,
+                                                           offer_type="buy",
+                                                           price="1",
+                                                           amount="1"))
+
+        PoloniexApp.update_offers(**create_poloniex_update(order_type=constants.POLONIEX_OFFER_MODIFIED,
+                                                           offer_type="ask",
+                                                           price="1",
+                                                           amount="2"))
+
+        self.check_offer(price="1",
+                         amount="2",
+                         system="poloniex")
+
+    def test_poloniex_offer_remove(self):
+        PoloniexApp.update_offers(**create_poloniex_update(order_type=constants.POLONIEX_OFFER_CREATED,
+                                                           offer_type="buy",
+                                                           price="1",
+                                                           amount="1"))
+
+        self.check_offer(price="1",
+                         amount="1",
+                         system="poloniex")
+
+        PoloniexApp.update_offers(**create_poloniex_update(order_type=constants.POLONIEX_OFFER_REMOVED,
+                                                           offer_type="buy",
+                                                           price="1"))
+
+        self.check_offer(price="1",
+                         amount="2",
+                         system="poloniex",
+                         should_exist=False)
+
+    def test_poloniex_offer_remove_without_creating(self):
+        PoloniexApp.update_offers(**create_poloniex_update(order_type=constants.POLONIEX_OFFER_REMOVED,
+                                                           offer_type="buy",
+                                                           price="1"))
+
+        self.check_offer(price="1",
+                         amount="2",
+                         system="poloniex",
+                         should_exist=False)
 
     def test_malformed(self):
         malformed_from_currency = "asdasd907867t67g"

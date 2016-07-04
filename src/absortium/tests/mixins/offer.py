@@ -9,7 +9,7 @@ logger = getLogger(__name__)
 
 
 class CheckOfferMixin():
-    def check_offer(self, amount, price, from_currency="btc", to_currency="eth", should_exist=True, debug=False):
+    def check_offer(self, amount, price, from_currency="btc", to_currency="eth", system="own", should_exist=True, debug=False):
         data = {
             'from_currency': from_currency,
             'to_currency': to_currency,
@@ -27,17 +27,21 @@ class CheckOfferMixin():
         price = Decimal(price)
 
         offer_amount = None
+        offer_system = None
         is_offer_exist = False
+
         for offer in offers:
 
             offer_price = Decimal(offer['price'])
             if offer_price == price:
                 offer_amount = Decimal(offer['amount'])
                 is_offer_exist = True
+                offer_system = offer['system']
 
         if should_exist:
             self.assertTrue(is_offer_exist)
             self.assertEqual(offer_amount, amount)
+            self.assertEqual(offer_system, system)
         else:
             self.assertTrue(not is_offer_exist)
 
