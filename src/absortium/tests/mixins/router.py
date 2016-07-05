@@ -6,7 +6,7 @@ from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
-_topics = {}
+topics = {}
 
 
 class RouterMockMixin():
@@ -25,19 +25,19 @@ class RouterMockMixin():
         self._router_patcher.stop()
 
     def get_publishments(self, topic=None):
-        global _topics
+        global topics
 
         if topic is None:
-            return _topics
+            return topics
         else:
             try:
-                return _topics[topic]
+                return topics[topic]
             except KeyError:
                 return None
 
     def publishments_flush(self):
-        global _topics
-        _topics = {}
+        global topics
+        topics = {}
 
     def get_publishment(self, topic):
         publishments = self.get_publishments(topic)
@@ -47,25 +47,25 @@ class RouterMockMixin():
             return None
 
     def get_publishment_by_task_id(self, task_id):
-        global _topics
+        global topics
 
         self.assertTrue(type(task_id) == str)
 
-        for _, publishments in _topics.items():
+        for _, publishments in topics.items():
             for pubslishment in publishments:
                 if 'task_id' in pubslishment and pubslishment['task_id'] == task_id:
                     return pubslishment
         return None
 
     def is_published(self, topic):
-        global _topics
-        return topic in _topics
+        global topics
+        return topic in topics
 
 
 class MockClient():
     def publish(self, topic, **publishment):
-        global _topics
-        if topic not in _topics:
-            _topics[topic] = []
+        global topics
+        if topic not in topics:
+            topics[topic] = []
 
-        _topics[topic].append(publishment)
+        topics[topic].append(publishment)

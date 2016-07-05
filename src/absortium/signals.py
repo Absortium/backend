@@ -9,7 +9,7 @@ from absortium import constants
 from absortium.celery import tasks
 from absortium.crossbarhttp import get_crossbar_client
 from absortium.model.models import Exchange, Offer, MarketInfo
-from absortium.serializers import OfferSerializer, MarketInfoSerializer, ExchangeSerializer
+from absortium.serializers import MarketInfoSerializer, ExchangeSerializer
 from absortium.utils import safe_offer_update
 from core.utils.logging import getPrettyLogger
 
@@ -64,38 +64,28 @@ def exchange_post_save(sender, instance, *args, **kwargs):
         client.publish(topic, **publishment)
 
 
+# @receiver(post_delete, sender=Offer, dispatch_uid="offer_post_delete")
 @receiver(post_save, sender=Offer, dispatch_uid="offer_post_save")
 def offer_post_save(sender, instance, *args, **kwargs):
     """
         Send websocket notification to the router if offer is changed.
     """
-    offer = instance
-    serializer = OfferSerializer(offer)
 
-    publishment = serializer.data
+    offer = instance
+
+    amount = sum((offer.amount for offer in Offer.objects.filter(price=offer.price)))
+
     to_repr = {value: key for key, value in constants.AVAILABLE_CURRENCIES.items()}
     topic = constants.TOPIC_OFFERS.format(from_currency=to_repr[offer.from_currency],
                                           to_currency=to_repr[offer.to_currency])
 
-    client = get_crossbar_client()
-    client.publish(topic, **publishment)
+    publishment = {
+        "amount": str(amount),
+        "from_currency": to_repr[offer.from_currency],
+        "to_currency": to_repr[offer.to_currency],
+        "price": str(offer.price)
+    }
 
-
-@receiver(post_delete, sender=Offer, dispatch_uid="offer_post_delete")
-def offer_post_delete(sender, instance, *args, **kwargs):
-    """
-        Send websocket notification to the router if offer is changed.
-    """
-    offer = instance
-    serializer = OfferSerializer(offer)
-
-    publishment = serializer.data
-    to_repr = {value: key for key, value in constants.AVAILABLE_CURRENCIES.items()}
-
-    topic = constants.TOPIC_OFFERS.format(from_currency=to_repr[offer.from_currency],
-                                          to_currency=to_repr[offer.to_currency])
-
-    publishment['amount'] = 0
     client = get_crossbar_client()
     client.publish(topic, **publishment)
 

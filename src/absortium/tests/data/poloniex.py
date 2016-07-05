@@ -57,3 +57,12 @@ def create_poloniex_update(order_type, offer_type=None,
         raise Exception("Unknown 'order_type'")
 
     return update
+
+
+def create_order_book(asks=[], bids=[]):
+    return {
+        'asks': asks,
+        'bids': bids,
+        'isFrozen': '0',
+        'seq': 66451300,
+    }

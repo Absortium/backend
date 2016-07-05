@@ -106,6 +106,6 @@ def safe_offer_update(price, from_currency, to_currency, update, system=constant
             Multiple offer with the same price might be created if threads/processes simultaneously trying to create
             not existing offer object with similar price. If this happen, duplication integrity error will be thrown,
             this means that thread/process tried to find offer, didn't find it, and then create new one, but another
-            thread/process do the same thing. So if we encounter this exception try to get_or_create_offer() second time.
+            thread/process do the same thing. So if we encounter this exception try to do() second time.
         """
         do()
