@@ -1,4 +1,5 @@
-__author__ = 'andrew.shvv@gmail.com'
+import decimal
+from decimal import Decimal
 
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
@@ -8,6 +9,11 @@ from absortium import constants
 from absortium.model.models import Account, Exchange, Offer, Deposit, Withdrawal, MarketInfo
 from core.serializer.fields import MyChoiceField
 from core.serializer.serializers import DynamicFieldsModelSerializer
+from core.utils.logging import getPrettyLogger
+
+__author__ = 'andrew.shvv@gmail.com'
+
+logger = getPrettyLogger(__name__)
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -74,23 +80,64 @@ class ExchangeSerializer(serializers.ModelSerializer):
     status = MyChoiceField(choices=constants.AVAILABLE_TASK_STATUS, default=constants.EXCHANGE_INIT, read_only=True)
     system = MyChoiceField(choices=constants.AVAILABLE_SYSTEMS, default=constants.SYSTEM_OWN, read_only=True)
 
-    amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
-                                      min_value=constants.WITHDRAW_AMOUNT_MIN_VALUE,
-                                      decimal_places=constants.DECIMAL_PLACES)
-
-    price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
-                                     decimal_places=constants.DECIMAL_PLACES,
-                                     min_value=constants.PRICE_MIN_VALUE,
-                                     max_value=constants.PRICE_MAX_VALUE)
-
     from_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
     to_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
 
+    from_amount = serializers.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
+                                           decimal_places=constants.DECIMAL_PLACES)
+    to_amount = serializers.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
+                                         decimal_places=constants.DECIMAL_PLACES)
+
+    price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
+                                     decimal_places=constants.DECIMAL_PLACES,
+                                     min_value=constants.PRICE_MIN_VALUE)
+
     class Meta:
         model = Exchange
-        fields = ('pk', 'amount', 'price', 'from_currency', 'to_currency', 'created', 'status', 'system')
+        fields = ('pk', 'price', 'created', 'status', 'system',
+                  'to_amount', 'from_amount',
+                  'from_currency', 'to_currency')
 
     def __init__(self, *args, **kwargs):
+        data = kwargs.get('data')
+
+        if data is not None:
+            from_amount = data.get('from_amount')
+            to_amount = data.get('to_amount')
+
+            if to_amount is not None and from_amount is not None:
+                raise ValidationError("only one of the 'to_amount' or 'from_amount' fields should be presented")
+
+            elif to_amount is None and from_amount is None:
+                raise ValidationError("one of the 'to_amount' or 'from_amount' fields should be presented")
+
+            price = data.get('price')
+            if price is None:
+                raise ValidationError("'price' field should be present")
+
+            try:
+                price = round(Decimal(price), constants.DECIMAL_PLACES)
+            except decimal.InvalidOperation:
+                raise ValidationError("'price' field should be decimal serializable")
+
+            if from_amount is not None and to_amount is None:
+                try:
+                    from_amount = round(Decimal(from_amount), constants.DECIMAL_PLACES)
+                except decimal.InvalidOperation:
+                    raise ValidationError("'from_amount' field should be decimal serializable")
+
+                data['to_amount'] = str(round(from_amount * price, constants.DECIMAL_PLACES))
+
+            elif to_amount is not None and from_amount is None:
+                try:
+                    to_amount = round(Decimal(to_amount), constants.DECIMAL_PLACES)
+                except decimal.InvalidOperation:
+                    raise ValidationError("'to_amount' field should be decimal serializable")
+
+                data['from_amount'] = str(round(to_amount / price, constants.DECIMAL_PLACES))
+
+            kwargs['data'] = data
+
         super().__init__(*args, **kwargs)
         self._object = None
 

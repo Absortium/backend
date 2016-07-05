@@ -44,13 +44,13 @@ def exchange_post_save(sender, instance, *args, **kwargs):
         safe_offer_update(price=new_exchange.price,
                           from_currency=new_exchange.from_currency,
                           to_currency=new_exchange.to_currency,
-                          update=lambda amount: amount + new_exchange.amount)
+                          update=lambda amount: amount + new_exchange.from_amount)
 
     elif new_exchange.status == constants.EXCHANGE_COMPLETED:
         safe_offer_update(price=new_exchange.price,
                           from_currency=new_exchange.from_currency,
                           to_currency=new_exchange.to_currency,
-                          update=lambda amount: amount - new_exchange.amount)
+                          update=lambda amount: amount - new_exchange.from_amount)
 
         to_repr = {value: key for key, value in constants.AVAILABLE_CURRENCIES.items()}
 

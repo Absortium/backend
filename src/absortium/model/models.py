@@ -70,7 +70,7 @@ class Account(models.Model):
 def operation_wrapper(func):
     def decorator(self, obj):
         if isinstance(obj, Exchange):
-            value = obj.converted_amount()
+            value = obj.to_amount
         elif isinstance(obj, (int, float)):
             value = obj
         else:
@@ -108,9 +108,14 @@ class Exchange(models.Model):
     status = models.IntegerField(default=constants.EXCHANGE_INIT)
     system = models.IntegerField(default=constants.SYSTEM_OWN)
 
-    amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
-                                 decimal_places=constants.DECIMAL_PLACES,
-                                 default=0)
+    to_amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                    decimal_places=constants.DECIMAL_PLACES,
+                                    default=0)
+
+    from_amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                      decimal_places=constants.DECIMAL_PLACES,
+                                      default=0)
+
     price = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                 decimal_places=constants.DECIMAL_PLACES)
 
@@ -131,10 +136,10 @@ class Exchange(models.Model):
 
     def process_account(self):
         # Check that we have enough money
-        if self.from_account.amount >= self.amount:
+        if self.from_account.amount >= self.from_amount:
 
             # Subtract money from account because it is locked by exchange
-            self.from_account.amount -= self.amount
+            self.from_account.amount -= self.from_amount
             self.save()
         else:
             raise ValidationError("Not enough money for exchange creation")
@@ -142,26 +147,25 @@ class Exchange(models.Model):
     def update(self, **kwargs):
         Account.objects.filter(pk=self.pk).update(**kwargs)
 
-    def converted_amount(self):
-        return self.amount * self.price
-
-    def split(self, converted_amount):
+    def split(self, to_amount, from_amount):
         """
             Divide exchange on two parts - completed part and remain part
         """
 
-        if (self.amount - converted_amount) * self.price <= constants.EPS:
+        if self.from_amount <= to_amount:
             self.status = constants.EXCHANGE_COMPLETED
             completed = self
         else:
             from copy import deepcopy
             completed = deepcopy(self)
-            completed.amount = converted_amount
+            completed.from_amount = to_amount
+            completed.to_amount = from_amount
             completed.pk = None
             completed.status = constants.EXCHANGE_COMPLETED
             completed.save()
 
-            self.amount -= converted_amount
+            self.from_amount -= to_amount
+            self.to_amount -= from_amount
 
         return completed, self
 
@@ -173,15 +177,11 @@ class Exchange(models.Model):
             exchange.status = constants.EXCHANGE_PENDING
             opposite.status = constants.EXCHANGE_COMPLETED
 
-            # convert to currency of this exchange
-            converted_amount = opposite.converted_amount()
-            amount = opposite.amount
-
-            exchange.to_account.amount += amount  # ETH
-            opposite.to_account.amount += converted_amount  # BTC
+            exchange.to_account.amount += opposite.from_amount
+            opposite.to_account.amount += opposite.to_amount
 
             # save fraction of exchange in order to store history of exchanges
-            (completed, exchange) = exchange.split(converted_amount)
+            (completed, exchange) = exchange.split(opposite.to_amount, opposite.from_amount)
 
             return completed, exchange
         else:
@@ -189,27 +189,27 @@ class Exchange(models.Model):
 
     @operation_wrapper
     def __lt__(self, value):
-        return self.amount < value
+        return self.from_amount < value
 
     @operation_wrapper
     def __gt__(self, value):
-        return self.amount > value
+        return self.from_amount > value
 
     @operation_wrapper
     def __le__(self, value):
-        return self.amount <= value
+        return self.from_amount <= value
 
     @operation_wrapper
     def __ge__(self, value):
-        return self.amount >= value
+        return self.from_amount >= value
 
     @operation_wrapper
     def __eq__(self, value):
-        return self.amount == value
+        return self.from_amount == value
 
     @operation_wrapper
     def __ne__(self, value):
-        return self.amount != value
+        return self.from_amount != value
 
 
 class Deposit(models.Model):

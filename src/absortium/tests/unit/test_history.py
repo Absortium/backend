@@ -40,12 +40,12 @@ class HistoryTest(AbsoritumUnitTest):
         """
             Check that we get only exchanges which belong to the user.
         """
-        self.create_exchange(price="1", amount="1", status="init")
-        self.create_exchange(price="1", amount="1", status="init")
+        self.create_exchange(price="1", from_amount="1", status="init")
+        self.create_exchange(price="1", from_amount="1", status="init")
         self.assertEqual(len(self.get_exchanges_history()), 0)
 
         self.client.force_authenticate(self.some_user)
-        self.create_exchange(from_currency="eth", to_currency="btc", price="1", amount="2", status="completed")
+        self.create_exchange(from_currency="eth", to_currency="btc", price="1", from_amount="2", status="completed")
 
         self.assertEqual(len(self.get_exchanges_history()), 4)
         self.assertEqual(len(self.get_exchanges_history("btc", "eth")), 2)

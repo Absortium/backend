@@ -44,10 +44,10 @@ class MarketInfoTest(AbsoritumUnitTest):
         self.make_deposit(self.get_account("eth"), amount="999999.0")
 
         # Create first exchange and check info
-        self.create_exchange(amount="1.0", price="2.0", status="init")
+        self.create_exchange(from_amount="1.0", price="2.0", status="init")
         self.check_offer(amount="1.0", price="2.0")
 
-        self.create_exchange(amount="2.0", price="0.5", status="completed",
+        self.create_exchange(from_amount="2.0", price="0.5", status="completed",
                              from_currency="eth",
                              to_currency="btc")
 
@@ -66,10 +66,10 @@ class MarketInfoTest(AbsoritumUnitTest):
         self.assertEqual(self.to_dec(last_info_eth_btc["rate_24h_min"]), 0.5)
 
         # Create second exchange and check market info changes
-        self.create_exchange(amount="1.0", price="1.0", status="init")
+        self.create_exchange(from_amount="1.0", price="1.0", status="init")
         self.check_offer(amount="1.0", price="1.0")
 
-        self.create_exchange(amount="1.0", price="1.0", status="completed",
+        self.create_exchange(from_amount="1.0", price="1.0", status="completed",
                              from_currency="eth",
                              to_currency="btc")
 
@@ -92,19 +92,19 @@ class MarketInfoTest(AbsoritumUnitTest):
         self.make_deposit(self.get_account("eth"), amount="999999.0")
 
         with freeze_time("2012-01-14 00:00:00"):
-            self.create_exchange(amount="1.0", price="1.0", status="init")
+            self.create_exchange(from_amount="1.0", price="1.0", status="init")
             self.check_offer(amount="1.0", price="1.0")
 
-            self.create_exchange(amount="1.0", price="1.0", status="completed",
+            self.create_exchange(from_amount="1.0", price="1.0", status="completed",
                                  from_currency="eth",
                                  to_currency="btc")
             tasks.calculate_market_info.delay()
 
         with freeze_time("2012-01-15 00:00:00"):
-            self.create_exchange(amount="1.0", price="2.0", status="init")
+            self.create_exchange(from_amount="1.0", price="2.0", status="init")
             self.check_offer(amount="1.0", price="2.0")
 
-            self.create_exchange(amount="2.0", price="0.5", status="completed",
+            self.create_exchange(from_amount="2.0", price="0.5", status="completed",
                                  from_currency="eth",
                                  to_currency="btc")
 
@@ -126,19 +126,19 @@ class MarketInfoTest(AbsoritumUnitTest):
         self.make_deposit(self.get_account("eth"), amount="999999.0")
 
         with freeze_time("2012-01-14 00:00:00"):
-            self.create_exchange(amount="1.0", price="1.0", status="init")
+            self.create_exchange(from_amount="1.0", price="1.0", status="init")
             self.check_offer(amount="1.0", price="1.0")
 
-            self.create_exchange(amount="1.0", price="1.0", status="completed",
+            self.create_exchange(from_amount="1.0", price="1.0", status="completed",
                                  from_currency="eth",
                                  to_currency="btc")
             tasks.calculate_market_info.delay()
 
         with freeze_time("2012-01-14 23:59:59"):
-            self.create_exchange(amount="1.0", price="2.0", status="init")
+            self.create_exchange(from_amount="1.0", price="2.0", status="init")
             self.check_offer(amount="1.0", price="2.0")
 
-            self.create_exchange(amount="2.0", price="0.5", status="completed",
+            self.create_exchange(from_amount="2.0", price="0.5", status="completed",
                                  from_currency="eth",
                                  to_currency="btc")
 
@@ -159,10 +159,10 @@ class MarketInfoTest(AbsoritumUnitTest):
         self.make_deposit(self.get_account("eth"), amount="999999.0")
 
         with freeze_time("2012-01-14 00:00:00"):
-            self.create_exchange(amount="1.0", price="1.0", status="init")
+            self.create_exchange(from_amount="1.0", price="1.0", status="init")
             self.check_offer(amount="1.0", price="1.0")
 
-            self.create_exchange(amount="1.0", price="1.0", status="completed",
+            self.create_exchange(from_amount="1.0", price="1.0", status="completed",
                                  from_currency="eth",
                                  to_currency="btc")
 
@@ -178,10 +178,10 @@ class MarketInfoTest(AbsoritumUnitTest):
         self.make_deposit(self.get_account("btc"), amount="999999.0")
         self.make_deposit(self.get_account("eth"), amount="999999.0")
 
-        self.create_exchange(amount="1.0", price="2.0", status="init")
+        self.create_exchange(from_amount="1.0", price="2.0", status="init")
         self.check_offer(amount="1.0", price="2.0")
 
-        self.create_exchange(amount="2.0", price="0.5", status="completed",
+        self.create_exchange(from_amount="2.0", price="0.5", status="completed",
                              from_currency="eth",
                              to_currency="btc")
 

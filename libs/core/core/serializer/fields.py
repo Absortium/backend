@@ -4,6 +4,22 @@ from rest_framework import serializers
 __author__ = 'andrew.shvv@gmail.com'
 
 
+class MyDecimalField(serializers.DecimalField):
+    def validate_precision(self, value):
+        try:
+            return super().validate_precision(value)
+        except serializers.ValidationError:
+            return round(value, self.decimal_places)
+
+
+class MySerializerMethodField(serializers.SerializerMethodField):
+    def __init__(self, read_only=True, method_name=None, **kwargs):
+        self.method_name = method_name
+        kwargs['source'] = '*'
+        kwargs['read_only'] = read_only
+        super(serializers.SerializerMethodField, self).__init__(**kwargs)
+
+
 class MyChoiceField(serializers.Field):
     """
         This class used for translation incoming strings values to

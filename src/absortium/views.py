@@ -1,16 +1,12 @@
-from absortium import constants
-
-__author__ = 'andrew.shvv@gmail.com'
-
 from django.contrib.auth.models import User, Group
 from django.db import transaction
 from rest_framework import generics, mixins, viewsets
-from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK
+from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
 from rest_framework.response import Response
+from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK
 
-from absortium.utils import get_currency
+from absortium import constants
 from absortium.celery import tasks
 from absortium.mixins import CreateCeleryMixin
 from absortium.model.models import Offer, Exchange, Account, MarketInfo
@@ -23,8 +19,10 @@ from absortium.serializers import \
     DepositSerializer, \
     WithdrawSerializer, \
     MarketInfoSerializer
-
+from absortium.utils import get_currency
 from core.utils.logging import getPrettyLogger
+
+__author__ = 'andrew.shvv@gmail.com'
 
 logger = getPrettyLogger(__name__)
 

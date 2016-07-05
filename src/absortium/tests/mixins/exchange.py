@@ -11,14 +11,27 @@ logger = getLogger(__name__)
 
 
 class CreateExchangeMixin():
-    def create_exchange(self, amount="1", from_currency="btc", to_currency="eth", price="1",
-                        status="completed", user=None, with_checks=True, debug=False, extra_data={}):
+    def create_exchange(self,
+                        from_amount="1",
+                        to_amount=None,
+                        from_currency="btc",
+                        to_currency="eth",
+                        price="1",
+                        status="completed",
+                        user=None,
+                        with_checks=True,
+                        debug=False,
+                        extra_data={}):
         data = {
             'to_currency': to_currency,
             'from_currency': from_currency,
-            'amount': amount,
             'price': price
         }
+
+        if to_amount is not None:
+            data.update(to_amount=to_amount)
+        elif from_amount is not None:
+            data.update(from_amount=from_amount)
 
         for k, v in extra_data.items():
             data[k] = v
@@ -66,7 +79,8 @@ class CreateExchangeMixin():
 
         is_exist = False
         for exchange in exchanges:
-            if decimal.Decimal(exchange['price']) == decimal.Decimal(price) and decimal.Decimal(exchange['amount']) == decimal.Decimal(amount):
+            if decimal.Decimal(exchange['price']) == decimal.Decimal(price) and decimal.Decimal(
+                    exchange['from_amount']) == decimal.Decimal(amount):
                 is_exist = True
 
         self.assertEqual(is_exist, should_exist)

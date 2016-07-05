@@ -83,7 +83,7 @@ class opposites:
                                                 'AND from_currency = %s'
                                                 ' FOR UPDATE'
                                                 ' LIMIT 1', [constants.EXCHANGE_PENDING, constants.EXCHANGE_INIT,
-                                                             self.converted_price + constants.EPS,
+                                                             self.converted_price,
                                                              self.exchange.to_currency])[0]
 
             except IndexError:

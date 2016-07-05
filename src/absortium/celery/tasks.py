@@ -102,7 +102,7 @@ def do_exchange(self, *args, **kwargs):
 
             return history + [exchange]
 
-        if exchange.price * exchange.amount <= constants.EXCHANGE_AMOUNT_MIN_VALUE:
+        if exchange.to_amount <= constants.EXCHANGE_AMOUNT_MIN_VALUE:
             raise ValidationError("Total amount lower than {}".format(constants.EXCHANGE_AMOUNT_MIN_VALUE))
 
         with publishment.atomic():
@@ -172,7 +172,7 @@ def calculate_market_info(self, *args, **kwargs):
                     rate_24h_min = min(rates)
 
                     # 4. Calculate the market volume.
-                    volume_24h = sum((exchange.amount for exchange in exchanges_24h))
+                    volume_24h = sum((exchange.from_amount for exchange in exchanges_24h))
 
                 info.rate_24h_max = rate_24h_max
                 info.rate_24h_min = rate_24h_min

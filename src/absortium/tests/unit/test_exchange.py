@@ -49,13 +49,22 @@ class ExchangeTest(AbsoritumUnitTest):
         self.client.force_authenticate(self.some_user)
         self.assertEqual(len(self.get_exchanges()), 0)
 
+    def test_to_amount(self):
+        """
+            Check that we get only exchanges which belong to the user.
+        """
+        self.create_exchange(to_amount="1", price="1", status="init")
+        self.create_exchange(to_amount="1", price="1", status="init")
+        self.assertEqual(len(self.get_exchanges()), 2)
+
+
     def test_exchanges_count_with_different_currency(self):
         """
             Check that we get only exchanges which belong to the user.
         """
         self.make_deposit(self.primary_eth_account, amount="10.0")
 
-        self.create_exchange(price="1", status="init")
+        self.create_exchange(from_amount="1", price="1", status="init")
         self.assertEqual(len(self.get_exchanges("btc", "eth")), 1)
         self.assertEqual(len(self.get_exchanges("eth", "btc")), 0)
 
@@ -77,19 +86,19 @@ class ExchangeTest(AbsoritumUnitTest):
     def test_malformed_data(self):
         malformed_amount = "(*YGV*T^C%D"
         with self.assertRaises(AssertionError):
-            self.create_exchange(price="2.0", amount=malformed_amount, status="pending")
+            self.create_exchange(price="2.0", from_amount=malformed_amount, status="pending")
 
         malformed_currency = "(*YGV*T^C%D"
         with self.assertRaises(AssertionError):
-            self.create_exchange(to_currency=malformed_currency, price="2.0", amount="1.0",
+            self.create_exchange(to_currency=malformed_currency, price="2.0", from_amount="1.0",
                                  status="init")
 
         malformed_price = "(*YGV*T^C%D"
         with self.assertRaises(AssertionError):
-            self.create_exchange(price=malformed_price, amount="1.0", status="init")
+            self.create_exchange(price=malformed_price, from_amount="1.0", status="init")
 
     def test_creation(self):
-        self.create_exchange(price="2.0", amount="3.0", status="init")
+        self.create_exchange(price="2.0", from_amount="3.0", status="init")
 
         self.check_account_amount(self.primary_btc_account, amount="7.0")
         self.check_account_amount(self.primary_eth_account, amount="0.0")
@@ -99,7 +108,7 @@ class ExchangeTest(AbsoritumUnitTest):
             Create exchanges without money
         """
         with self.assertRaises(AssertionError):
-            self.create_exchange(price="2.0", amount="999")
+            self.create_exchange(price="2.0", from_amount="999")
 
         self.check_account_amount(self.primary_btc_account, amount="10.0")
         self.check_account_amount(self.primary_eth_account, amount="0.0")
@@ -109,11 +118,11 @@ class ExchangeTest(AbsoritumUnitTest):
             Create exchanges which will be processed fully
         """
 
-        self.create_exchange(price="2.0", amount="5.0", status="init")
-        self.create_exchange(price="2.0", amount="5.0", status="init")
+        self.create_exchange(price="2.0", from_amount="5.0", status="init")
+        self.create_exchange(price="2.0", from_amount="5.0", status="init")
 
         self.client.force_authenticate(self.some_user)
-        self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", amount="20.0")
+        self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", from_amount="20.0")
 
         self.check_account_amount(self.some_btc_account, amount="10.0")
         self.check_account_amount(self.some_eth_account, amount="0.0")
@@ -126,14 +135,14 @@ class ExchangeTest(AbsoritumUnitTest):
         """
             Create exchanges which will be processed not fully
         """
-        self.create_exchange(price="2.0", amount="8.0", status="init")
+        self.create_exchange(price="2.0", from_amount="8.0", status="init")
         self.check_account_amount(self.primary_btc_account, amount="2.0")
 
         self.client.force_authenticate(self.some_user)
         self.create_exchange(from_currency="eth",
                              to_currency="btc",
                              price="0.5",
-                             amount="20.0",
+                             from_amount="20.0",
                              status="pending")
 
         self.check_account_amount(self.some_eth_account, amount="0.0")
@@ -149,10 +158,10 @@ class ExchangeTest(AbsoritumUnitTest):
         """
         self.make_deposit(self.primary_eth_account, amount="20.0")
 
-        self.create_exchange(price="2.0", amount="10.0", status="init")
+        self.create_exchange(price="2.0", from_amount="10.0", status="init")
         self.check_account_amount(self.primary_btc_account, amount="0.0")
 
-        self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", amount="20.0")
+        self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", from_amount="20.0")
 
         self.check_account_amount(self.primary_eth_account, amount="20.0")
 
@@ -160,12 +169,12 @@ class ExchangeTest(AbsoritumUnitTest):
         """
             Create create two exchanges with different price and then one opposite with smaller price.
         """
-        self.create_exchange(price="2.0", amount="5.0", status="init")
-        self.create_exchange(price="1.0", amount="5.0", status="init")
+        self.create_exchange(price="2.0", from_amount="5.0", status="init")
+        self.create_exchange(price="1.0", from_amount="5.0", status="init")
         self.check_account_amount(self.primary_btc_account, amount="0.0")
 
         self.client.force_authenticate(self.some_user)
-        self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", amount="15.0", status="completed")
+        self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", from_amount="15.0", status="completed")
         self.check_account_amount(self.some_eth_account, amount="5.0")
 
         self.check_account_amount(self.some_btc_account, amount="10.0")
@@ -180,61 +189,26 @@ class ExchangeTest(AbsoritumUnitTest):
             'status': "pending"
         }
 
-        self.create_exchange(price="2.0", amount="10.0", status="init", extra_data=extra_data)
+        self.create_exchange(price="2.0", from_amount="10.0", status="init", extra_data=extra_data)
 
     def test_eth_exchange_with_small_amount(self):
         self.client.force_authenticate(self.some_user)
 
         with self.assertRaises(AssertionError):
-            self.create_exchange(from_currency="eth", to_currency="btc", price="0.1", amount="0.0001")
+            self.create_exchange(from_currency="eth", to_currency="btc", price="0.1", from_amount="0.0001")
         self.check_account_amount(self.some_eth_account, amount="20.0")
 
     def test_btc_exchange_with_small_amount(self):
         with self.assertRaises(AssertionError):
-            self.create_exchange(price="0.1", amount="0.0001")
+            self.create_exchange(price="0.1", from_amount="0.0001")
         self.check_account_amount(self.primary_btc_account, amount="10.0")
 
-    def test_exchange_with_small_diff(self):
-        self.client.force_authenticate(self.some_user)
-        self.create_exchange(from_currency="eth", to_currency="btc", amount="2.0", price="0.01", status="init")
-
-        self.client.force_authenticate(self.user)
-        self.create_exchange(from_currency="btc", to_currency="eth",
-                             amount="0.01999999",
-                             price="100",
-                             status="completed")
-
-        self.check_account_amount(self.primary_eth_account, amount="1.99999900")
-
-        self.client.force_authenticate(self.some_user)
-        self.check_exchange(from_currency="eth", to_currency="btc", price="0.01", amount="0.00000100", should_exist=False)
-
-    def test_eps_equality(self):
-        self.create_exchange(amount="0.071428571429", price="14", status="init")
-
-        self.client.force_authenticate(self.some_user)
-        self.create_exchange(from_currency="eth", to_currency="btc",
-                             amount="1.000000000007",
-                             price="0.071428571429",
-                             status="completed")
-
-        self.check_account_amount(self.some_btc_account, amount="0.071428571429")
-
-        self.client.force_authenticate(self.user)
-
-        # amount equal to 1.000000000006 because 0.071428571429 * 14 it is actually is 1.000000000006
-        # and within the epsilon which is 10 ** 8 this exchanges are equal.
-        self.check_account_amount(self.primary_eth_account, amount="1.000000000006")
-
-        self.check_offers_empty()
-
-
     def test_notification(self):
-        self.create_exchange(price="2.0", amount="5.0", status="init")
-        self.create_exchange(price="2.0", amount="5.0", status="init")
+        self.create_exchange(price="2.0", from_amount="5.0", status="init")
+        self.create_exchange(price="2.0", from_amount="5.0", status="init")
 
         self.client.force_authenticate(self.some_user)
-        self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", amount="20.0")
+        self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", from_amount="20.0")
 
         self.check_account_amount(self.some_btc_account, amount="10.0")
         self.check_account_amount(self.some_eth_account, amount="0.0")

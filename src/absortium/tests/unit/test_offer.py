@@ -40,14 +40,14 @@ class OfferTest(AbsoritumUnitTest):
 
             self.make_deposit(account, amount=amount)
             self.check_account_amount(account=account, amount=amount)
-            self.create_exchange(amount=str(amount), price="0.1", status="init")
+            self.create_exchange(from_amount=str(amount), price="0.1", status="init")
             self.check_offer(amount=should_be, price="0.1")
 
     def test_different_price(self, *args, **kwargs):
         self.make_deposit(self.get_account('btc'), amount="999999.0")
 
-        self.create_exchange(amount="1.0", price="1", status="init")
-        self.create_exchange(amount="1.0", price="2", status="init")
+        self.create_exchange(from_amount="1.0", price="1", status="init")
+        self.create_exchange(from_amount="1.0", price="2", status="init")
 
         self.check_offer(amount="1.0", price="1.0")
         self.check_offer(amount="1.0", price="2.0")
@@ -55,7 +55,7 @@ class OfferTest(AbsoritumUnitTest):
     def test_offer_deletion(self, *args, **kwargs):
         self.make_deposit(self.get_account('btc'), amount="999999.0")
         self.make_deposit(self.get_account('eth'), amount="999999.0")
-        self.create_exchange(amount="1.0", price="1.0", status="init")
+        self.create_exchange(from_amount="1.0", price="1.0", status="init")
         self.check_offer(amount="1.0", price="1.0")
 
         # Create some another user
@@ -67,19 +67,19 @@ class OfferTest(AbsoritumUnitTest):
         self.make_deposit(self.get_account('btc'), amount="999999.0")
         self.make_deposit(self.get_account('eth'), amount="999999.0")
 
-        self.create_exchange(from_currency="eth", to_currency="btc", amount="1.0", price="3.0", status="init")
+        self.create_exchange(from_currency="eth", to_currency="btc", from_amount="1.0", price="3.0", status="init")
         self.check_offer(from_currency="eth", to_currency="btc", amount="1.0", price="3.0")
 
-        self.create_exchange(from_currency="eth", to_currency="btc", amount="1.0", price="1.0", status="completed")
+        self.create_exchange(from_currency="eth", to_currency="btc", from_amount="1.0", price="1.0", status="completed")
         self.check_offer(amount="1.0", price="1.0", should_exist=False)
 
     def test_offer_deletion_complex(self, *args, **kwargs):
         self.make_deposit(self.get_account('btc'), amount="999999.0")
         self.make_deposit(self.get_account('eth'), amount="999999.0")
 
-        self.create_exchange(amount="1.0", price="2.0", status="init")
-        self.create_exchange(amount="1.0", price="2.0", status="init")
-        self.create_exchange(amount="1.0", price="2.0", status="init")
+        self.create_exchange(from_amount="1.0", price="2.0", status="init")
+        self.create_exchange(from_amount="1.0", price="2.0", status="init")
+        self.create_exchange(from_amount="1.0", price="2.0", status="init")
 
         self.check_offer(amount="3.0", price="2.0")
 
@@ -92,13 +92,13 @@ class OfferTest(AbsoritumUnitTest):
         self.make_deposit(self.get_account('btc'), amount="999999.0")
         self.make_deposit(self.get_account('eth'), amount="999999.0")
 
-        self.create_exchange(from_currency="eth", to_currency="btc", amount="2.0", price="0.5", status="completed")
-        self.create_exchange(from_currency="eth", to_currency="btc", amount="2.0", price="0.5", status="completed")
-        self.create_exchange(from_currency="eth", to_currency="btc", amount="1.0", price="0.5", status="completed")
+        self.create_exchange(from_currency="eth", to_currency="btc", from_amount="2.0", price="0.5", status="completed")
+        self.create_exchange(from_currency="eth", to_currency="btc", from_amount="2.0", price="0.5", status="completed")
+        self.create_exchange(from_currency="eth", to_currency="btc", from_amount="1.0", price="0.5", status="completed")
 
         self.check_offer(amount="0.5", price="2.0")
 
-        self.create_exchange(from_currency="eth", to_currency="btc", amount="1.0", price="0.5", status="completed")
+        self.create_exchange(from_currency="eth", to_currency="btc", from_amount="1.0", price="0.5", status="completed")
 
         self.check_offer(amount="0.5", price="2.0", should_exist=False)
 
@@ -110,8 +110,8 @@ class OfferTest(AbsoritumUnitTest):
 
         self.make_deposit(self.get_account('btc'), amount="10.0")
 
-        self.create_exchange(price="2.0", amount="5.0", status="init")
-        self.create_exchange(price="1.0", amount="5.0", status="init")
+        self.create_exchange(price="2.0", from_amount="5.0", status="init")
+        self.create_exchange(price="1.0", from_amount="5.0", status="init")
         self.check_account_amount(self.get_account('btc'), amount="0.0")
         self.check_account_amount(self.get_account('eth'), amount="0.0")
 
@@ -122,7 +122,7 @@ class OfferTest(AbsoritumUnitTest):
         self.client.force_authenticate(some_user)
         self.make_deposit(self.get_account('eth'), amount="20.0")
 
-        self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", amount="15.0", status="completed")
+        self.create_exchange(from_currency="eth", to_currency="btc", price="0.5", from_amount="15.0", status="completed")
         self.check_account_amount(self.get_account('eth'), amount="5.0")
         self.check_account_amount(self.get_account('btc'), amount="10.0")
 
@@ -204,7 +204,7 @@ class OfferTest(AbsoritumUnitTest):
 
     def test_usual_notification(self):
         self.make_deposit(self.get_account('btc'), amount="1.0")
-        self.create_exchange(price="1.0", amount="1.0", status="init")
+        self.create_exchange(price="1.0", from_amount="1.0", status="init")
         self.assertEqual(len(self.get_publishments("offers_btc_eth")), 1)
 
     def test_notification_offer_amount_accumulation(self):
@@ -217,7 +217,7 @@ class OfferTest(AbsoritumUnitTest):
                                                              amount="1"))
 
         self.make_deposit(self.get_account('btc'), amount="1.0")
-        self.create_exchange(price="1.0", amount="1.0", status="init")
+        self.create_exchange(price="1.0", from_amount="1.0", status="init")
 
         publishments = self.get_publishments("offers_btc_eth")
 
