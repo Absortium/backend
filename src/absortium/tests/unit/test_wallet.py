@@ -65,7 +65,7 @@ class WalletAtomicTest(AbsoritumUnitTest):
         """
 
         tasks.pregenerate_accounts()
-        currencies = constants.AVAILABLE_CURRENCIES.values()
+        currencies = constants.AVAILABLE_CURRENCIES
 
         for currency in currencies:
             count = constants.ACCOUNT_POOL_LENGTH - len(AccountPool(currency))

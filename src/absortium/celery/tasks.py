@@ -14,10 +14,10 @@ from absortium.wallet.pool import AccountPool
 from absortium.celery.base import get_base_class
 from absortium.crossbarhttp import publishment
 from absortium.exceptions import AlreadyExistError
-from absortium.model.locks import lockexchange, opposites
-from absortium.model.models import Account, Exchange, MarketInfo
+from absortium.model.locks import lockorder, opposites
+from absortium.model.models import Account, Order, MarketInfo
 from absortium.serializers import \
-    ExchangeSerializer, \
+    OrderSerializer, \
     WithdrawSerializer, \
     DepositSerializer, \
     AccountSerializer
@@ -72,46 +72,46 @@ def do_exchange(self, *args, **kwargs):
     user_pk = kwargs['user_pk']
 
     try:
-        serializer = ExchangeSerializer(data=data)
+        serializer = OrderSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        exchange = serializer.object(owner_id=user_pk)
+        order = serializer.object(owner_id=user_pk)
 
-        def process(exchange):
+        def process(order):
             history = []
-            for opposite in opposites(exchange):
-                with lockexchange(opposite):
-                    if exchange > opposite:
-                        (completed, exchange) = exchange - opposite
+            for opposite in opposites(order):
+                with lockorder(opposite):
+                    if order > opposite:
+                        (completed, order) = order - opposite
                         history.append(completed)
 
-                    elif exchange < opposite:
+                    elif order < opposite:
                         """
-                            In this case exchange will be in the EXCHANGE_COMPLETED status, so just break loop and
-                            than add exchange to the history
+                            In this case order will be in the ORDER_COMPLETED status, so just break loop and
+                            than add order to the history
                         """
-                        (_, opposite) = opposite - exchange
+                        (_, opposite) = opposite - order
                         break
 
                     else:
                         """
-                            In this case exchange will be in the EXCHANGE_COMPLETED status, so just break loop and
-                            than add exchange to the history
+                            In this case order will be in the ORDER_COMPLETED status, so just break loop and
+                            than add order to the history
                         """
-                        (_, exchange) = exchange - opposite
+                        (_, order) = order - opposite
                         break
 
-            return history + [exchange]
+            return history + [order]
 
-        if exchange.to_amount <= constants.EXCHANGE_AMOUNT_MIN_VALUE:
-            raise ValidationError("Total amount lower than {}".format(constants.EXCHANGE_AMOUNT_MIN_VALUE))
+        if order.total <= constants.ORDER_MIN_TOTAL_AMOUNT:
+            raise ValidationError("Total amount lower than {}".format(constants.ORDER_MIN_TOTAL_AMOUNT))
 
         with publishment.atomic():
             with transaction.atomic():
-                with lockexchange(exchange):
-                    exchange.process_account()
-                    history = process(exchange)
+                with lockorder(order):
+                    order.process_account()
+                    history = process(order)
 
-                return [ExchangeSerializer(e).data for e in history]
+                return [OrderSerializer(e).data for e in history]
 
     except OperationalError:
         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
@@ -143,21 +143,16 @@ def create_account(self, *args, **kwargs):
 def calculate_market_info(self, *args, **kwargs):
     with publishment.atomic():
         with transaction.atomic():
-            currencies = constants.AVAILABLE_CURRENCIES.values()
-            pairs = [(fc, tc) for fc in currencies for tc in currencies if fc != tc]
 
-            for from_currency, to_currency in pairs:
+            for pair in constants.AVAILABLE_CURRENCY_PAIRS:
                 info = MarketInfo()
-
-                info.from_currency = from_currency
-                info.to_currency = to_currency
+                info.pair = pair
 
                 # 1. Get exchanges for the last 24h.
                 day_ago = timezone.now() - timedelta(hours=constants.MARKET_INFO_DELTA)
-                exchanges_24h = Exchange.objects.filter(status=constants.EXCHANGE_COMPLETED,
-                                                        from_currency=from_currency,
-                                                        to_currency=to_currency,
-                                                        created__gt=day_ago).all()
+                exchanges_24h = Order.objects.filter(status=constants.ORDER_COMPLETED,
+                                                     pair=pair,
+                                                     created__gte=day_ago).all()
 
                 rate_24h_max = 0
                 rate_24h_min = 0
@@ -172,17 +167,15 @@ def calculate_market_info(self, *args, **kwargs):
                     rate_24h_min = min(rates)
 
                     # 4. Calculate the market volume.
-                    volume_24h = sum((exchange.from_amount for exchange in exchanges_24h))
+                    volume_24h = sum((exchange.total for exchange in exchanges_24h))
 
                 info.rate_24h_max = rate_24h_max
                 info.rate_24h_min = rate_24h_min
                 info.volume_24h = volume_24h
 
                 # 5. Get the last completed exchanges
-                last_exchanges = Exchange.objects.filter(
-                    status=constants.EXCHANGE_COMPLETED,
-                    from_currency=from_currency,
-                    to_currency=to_currency).all()[:constants.MARKET_INFO_COUNT_OF_EXCHANGES]
+                last_exchanges = Order.objects.filter(status=constants.ORDER_COMPLETED,
+                                                      pair=pair).all()[:constants.MARKET_INFO_COUNT_OF_EXCHANGES]
 
                 average_price = 0
                 if last_exchanges:
@@ -196,7 +189,7 @@ def calculate_market_info(self, *args, **kwargs):
 @shared_task(bind=True, base=get_base_class())
 def pregenerate_accounts(self, *args, **kwargs):
     with transaction.atomic():
-        currencies = constants.AVAILABLE_CURRENCIES.values()
+        currencies = constants.AVAILABLE_CURRENCIES
 
         for currency in currencies:
             pool = AccountPool(currency)

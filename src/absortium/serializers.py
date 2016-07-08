@@ -6,7 +6,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from absortium import constants
-from absortium.model.models import Account, Exchange, Offer, Deposit, Withdrawal, MarketInfo
+from absortium.model.models import Account, Order, Offer, Deposit, Withdrawal, MarketInfo
 from core.serializer.fields import MyChoiceField
 from core.serializer.serializers import DynamicFieldsModelSerializer
 from core.utils.logging import getPrettyLogger
@@ -31,10 +31,12 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
 class OfferSerializer(DynamicFieldsModelSerializer):
     system = MyChoiceField(choices=constants.AVAILABLE_SYSTEMS,
                            default=constants.SYSTEM_OWN,
-                           read_only=True)
+                           write_only=True)
 
-    from_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, write_only=True)
-    to_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES, write_only=True)
+    type = MyChoiceField(choices=constants.AVAILABLE_ORDER_TYPES)
+
+    pair = MyChoiceField(choices=constants.AVAILABLE_CURRENCY_PAIRS,
+                         default=constants.PAIR_BTC_ETH)
 
     amount = serializers.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
                                       decimal_places=constants.DECIMAL_PLACES,
@@ -47,7 +49,7 @@ class OfferSerializer(DynamicFieldsModelSerializer):
 
     class Meta:
         model = Offer
-        fields = ('from_currency', 'to_currency', 'amount', 'price', 'system')
+        fields = ('pair', 'type', 'amount', 'price', 'system')
 
 
 class AccountSerializer(serializers.ModelSerializer):
@@ -73,43 +75,44 @@ class AccountSerializer(serializers.ModelSerializer):
         return self._object
 
 
-class ExchangeSerializer(serializers.ModelSerializer):
+class OrderSerializer(serializers.ModelSerializer):
     """
         WARNING: 'status' AND 'type' FIELDS SHOULD ALWAYS BE READ ONLY!
     """
-    status = MyChoiceField(choices=constants.AVAILABLE_TASK_STATUS, default=constants.EXCHANGE_INIT, read_only=True)
+    status = MyChoiceField(choices=constants.AVAILABLE_ORDER_STATUSES, default=constants.ORDER_INIT, read_only=True)
+
     system = MyChoiceField(choices=constants.AVAILABLE_SYSTEMS, default=constants.SYSTEM_OWN, read_only=True)
 
-    from_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
-    to_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
+    type = MyChoiceField(choices=constants.AVAILABLE_ORDER_TYPES)
 
-    from_amount = serializers.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
-                                           decimal_places=constants.DECIMAL_PLACES)
-    to_amount = serializers.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
-                                         decimal_places=constants.DECIMAL_PLACES)
+    pair = MyChoiceField(choices=constants.AVAILABLE_CURRENCY_PAIRS,
+                         default=constants.PAIR_BTC_ETH)
+
+    amount = serializers.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
+                                      decimal_places=constants.DECIMAL_PLACES)
+    total = serializers.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
+                                     decimal_places=constants.DECIMAL_PLACES)
 
     price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                      decimal_places=constants.DECIMAL_PLACES,
                                      min_value=constants.PRICE_MIN_VALUE)
 
     class Meta:
-        model = Exchange
-        fields = ('pk', 'price', 'created', 'status', 'system',
-                  'to_amount', 'from_amount',
-                  'from_currency', 'to_currency')
+        model = Order
+        fields = ('pk', 'price', 'created', 'status', 'type', 'system', 'amount', 'total', 'pair')
 
     def __init__(self, *args, **kwargs):
         data = kwargs.get('data')
 
         if data is not None:
-            from_amount = data.get('from_amount')
-            to_amount = data.get('to_amount')
+            amount = data.get('amount')
+            total = data.get('total')
 
-            if to_amount is not None and from_amount is not None:
-                raise ValidationError("only one of the 'to_amount' or 'from_amount' fields should be presented")
+            if total is not None and amount is not None:
+                raise ValidationError("only one of the 'amount' or 'total' fields should be presented")
 
-            elif to_amount is None and from_amount is None:
-                raise ValidationError("one of the 'to_amount' or 'from_amount' fields should be presented")
+            elif total is None and amount is None:
+                raise ValidationError("one of the 'amount' or 'total' fields should be presented")
 
             price = data.get('price')
             if price is None:
@@ -120,21 +123,21 @@ class ExchangeSerializer(serializers.ModelSerializer):
             except decimal.InvalidOperation:
                 raise ValidationError("'price' field should be decimal serializable")
 
-            if from_amount is not None and to_amount is None:
+            if amount is not None and total is None:
                 try:
-                    from_amount = round(Decimal(from_amount), constants.DECIMAL_PLACES)
+                    amount = round(Decimal(amount), constants.DECIMAL_PLACES)
                 except decimal.InvalidOperation:
-                    raise ValidationError("'from_amount' field should be decimal serializable")
+                    raise ValidationError("'amount' field should be decimal serializable")
 
-                data['to_amount'] = str(round(from_amount * price, constants.DECIMAL_PLACES))
+                data['total'] = str(round(amount * price, constants.DECIMAL_PLACES))
 
-            elif to_amount is not None and from_amount is None:
+            elif total is not None and amount is None:
                 try:
-                    to_amount = round(Decimal(to_amount), constants.DECIMAL_PLACES)
+                    total = round(Decimal(total), constants.DECIMAL_PLACES)
                 except decimal.InvalidOperation:
-                    raise ValidationError("'to_amount' field should be decimal serializable")
+                    raise ValidationError("'total' field should be decimal serializable")
 
-                data['from_amount'] = str(round(to_amount / price, constants.DECIMAL_PLACES))
+                data['amount'] = str(round(total / price, constants.DECIMAL_PLACES))
 
             kwargs['data'] = data
 
@@ -148,14 +151,8 @@ class ExchangeSerializer(serializers.ModelSerializer):
                 list(kwargs.items())
             )
 
-            self._object = Exchange(**validated_data)
+            self._object = Order(**validated_data)
         return self._object
-
-    def validate(self, attrs):
-        if attrs['from_currency'] == attrs['to_currency']:
-            raise ValidationError("Exchange on the same currency not make sense")
-
-        return super().validate(attrs)
 
 
 class DepositSerializer(serializers.ModelSerializer):
@@ -181,9 +178,9 @@ class WithdrawSerializer(serializers.ModelSerializer):
 
 
 class MarketInfoSerializer(serializers.ModelSerializer):
-    from_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
-    to_currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
+    pair = MyChoiceField(choices=constants.AVAILABLE_CURRENCY_PAIRS,
+                         default=constants.PAIR_BTC_ETH)
 
     class Meta:
         model = MarketInfo
-        fields = ('rate', 'rate_24h_max', 'rate_24h_min', 'volume_24h', 'from_currency', 'to_currency')
+        fields = ('rate', 'rate_24h_max', 'rate_24h_min', 'volume_24h', 'pair')

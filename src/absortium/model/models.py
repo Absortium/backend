@@ -1,5 +1,3 @@
-__author__ = 'andrew.shvv@gmail.com'
-
 from django.conf import settings
 from django.db import models
 from rest_framework.exceptions import ValidationError
@@ -8,39 +6,83 @@ from absortium import constants
 from absortium.wallet.base import get_wallet_client
 from core.utils.logging import getLogger
 
+__author__ = 'andrew.shvv@gmail.com'
 logger = getLogger(__name__)
+
+
+def calculate_len(choices):
+    """
+        Calculate length for choice filed in django model.
+    """
+    return max([len(t) for t in choices]) + 1
 
 
 class Offer(models.Model):
     """
         Offer model represent summarized amount of currency that we want to sell grouped by price.
 
-    from_currency/to_currency; example exchange BTC to XMR, from_currency will be BTC, to_currency will be XMR.
+    from_currency/to_currency; example order BTC to XMR, from_currency will be BTC, to_currency will be XMR.
     As input we get string but values stored in Integer, translation from
     string representation "BTC" to integer code 0 happens on the serialization state.
 
-    amount - represent amount of the currency that user want to exchange.
+    amount - represent amount of the currency that user want to order.
 
     price - represent the price for the 1 amount of primary currency represented in secondary currency.
     """
-    system = models.IntegerField(default=constants.SYSTEM_OWN)
+    system = models.CharField(max_length=calculate_len(constants.AVAILABLE_SYSTEMS),
+                              default=constants.SYSTEM_OWN)
 
-    from_currency = models.IntegerField()
-    to_currency = models.IntegerField()
+    pair = models.CharField(max_length=calculate_len(constants.AVAILABLE_CURRENCY_PAIRS))
+
+    type = models.CharField(max_length=calculate_len(constants.AVAILABLE_ORDER_TYPES))
+
     amount = models.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
                                  decimal_places=constants.DECIMAL_PLACES,
                                  default=0)
+
     price = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                 decimal_places=constants.DECIMAL_PLACES)
 
     class Meta:
-        ordering = ('price',)
-        unique_together = ('to_currency', 'from_currency', 'price', 'system')
+        ordering = ('-price',)
+        unique_together = ('pair', 'price', 'system', 'type')
 
     def update(self, **kwargs):
         # update() is converted directly to an SQL statement; it doesn't exec save() on the model
         # instances, and so the pre_save and post_save signals aren't emitted.
         Offer.objects.filter(pk=self.pk).update(**kwargs)
+
+    @property
+    def primary_currency(self):
+        primary_currency = self.pair.split("_")[0]
+
+        if primary_currency not in constants.AVAILABLE_CURRENCIES:
+            raise Exception("Not available currency {}".format(primary_currency))
+
+        return primary_currency
+
+    @property
+    def secondary_currency(self):
+        secondary_currency = self.pair.split("_")[1]
+
+        if secondary_currency not in constants.AVAILABLE_CURRENCIES:
+            raise Exception("Not available currency {}".format(secondary_currency))
+
+        return secondary_currency
+
+    @property
+    def from_currency(self):
+        if self.type == constants.ORDER_BUY:
+            return self.primary_currency
+        elif self.type == constants.ORDER_SELL:
+            return self.secondary_currency
+
+    @property
+    def to_currency(self):
+        if self.type == constants.ORDER_BUY:
+            return self.secondary_currency
+        elif self.type == constants.ORDER_SELL:
+            return self.primary_currency
 
 
 class Account(models.Model):
@@ -52,7 +94,8 @@ class Account(models.Model):
                                  default=0)
 
     address = models.CharField(max_length=50)
-    currency = models.IntegerField()
+
+    currency = models.CharField(max_length=calculate_len(constants.AVAILABLE_CURRENCIES))
 
     created = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="accounts", null=True)
@@ -69,8 +112,8 @@ class Account(models.Model):
 
 def operation_wrapper(func):
     def decorator(self, obj):
-        if isinstance(obj, Exchange):
-            value = obj.to_amount
+        if isinstance(obj, Order):
+            value = obj.amount
         elif isinstance(obj, (int, float)):
             value = obj
         else:
@@ -81,50 +124,61 @@ def operation_wrapper(func):
     return decorator
 
 
-class Exchange(models.Model):
+class Order(models.Model):
     """
-        Exchange model represent order for exchange primary currency determined as account currency
-        secondary currency determined from the post request.
+    'status' - status of the order:
+        'init' - order was created, processed but no opposite order was found for now.
+        'pending' - order was created but not fully processed yet.
+        'completed' - order was created and fully processed.
 
-    from_currency/to_currency; example exchange BTC to XMR, from_currency will be BTC, to_currency will be XMR.
-    As input we get string but values stored in Integer, translation from
-    string representation "BTC" to integer code 0 happens on the serialization state.
+    'system' - system in which order is present:
+        'own' - order is resides in our system.
+        'poloniex' -order is redirected to the poloniex.
 
-    amount - represent amount of the currency that  user want to exchange.
+    'type' - type of the order:
+        sell - order on selling secondary currency.
+        buy - order on buying secondary currency.
 
-    price - represent the price for the 1 amount of base currency he wants to exchange.
+    'amount' - represent amount of the secondary currency that user want to sell/buy.
 
-    created - exchange time creation.
+    'total' - represent amount of the primary currency that user need to buy/sell in order to get secondary currency.
 
-    owner - user; owner of the exchange
+    'price' - represent the amount of 1 unit of the secondary currency in primary currency.
+    primary/secondary are determined as first/second currency in pair string : BTC_ETH => primary=BTC, secondary=ETH
 
-    status - status of the exhcange:
-        init -
-        pending -
-        completed -
+    'created' - order time creation.
 
+    'owner' - user; owner of the order.
+
+    'pair' - represent the two currency between exchanges are happening.
+    Example: BTC_ETH, BTC - primary currency, ETH - secondary currency.
     """
 
-    status = models.IntegerField(default=constants.EXCHANGE_INIT)
-    system = models.IntegerField(default=constants.SYSTEM_OWN)
+    status = models.CharField(max_length=calculate_len(constants.AVAILABLE_ORDER_STATUSES),
+                              default=constants.ORDER_INIT)
 
-    to_amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
-                                    decimal_places=constants.DECIMAL_PLACES,
-                                    default=0)
+    system = models.CharField(max_length=calculate_len(constants.AVAILABLE_SYSTEMS),
+                              default=constants.SYSTEM_OWN)
 
-    from_amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
-                                      decimal_places=constants.DECIMAL_PLACES,
-                                      default=0)
+    pair = models.CharField(max_length=calculate_len(constants.AVAILABLE_CURRENCY_PAIRS))
+
+    type = models.CharField(max_length=calculate_len(constants.AVAILABLE_ORDER_TYPES))
+
+    amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                 decimal_places=constants.DECIMAL_PLACES,
+                                 default=0)
+
+    total = models.DecimalField(max_digits=constants.MAX_DIGITS,
+                                decimal_places=constants.DECIMAL_PLACES,
+                                default=0)
 
     price = models.DecimalField(max_digits=constants.MAX_DIGITS,
-                                decimal_places=constants.DECIMAL_PLACES)
+                                decimal_places=constants.DECIMAL_PLACES,
+                                default=0)
 
     created = models.DateTimeField(auto_now_add=True)
 
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="exchanges")
-
-    from_currency = models.IntegerField()
-    to_currency = models.IntegerField()
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="orders")
 
     class Meta:
         ordering = ['-price', 'created']
@@ -134,26 +188,93 @@ class Exchange(models.Model):
         self.from_account = None
         self.to_account = None
 
+    @property
+    def opposite_type(self):
+        if self.type == constants.ORDER_BUY:
+            return constants.ORDER_SELL
+        elif self.type == constants.ORDER_SELL:
+            return constants.ORDER_BUY
+
+    @property
+    def primary_currency(self):
+        primary_currency = self.pair.split("_")[0]
+
+        if primary_currency not in constants.AVAILABLE_CURRENCIES:
+            raise Exception("Not available currency {}".format(primary_currency))
+
+        return primary_currency
+
+    @property
+    def secondary_currency(self):
+        secondary_currency = self.pair.split("_")[1]
+
+        if secondary_currency not in constants.AVAILABLE_CURRENCIES:
+            raise Exception("Not available currency {}".format(secondary_currency))
+
+        return secondary_currency
+
+    @property
+    def from_currency(self):
+        if self.type == constants.ORDER_BUY:
+            return self.primary_currency
+        elif self.type == constants.ORDER_SELL:
+            return self.secondary_currency
+
+    @property
+    def to_currency(self):
+        if self.type == constants.ORDER_BUY:
+            return self.secondary_currency
+        elif self.type == constants.ORDER_SELL:
+            return self.primary_currency
+
+    @property
+    def from_amount(self):
+        if self.type == constants.ORDER_BUY:
+            return self.total
+        elif self.type == constants.ORDER_SELL:
+            return self.amount
+
+    @property
+    def to_amount(self):
+        if self.type == constants.ORDER_BUY:
+            return self.amount
+        elif self.type == constants.ORDER_SELL:
+            return self.total
+
+    @from_amount.setter
+    def from_amount(self, value):
+        if self.type == constants.ORDER_BUY:
+            self.total = value
+        elif self.type == constants.ORDER_SELL:
+            self.amount = value
+
+    @to_amount.setter
+    def to_amount(self, value):
+        if self.type == constants.ORDER_BUY:
+            self.amount = value
+        elif self.type == constants.ORDER_SELL:
+            self.total = value
+
     def process_account(self):
         # Check that we have enough money
         if self.from_account.amount >= self.from_amount:
 
-            # Subtract money from account because it is locked by exchange
+            # Subtract money from account because it is locked by order
             self.from_account.amount -= self.from_amount
             self.save()
         else:
-            raise ValidationError("Not enough money for exchange creation")
+            raise ValidationError("Not enough money for order creation")
 
     def update(self, **kwargs):
         Account.objects.filter(pk=self.pk).update(**kwargs)
 
     def split(self, to_amount, from_amount):
         """
-            Divide exchange on two parts - completed part and remain part
+            Divide order on two parts - completed part and remain part
         """
 
         if self.from_amount <= to_amount:
-            self.status = constants.EXCHANGE_COMPLETED
+            self.status = constants.ORDER_COMPLETED
             completed = self
         else:
             from copy import deepcopy
@@ -161,7 +282,7 @@ class Exchange(models.Model):
             completed.from_amount = to_amount
             completed.to_amount = from_amount
             completed.pk = None
-            completed.status = constants.EXCHANGE_COMPLETED
+            completed.status = constants.ORDER_COMPLETED
             completed.save()
 
             self.from_amount -= to_amount
@@ -170,46 +291,46 @@ class Exchange(models.Model):
         return completed, self
 
     def __sub__(self, obj):
-        if isinstance(obj, Exchange):
+        if isinstance(obj, Order):
             opposite = obj
-            exchange = self
+            order = self
 
-            exchange.status = constants.EXCHANGE_PENDING
-            opposite.status = constants.EXCHANGE_COMPLETED
+            order.status = constants.ORDER_PENDING
+            opposite.status = constants.ORDER_COMPLETED
 
-            exchange.to_account.amount += opposite.from_amount
+            order.to_account.amount += opposite.from_amount
             opposite.to_account.amount += opposite.to_amount
 
-            # save fraction of exchange in order to store history of exchanges
-            (completed, exchange) = exchange.split(opposite.to_amount, opposite.from_amount)
+            # save fraction of order to store history of orders
+            (completed, order) = order.split(opposite.to_amount, opposite.from_amount)
 
-            return completed, exchange
+            return completed, order
         else:
             return NotImplemented
 
     @operation_wrapper
     def __lt__(self, value):
-        return self.from_amount < value
+        return self.amount < value
 
     @operation_wrapper
     def __gt__(self, value):
-        return self.from_amount > value
+        return self.amount > value
 
     @operation_wrapper
     def __le__(self, value):
-        return self.from_amount <= value
+        return self.amount <= value
 
     @operation_wrapper
     def __ge__(self, value):
-        return self.from_amount >= value
+        return self.amount >= value
 
     @operation_wrapper
     def __eq__(self, value):
-        return self.from_amount == value
+        return self.amount == value
 
     @operation_wrapper
     def __ne__(self, value):
-        return self.from_amount != value
+        return self.amount != value
 
 
 class Deposit(models.Model):
@@ -244,17 +365,20 @@ class Withdrawal(models.Model):
 
 class MarketInfo(models.Model):
     created = models.DateTimeField(auto_now_add=True)
+
     rate = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                decimal_places=constants.DECIMAL_PLACES)
+
     rate_24h_max = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                        decimal_places=constants.DECIMAL_PLACES)
+
     rate_24h_min = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                        decimal_places=constants.DECIMAL_PLACES)
+
     volume_24h = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                      decimal_places=constants.DECIMAL_PLACES, default=0)
 
-    from_currency = models.IntegerField()
-    to_currency = models.IntegerField()
+    pair = models.CharField(max_length=calculate_len(constants.AVAILABLE_CURRENCY_PAIRS))
 
     class Meta:
         ordering = ('-created',)

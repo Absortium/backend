@@ -2,40 +2,43 @@ import decimal
 
 __author__ = 'andrew.shvv@gmail.com'
 
-SELL = 0
-BUY = 1
-AVAILABLE_ORDER_TYPES = {
-    'sell': SELL,
-    'buy': BUY
-}
+ORDER_INIT = 'init'
+ORDER_PENDING = 'pending'
+ORDER_COMPLETED = 'completed'
+AVAILABLE_ORDER_STATUSES = [
+    ORDER_INIT,
+    ORDER_PENDING,
+    ORDER_COMPLETED
+]
 
-EXCHANGE_INIT = 0
-EXCHANGE_PENDING = 1
-EXCHANGE_COMPLETED = 2
+ORDER_SELL = 'sell'
+ORDER_BUY = 'buy'
+AVAILABLE_ORDER_TYPES = [
+    ORDER_SELL,
+    ORDER_BUY
+]
 
-AVAILABLE_TASK_STATUS = {
-    'init': EXCHANGE_INIT,
-    'pending': EXCHANGE_PENDING,
-    'completed': EXCHANGE_COMPLETED
-}
+SYSTEM_OWN = 'own'
+SYSTEM_POLONIEX = 'poloniex'
+AVAILABLE_SYSTEMS = [
+    SYSTEM_OWN,
+    SYSTEM_POLONIEX,
+]
 
-SYSTEM_OWN = 0
-SYSTEM_POLONIEX = 1
+PAIR_BTC_ETH = 'btc_eth'
+AVAILABLE_CURRENCY_PAIRS = [
+    PAIR_BTC_ETH
+]
 
-AVAILABLE_SYSTEMS = {
-    'own': SYSTEM_OWN,
-    'poloniex': SYSTEM_POLONIEX,
-}
+BTC = 'btc'
+ETH = 'eth'
+AVAILABLE_CURRENCIES = [
+    BTC,
+    ETH
+]
 
 CELERY_RETRY_COUNTDOWN = 0.1
 CELERY_MAX_RETRIES = 1000
-
-BTC = 0
-ETH = 1
-AVAILABLE_CURRENCIES = {
-    'btc': BTC,
-    'eth': ETH
-}
 
 POLONIEX_OFFER_MODIFIED = "orderBookModify"
 POLONIEX_OFFER_CREATED = "newTrade"
@@ -56,8 +59,8 @@ USERNAME_LENGTH = 30
 MARKET_INFO_DELTA = 24
 MARKET_INFO_COUNT_OF_EXCHANGES = 10
 
-TOPIC_OFFERS = "offers_{from_currency}_{to_currency}"
-TOPIC_HISTORY = "history_{from_currency}_{to_currency}"
+TOPIC_OFFERS = "offers_{pair}_{type}"
+TOPIC_HISTORY = "history_{pair}_{type}"
 TOPIC_MARKET_INFO = "marketinfo"
 
 DEFAULT_AMOUNT = 0
@@ -66,7 +69,7 @@ WITHDRAW_AMOUNT_MIN_VALUE = decimal.Decimal(1 / 10 ** 3)
 DEPOSIT_AMOUNT_MIN_VALUE = 0
 PRICE_MIN_VALUE = decimal.Decimal(1 / 10 ** 8)
 PRICE_MAX_VALUE = 5000
-EXCHANGE_AMOUNT_MIN_VALUE = round(decimal.Decimal(0.001), 3)
+ORDER_MIN_TOTAL_AMOUNT = round(decimal.Decimal(0.001), 3)
 WEI_IN_ETH = 10 ** 18
 
 COINBASE_PAYMENT_NOTIFICATION = "wallet:addresses:new-payment"

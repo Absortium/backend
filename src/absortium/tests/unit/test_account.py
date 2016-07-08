@@ -17,7 +17,7 @@ from absortium import constants
 class AccountTest(AbsoritumUnitTest):
     def test_creation_mixin(self):
         accounts = Account.objects.all()
-        self.assertEqual(len(accounts), len(constants.AVAILABLE_CURRENCIES.keys()))
+        self.assertEqual(len(accounts), len(constants.AVAILABLE_CURRENCIES))
         account = accounts[0]
         self.assertEqual(account.owner, self.user)
 

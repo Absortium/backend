@@ -21,30 +21,24 @@ class MySerializerMethodField(serializers.SerializerMethodField):
 
 
 class MyChoiceField(serializers.Field):
-    """
-        This class used for translation incoming strings values to
-        integer representation by the given mapping dict.
-    """
-
     def __init__(self, choices, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.to_internal = choices
-        self.to_repr = {value: key for key, value in choices.items()}
+        self.choices = choices
 
-    def to_internal_value(self, data):
-        if not isinstance(data, six.text_type):
+    def to_internal_value(self, value):
+        if not isinstance(value, six.text_type):
             msg = 'Incorrect type. Expected a string, but got %s'
-            raise serializers.ValidationError(msg % type(data).__name__)
-
-        data = data.lower()
-        if data not in self.to_internal.keys():
-            raise serializers.ValidationError("Malformed data '{}'".format(data))
-
-        return self.to_internal[data]
-
-    def to_representation(self, value):
-        if not isinstance(value, six.integer_types):
-            msg = 'Incorrect type. Expected a int, but got %s'
             raise serializers.ValidationError(msg % type(value).__name__)
 
-        return self.to_repr[value]
+        value = value.lower()
+        if value not in self.choices:
+            raise serializers.ValidationError("Field not in the ['{}']".format(self.choices))
+
+        return value
+
+    def to_representation(self, value):
+        if not isinstance(value, six.text_type):
+            msg = 'Incorrect type. Expected a string, but got %s'
+            raise serializers.ValidationError(msg % type(value).__name__)
+
+        return value

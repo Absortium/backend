@@ -1,3 +1,5 @@
+from absortium import constants
+
 __author__ = 'andrew.shvv@gmail.com'
 
 from rest_framework.status import HTTP_200_OK
@@ -8,13 +10,18 @@ logger = getLogger(__name__)
 
 
 class MarketInfoMixin():
-    def get_market_info(self, from_currency=None, to_currency=None, counts="1", with_checks=True, debug=False):
-        params = {'counts': counts}
+    def get_market_info(self,
+                        pair=constants.PAIR_BTC_ETH,
+                        counts=None,
+                        with_checks=True,
+                        debug=False):
 
-        if from_currency:
-            params.update(from_currency=from_currency)
-        if to_currency:
-            params.update(to_currency=to_currency)
+        params = {}
+        if counts:
+            params.update(counts=counts)
+
+        if pair:
+            params.update(pair=pair)
 
         # Get market info
         response = self.client.get('/api/marketinfo/', data=params, format='json')

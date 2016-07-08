@@ -13,7 +13,7 @@ from absortium.tests.mixins.account import CreateAccountMixin
 from absortium.tests.mixins.bitcoin import BitcoinClientMockMixin
 from absortium.tests.mixins.deposit import CreateDepositMixin
 from absortium.tests.mixins.ethereum import EthereumClientMockMixin
-from absortium.tests.mixins.exchange import CreateExchangeMixin
+from absortium.tests.mixins.order import CreateOrderMixin
 from absortium.tests.mixins.history import HistoryMixin
 from absortium.tests.mixins.market import MarketInfoMixin
 from absortium.tests.mixins.offer import CheckOfferMixin
@@ -46,7 +46,7 @@ class AbsoritumLiveTest(APITransactionTestCase,
                         AbsortiumTestMixin,
                         CreateAccountMixin,
                         CreateDepositMixin,
-                        CreateExchangeMixin,
+                        CreateOrderMixin,
                         CreateWithdrawalMixin,
                         CheckOfferMixin,
                         MarketInfoMixin,
@@ -91,7 +91,7 @@ class AbsoritumLiveTest(APITransactionTestCase,
 class AbsoritumUnitTest(AbsortiumTestMixin,
                         CreateAccountMixin,
                         CreateDepositMixin,
-                        CreateExchangeMixin,
+                        CreateOrderMixin,
                         CreateWithdrawalMixin,
                         CheckOfferMixin,
                         RouterMockMixin,

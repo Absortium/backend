@@ -1,5 +1,10 @@
+import json
+
 from django.contrib.auth.models import User, Group
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
+from django.db.models import Sum
+from django.http import HttpResponse
 from rest_framework import generics, mixins, viewsets
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
@@ -9,17 +14,17 @@ from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK
 from absortium import constants
 from absortium.celery import tasks
 from absortium.mixins import CreateCeleryMixin
-from absortium.model.models import Offer, Exchange, Account, MarketInfo
+from absortium.model.models import Offer, Order, Account, MarketInfo
 from absortium.serializers import \
     UserSerializer, \
     GroupSerializer, \
     OfferSerializer, \
     AccountSerializer, \
-    ExchangeSerializer, \
+    OrderSerializer, \
     DepositSerializer, \
     WithdrawSerializer, \
     MarketInfoSerializer
-from absortium.utils import get_currency
+from absortium.utils import get_field
 from core.utils.logging import getPrettyLogger
 
 __author__ = 'andrew.shvv@gmail.com'
@@ -45,8 +50,7 @@ class GroupViewSet(viewsets.ModelViewSet):
     serializer_class = GroupSerializer
 
 
-class OfferListView(mixins.ListModelMixin,
-                    generics.GenericAPIView):
+class OfferListView(generics.GenericAPIView):
     """
     This view should return a list of all offers
     by the given currencies.
@@ -59,22 +63,24 @@ class OfferListView(mixins.ListModelMixin,
 
     def filter_queryset(self, queryset):
         """
-            This method used for filter origin offers queryset by the given from/to currency.
+            This method used for filter origin offers queryset by the given pair/type currency.
         """
         fields = {}
 
-        to_currency = get_currency(self.request.GET, 'to_currency', throw=False)
-        if to_currency is not None:
-            fields.update(to_currency=to_currency)
+        pair = get_field(self.request.GET, 'pair', constants.AVAILABLE_CURRENCY_PAIRS, throw=False)
+        if pair is not None:
+            fields.update(pair=pair)
 
-        from_currency = get_currency(self.request.GET, 'from_currency', throw=False)
-        if from_currency is not None:
-            fields.update(from_currency=from_currency)
+        order_type = get_field(self.request.GET, 'type', constants.AVAILABLE_ORDER_TYPES, throw=False)
+        if order_type is not None:
+            fields.update(type=order_type)
 
         return queryset.filter(**fields)
 
     def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
+        queryset = self.filter_queryset(self.get_queryset())
+        queryset = queryset.values("price", "type", "pair").annotate(amount=Sum('amount'))
+        return HttpResponse(json.dumps(list(queryset), cls=DjangoJSONEncoder), content_type="application/json")
 
 
 def init_account(pk_name="accounts_pk"):
@@ -108,7 +114,7 @@ class AccountViewSet(CreateCeleryMixin,
         return self.request.user.accounts.all()
 
     def list(self, request, *args, **kwargs):
-        currency = get_currency(self.request.GET, 'currency', throw=False)
+        currency = get_field(self.request.GET, 'currency', constants.AVAILABLE_CURRENCIES, throw=False)
         queryset = self.filter_queryset(self.get_queryset())
 
         if currency is not None:
@@ -181,32 +187,32 @@ class WithdrawalViewSet(CreateCeleryMixin,
         return tasks.do_withdrawal.delay(**context)
 
 
-class ExchangeViewSet(CreateCeleryMixin,
-                      mixins.RetrieveModelMixin,
-                      mixins.ListModelMixin,
-                      viewsets.GenericViewSet):
-    serializer_class = ExchangeSerializer
+class OrderViewSet(CreateCeleryMixin,
+                   mixins.RetrieveModelMixin,
+                   mixins.ListModelMixin,
+                   viewsets.GenericViewSet):
+    serializer_class = OrderSerializer
 
     def __init__(self, *args, **kwargs):
         self.account = None
         super().__init__(*args, **kwargs)
 
     def get_queryset(self):
-        return self.request.user.exchanges.all()
+        return self.request.user.orders.all()
 
     def filter_queryset(self, queryset):
         """
-            This method used for filter origin exchanges queryset by the given from/to currency.
+            This method used for filter origin orders queryset by the given pair/type currency.
         """
         fields = {}
 
-        to_currency = get_currency(self.request.GET, 'to_currency', throw=False)
-        if to_currency is not None:
-            fields.update(to_currency=to_currency)
+        pair = get_field(self.request.GET, 'pair', constants.AVAILABLE_CURRENCY_PAIRS, throw=False)
+        if pair is not None:
+            fields.update(pair=pair)
 
-        from_currency = get_currency(self.request.GET, 'from_currency', throw=False)
-        if from_currency is not None:
-            fields.update(from_currency=from_currency)
+        order_type = get_field(self.request.GET, 'type', constants.AVAILABLE_ORDER_TYPES, throw=False)
+        if order_type is not None:
+            fields.update(type=order_type)
 
         return queryset.filter(**fields)
 
@@ -227,24 +233,24 @@ class ExchangeViewSet(CreateCeleryMixin,
 
 class HistoryViewSet(generics.GenericAPIView,
                      mixins.ListModelMixin):
-    serializer_class = ExchangeSerializer
-    queryset = Exchange.objects.all()
+    serializer_class = OrderSerializer
+    queryset = Order.objects.all()
     permission_classes = ()
     authentication_classes = ()
 
     def filter_queryset(self, queryset):
         """
-            This method used for filter origin exchanges queryset by the given from/to currency.
+            This method used for filter origin orders queryset by the given pair/type currency.
         """
-        fields = {"status": constants.EXCHANGE_COMPLETED}
+        fields = {"status": constants.ORDER_COMPLETED}
 
-        to_currency = get_currency(self.request.GET, 'to_currency', throw=False)
-        if to_currency is not None:
-            fields.update(to_currency=to_currency)
+        pair = get_field(self.request.GET, 'pair', constants.AVAILABLE_CURRENCY_PAIRS, throw=False)
+        if pair is not None:
+            fields.update(pair=pair)
 
-        from_currency = get_currency(self.request.GET, 'from_currency', throw=False)
-        if from_currency is not None:
-            fields.update(from_currency=from_currency)
+        order_type = get_field(self.request.GET, 'type', constants.AVAILABLE_ORDER_TYPES, throw=False)
+        if order_type is not None:
+            fields.update(type=order_type)
 
         return queryset.filter(**fields)
 
@@ -260,49 +266,25 @@ class MarketInfoSet(mixins.ListModelMixin,
     authentication_classes = ()
 
     def list(self, request, *args, **kwargs):
-        to_currency = get_currency(self.request.GET, 'to_currency', throw=False)
-        from_currency = get_currency(self.request.GET, 'from_currency', throw=False)
+        fields = {}
 
-        c1 = from_currency is not None
-        c2 = to_currency is not None
+        pair = get_field(self.request.GET, 'pair', constants.AVAILABLE_CURRENCY_PAIRS, throw=False)
+        if pair is not None:
+            fields.update(pair=pair)
 
-        if c1 and c2:
-            from_currency = [from_currency]
-            to_currency = [to_currency]
+        try:
+            count = self.request.GET.get('count', 1)
+            count = int(count)
+        except ValueError:
+            raise ValidationError("You should specify valid 'count' field")
 
-        elif c1 and not c2:
-            from_currency = [from_currency]
-            to_currency = constants.AVAILABLE_CURRENCIES.values()
-
-        elif not c1 and not c2:
-            from_currency = constants.AVAILABLE_CURRENCIES.values()
-            to_currency = constants.AVAILABLE_CURRENCIES.values()
-
-        elif not c1 and c2:
-            raise ValidationError("You should specify 'to_currency' field")
-
-        count = self.request.GET.get('count')
-        if not count:
-            count = 1
+        if count == 0:
+            objs = self.get_queryset().filter(**fields)
         else:
-            try:
-                count = int(count)
-            except ValueError:
-                raise ValidationError("You should specify valid 'count' field")
+            objs = self.get_queryset().filter(**fields)[:count]
 
-        response = []
-        for fc in from_currency:
-            for tc in to_currency:
-                if fc != tc:
-                    if count == 0:
-                        objs = self.get_queryset().filter(from_currency=fc, to_currency=tc)
-                    else:
-                        objs = self.get_queryset().filter(from_currency=fc, to_currency=tc)[:count]
-
-                    serializer = self.get_serializer(objs, many=True)
-                    response += serializer.data
-
-        return Response(response)
+        serializer = self.get_serializer(objs, many=True)
+        return Response(serializer.data)
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)

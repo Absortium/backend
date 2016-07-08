@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from absortium import constants
+
 __author__ = 'andrew.shvv@gmail.com'
 
 from rest_framework.status import HTTP_200_OK
@@ -9,10 +11,15 @@ logger = getLogger(__name__)
 
 
 class CheckOfferMixin():
-    def check_offer(self, amount, price, from_currency="btc", to_currency="eth", system="own", should_exist=True, debug=False):
+    def check_offer(self,
+                    amount="1",
+                    price="1",
+                    pair=constants.PAIR_BTC_ETH,
+                    order_type=constants.ORDER_BUY,
+                    should_exist=True, debug=False):
         data = {
-            'from_currency': from_currency,
-            'to_currency': to_currency,
+            'pair': pair,
+            'type': order_type,
         }
 
         response = self.client.get('/api/offers/', data=data, format='json')
@@ -27,21 +34,20 @@ class CheckOfferMixin():
         price = Decimal(price)
 
         offer_amount = None
-        offer_system = None
+        offer_type = None
         is_offer_exist = False
 
         for offer in offers:
-
             offer_price = Decimal(offer['price'])
             if offer_price == price:
                 offer_amount = Decimal(offer['amount'])
+                offer_type = offer['type']
                 is_offer_exist = True
-                offer_system = offer['system']
 
         if should_exist:
             self.assertTrue(is_offer_exist)
-            self.assertEqual(offer_amount, amount)
-            self.assertEqual(offer_system, system)
+            self.assertEqual(offer_amount, round(amount, constants.DECIMAL_PLACES))
+            self.assertEqual(offer_type, order_type)
         else:
             self.assertTrue(not is_offer_exist)
 

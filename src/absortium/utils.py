@@ -1,18 +1,15 @@
-from sqlite3 import IntegrityError
-
-from django.db import transaction
-
-from absortium.model.models import Offer
-
-__author__ = 'andrew.shvv@gmail.com'
-
 from random import choice
+from sqlite3 import IntegrityError
 from string import printable
 
+from django.db import transaction
 from rest_framework.exceptions import ValidationError
 
 from absortium import constants
+from absortium.model.models import Offer
 from core.utils.logging import getPrettyLogger
+
+__author__ = 'andrew.shvv@gmail.com'
 
 logger = getPrettyLogger(__name__)
 
@@ -47,47 +44,47 @@ def retry(exceptions=(), times=1):
     return wrapper
 
 
-def get_currency(data, name, throw=True):
-    currency = data.get(name)
-    if currency:
-        currency = currency.lower()
+def get_field(data, name, choices, throw=True):
+    value = data.get(name)
+    if value:
+        value = value.lower()
 
-        if currency in constants.AVAILABLE_CURRENCIES.keys():
-            return constants.AVAILABLE_CURRENCIES[currency]
+        if value in choices:
+            return value
         else:
-            raise ValidationError("Not available currency '{}'".format(currency))
+            raise ValidationError("Value not in the '{}'".format(choices))
     else:
         if throw:
-            raise ValidationError("You should specify '{}' field'".format(name))
+            raise ValidationError("You should specify 'pair' field'".format())
         else:
             return None
 
 
-def get_or_create_offer(price, from_currency, to_currency, should_exist=False, system=constants.SYSTEM_OWN):
+def get_or_create_offer(price, order_type, pair, should_exist=False, system=constants.SYSTEM_OWN):
     try:
         with transaction.atomic():
             offer = Offer.objects.select_for_update().get(price=price,
-                                                          from_currency=from_currency,
-                                                          to_currency=to_currency,
+                                                          pair=pair,
+                                                          type=order_type,
                                                           system=system)
     except Offer.DoesNotExist:
         if should_exist:
             raise
         else:
             offer = Offer(price=price,
-                          from_currency=from_currency,
-                          to_currency=to_currency,
+                          pair=pair,
+                          type=order_type,
                           system=system)
 
     return offer
 
 
-def safe_offer_update(price, from_currency, to_currency, update, system=constants.SYSTEM_OWN):
+def safe_offer_update(price, order_type, pair, update, system=constants.SYSTEM_OWN):
     def do():
         with transaction.atomic():
             offer = get_or_create_offer(price=price,
-                                        from_currency=from_currency,
-                                        to_currency=to_currency,
+                                        pair=pair,
+                                        order_type=order_type,
                                         system=system)
 
             offer.amount = update(offer.amount)

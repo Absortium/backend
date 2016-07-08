@@ -1,4 +1,3 @@
-import decimal
 from decimal import Decimal
 
 from absortium import constants
@@ -15,28 +14,20 @@ CURRENCY_PAIR = "BTC_ETH"
 to_db_repr = lambda key: constants.AVAILABLE_CURRENCIES[key.lower()]
 
 
-def order2offer(order):
-    pair = order["pair"].split("_")
-    first_currency = to_db_repr(pair[0])
-    second_currency = to_db_repr(pair[1])
-
+def update2offer(order):
     price = Decimal(order["rate"])
     amount = Decimal(order.get("amount", 0))
 
-    if order["type"] in ["buy", "ask", "asks"]:
-        price = round(decimal.Decimal("1.0") / price, constants.DECIMAL_PLACES)
-        from_currency = first_currency
-        to_currency = second_currency
-
-    elif order["type"] in ["sell", "bid", "bids"]:
-        from_currency = second_currency
-        to_currency = first_currency
+    if order["type"] in ["buy", "bid", "bids"]:
+        offer_type = constants.ORDER_BUY
+    elif order["type"] in ["sell", "ask", "asks"]:
+        offer_type = constants.ORDER_SELL
     else:
         raise Exception("Unknown order type")
 
     return {
-        "from_currency": from_currency,
-        "to_currency": to_currency,
+        "pair": order["pair"].lower(),
+        "type": offer_type,
         "price": price,
         "amount": amount,
         "system": constants.SYSTEM_POLONIEX
@@ -49,10 +40,11 @@ class PoloniexApp(Application):
         order = trade.get("data")
         order["pair"] = trade.get("currency_pair")
 
-        offer = order2offer(order)
+        offer = update2offer(order)
+
         safe_offer_update(price=offer["price"],
-                          from_currency=offer["from_currency"],
-                          to_currency=offer["to_currency"],
+                          pair=offer["pair"],
+                          order_type=offer["type"],
                           system=offer["system"],
                           update=lambda *args: offer["amount"])
 
@@ -67,10 +59,10 @@ class PoloniexApp(Application):
                     "type": _type
                 }
 
-                offer = order2offer(order)
+                offer = update2offer(order)
                 safe_offer_update(price=offer["price"],
-                                  from_currency=offer["from_currency"],
-                                  to_currency=offer["to_currency"],
+                                  pair=offer["pair"],
+                                  order_type=offer["type"],
                                   system=offer["system"],
                                   update=lambda *args: offer["amount"])
 

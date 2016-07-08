@@ -1,3 +1,5 @@
+from absortium import constants
+
 __author__ = 'andrew.shvv@gmail.com'
 
 from rest_framework.status import HTTP_200_OK
@@ -8,14 +10,13 @@ logger = getLogger(__name__)
 
 
 class HistoryMixin():
-    def get_exchanges_history(self, from_currency=None, to_currency=None, debug=False):
+    def get_exchanges_history(self, order_type=None, pair=constants.PAIR_BTC_ETH, debug=False):
         data = {}
+        if order_type is not None:
+            data.update(type=order_type)
 
-        if from_currency is not None:
-            data["from_currency"] = from_currency
-
-        if to_currency is not None:
-            data["to_currency"] = to_currency
+        if pair is not None:
+            data.update(pair=pair)
 
         response = self.client.get('/api/history/', data=data, format='json')
         if debug:

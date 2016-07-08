@@ -1,24 +1,23 @@
-__author__ = 'andrew.shvv@gmail.com'
-
-import decimal
-
 from absortium import constants
-from absortium.model.models import Exchange, Account
+from absortium.model.models import Order, Account
 from core.utils.logging import getLogger
+
+__author__ = 'andrew.shvv@gmail.com'
 
 logger = getLogger(__name__)
 
 
-class lockexchange:
-    def __init__(self, exchange=None):
-        self.exchange = exchange
+class lockorder:
+    def __init__(self, order=None):
+        self.order = order
 
     def __enter__(self):
-        if not self.exchange.from_account and not self.exchange.to_account:
+        if not self.order.from_account and not self.order.to_account:
             """
-                Such strange select was done in order to prevent deadlocks. Example:
+                Such strange select was done in order to prevent deadlocks (we should lock two accounts at one atomic operation).
+                Example:
 
-                Thread #1 (Exchange #1)             Thread #2 (Exchange #2) - opposite exchange
+                Thread #1 (Order #1)             Thread #2 (Order #2) - opposite order
                 Lock ETC account (from_account)
                                                     Lock BTC account (from_account)
 
@@ -27,64 +26,73 @@ class lockexchange:
                                                     Lock ETC account (to_account) <--- dead lock
 
             """
-            accounts = Account.objects.select_for_update().filter(owner__pk=self.exchange.owner_id,
-                                                                  currency__in=[self.exchange.from_currency,
-                                                                                self.exchange.to_currency])
-            for account in accounts:
-                if account.currency == self.exchange.from_currency:
-                    self.exchange.from_account = account
-                if account.currency == self.exchange.to_currency:
-                    self.exchange.to_account = account
 
-        return self.exchange
+            accounts = Account.objects.select_for_update().filter(owner__pk=self.order.owner_id,
+                                                                  currency__in=[self.order.primary_currency,
+                                                                                self.order.secondary_currency])
+
+            for account in accounts:
+                if account.currency == self.order.from_currency:
+                    self.order.from_account = account
+                if account.currency == self.order.to_currency:
+                    self.order.to_account = account
+
+        return self.order
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not exc_val:
 
             """
-                Account should be always updated even if exchange in init state, because we subtract exchange amount from account.
+                Account always should be updated even if order in 'init' state, because we subtract order amount from account.
             """
-            self.exchange.from_account.update(amount=self.exchange.from_account.amount)
-            self.exchange.to_account.update(amount=self.exchange.to_account.amount)
+            self.order.from_account.update(amount=self.order.from_account.amount)
+            self.order.to_account.update(amount=self.order.to_account.amount)
 
-            if self.exchange.status != constants.EXCHANGE_INIT:
-                self.exchange.save()
+            if self.order.status != constants.ORDER_INIT:
+                self.order.save()
 
 
 class opposites:
     """
-        1. Search for opposite exchanges.
-        2. Block exchange with pg_try_advisory_xact_lock postgres lock.
+        1. Search for opposite orders.
+        2. Block order with pg_try_advisory_xact_lock postgres lock.
 
         Example:
-            Exchange: BTC->ETH Price: 2.0 ETH for 1 BTC
-            Opposite exchange: ETH->BTC Price: 0.5 BTC for 1 ETH
+            Order: pair: BTC_ETH price: 1 ETH = 0.1 BTC type:sell
+            Opposite order: pair=BTC_ETH Price: 1 ETH = 0.1 BTC type:buy
     """
 
-    def __init__(self, exchange):
-        self.exchange = exchange
-        self.converted_price = round(decimal.Decimal("1.0") / self.exchange.price, constants.DECIMAL_PLACES)
+    def __init__(self, order):
+        self.order = order
         self.times = 3
 
     def __iter__(self):
         return self
 
     def __next__(self):
+        if self.order.type == constants.ORDER_BUY:
+            sign = "<="
+        elif self.order.type == constants.ORDER_SELL:
+            sign = ">="
+
         while True:
             try:
                 """
-                    Get first non-blocked exchange which suit out conditions (price, status, currency) and block it.
+                    Get first non-blocked order which suit out conditions (price, status, currency) and block it.
                 """
-                opposite = Exchange.objects.raw(' SELECT *'
-                                                ' FROM absortium_exchange'
-                                                ' WHERE (status = %s OR status = %s) '
-                                                'AND pg_try_advisory_xact_lock(id) '
-                                                'AND price <= %s '
-                                                'AND from_currency = %s'
-                                                ' FOR UPDATE'
-                                                ' LIMIT 1', [constants.EXCHANGE_PENDING, constants.EXCHANGE_INIT,
-                                                             self.converted_price,
-                                                             self.exchange.to_currency])[0]
+                opposite = Order.objects.raw('SELECT * '
+                                             'FROM absortium_order '
+                                             'WHERE (status = %s OR status = %s) '
+                                             'AND pg_try_advisory_xact_lock(id) '
+                                             'AND price ' + sign + ' %s '
+                                                                   'AND pair = %s '
+                                                                   'AND type = %s '
+                                                                   'FOR UPDATE '
+                                                                   'LIMIT 1 ',
+                                             [constants.ORDER_PENDING, constants.ORDER_INIT,
+                                              self.order.price,
+                                              self.order.pair,
+                                              self.order.opposite_type])[0]
 
             except IndexError:
                 """
@@ -98,12 +106,12 @@ class opposites:
                 else:
                     raise StopIteration()
 
-            if self.exchange.owner_id == opposite.owner_id:
+            if self.order.owner_id == opposite.owner_id:
                 """
                     If we process the same users that means that exchanges are opposite
                     and we should not block the same accounts twice.
                 """
-                opposite.from_account = self.exchange.to_account
-                opposite.to_account = self.exchange.from_account
+                opposite.from_account = self.order.to_account
+                opposite.to_account = self.order.from_account
 
             return opposite

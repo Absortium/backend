@@ -70,7 +70,7 @@ class Atomic():
             self.funcs = funcs
 
     def __enter__(self):
-        for currency in constants.AVAILABLE_CURRENCIES.values():
+        for currency in constants.AVAILABLE_CURRENCIES:
             client = get_wallet_client(currency)
 
             if not isinstance(client, PostponeClient):
@@ -82,13 +82,13 @@ class Atomic():
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        for currency in constants.AVAILABLE_CURRENCIES.values():
-            pclient = get_wallet_client(currency)
+        for currency in constants.AVAILABLE_CURRENCIES:
+            client = get_wallet_client(currency)
 
             if not exc_val:
-                pclient.do()
+                client.do()
 
-            set_wallet_client(currency, pclient.client)
+            set_wallet_client(currency, client.client)
 
 
 def atomic(*args, **kwargs):
@@ -113,11 +113,11 @@ def get_wallet_client(currency):
         # we experienced some difficulties - we couldn't
         # mock currency client because it was imported before the mock patch
 
-        if currency is constants.BTC:
+        if currency == constants.BTC:
             from absortium.wallet.bitcoin import BitcoinClient
             _clients[currency] = BitcoinClient()
 
-        elif currency is constants.ETH:
+        elif currency == constants.ETH:
             from absortium.wallet.ethereum import EthereumClient
             _clients[currency] = EthereumClient()
         else:

@@ -185,7 +185,7 @@ class AccuracyTest(AbsoritumLiveTest):
 
     def init_deposits(self, contexts, n):
         """
-            In order to ensure that exchange,withdraw tasks will not fail because
+            In order to ensure that order,withdraw tasks will not fail because
             of run out of the money we should firstly to deposit a lot of money on the accounts.
         """
 

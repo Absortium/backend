@@ -8,8 +8,8 @@ from django.dispatch.dispatcher import receiver
 from absortium import constants
 from absortium.celery import tasks
 from absortium.crossbarhttp import get_crossbar_client
-from absortium.model.models import Exchange, Offer, MarketInfo
-from absortium.serializers import MarketInfoSerializer, ExchangeSerializer
+from absortium.model.models import Order, Offer, MarketInfo
+from absortium.serializers import MarketInfoSerializer, OrderSerializer
 from absortium.utils import safe_offer_update
 from core.utils.logging import getPrettyLogger
 
@@ -22,7 +22,7 @@ logger = getPrettyLogger(__name__)
 def user_post_save(sender, instance, *args, **kwargs):
     user = instance
 
-    for currency in constants.AVAILABLE_CURRENCIES.keys():
+    for currency in constants.AVAILABLE_CURRENCIES:
         context = {
             'data': {
                 'currency': currency
@@ -33,56 +33,54 @@ def user_post_save(sender, instance, *args, **kwargs):
         tasks.create_account.delay(**context)
 
 
-@receiver(post_save, sender=Exchange, dispatch_uid="exchange_post_save")
-def exchange_post_save(sender, instance, *args, **kwargs):
+@receiver(post_save, sender=Order, dispatch_uid="order_post_save")
+def order_post_save(sender, instance, *args, **kwargs):
     """
-        Create or change offer object if exchange object is received and saved.
+        Create or change offer object if order object is received and saved.
     """
-    new_exchange = instance
+    new_order = instance
 
-    if new_exchange.status == constants.EXCHANGE_INIT:
-        safe_offer_update(price=new_exchange.price,
-                          from_currency=new_exchange.from_currency,
-                          to_currency=new_exchange.to_currency,
-                          update=lambda amount: amount + new_exchange.from_amount)
+    if new_order.status == constants.ORDER_INIT:
+        safe_offer_update(price=new_order.price,
+                          pair=new_order.pair,
+                          order_type=new_order.type,
+                          update=lambda amount: amount + new_order.amount)
 
-    elif new_exchange.status == constants.EXCHANGE_COMPLETED:
-        safe_offer_update(price=new_exchange.price,
-                          from_currency=new_exchange.from_currency,
-                          to_currency=new_exchange.to_currency,
-                          update=lambda amount: amount - new_exchange.from_amount)
+    elif new_order.status == constants.ORDER_COMPLETED:
+        safe_offer_update(price=new_order.price,
+                          pair=new_order.pair,
+                          order_type=new_order.type,
+                          update=lambda amount: amount - new_order.amount)
 
-        to_repr = {value: key for key, value in constants.AVAILABLE_CURRENCIES.items()}
-
-        serializer = ExchangeSerializer(new_exchange)
+        serializer = OrderSerializer(new_order)
         publishment = serializer.data
 
-        topic = constants.TOPIC_HISTORY.format(from_currency=to_repr[new_exchange.from_currency],
-                                               to_currency=to_repr[new_exchange.to_currency])
+        topic = constants.TOPIC_HISTORY.format(pair=new_order.pair, type=new_order.type)
 
         client = get_crossbar_client()
         client.publish(topic, **publishment)
 
 
-# @receiver(post_delete, sender=Offer, dispatch_uid="offer_post_delete")
+@receiver(post_delete, sender=Offer, dispatch_uid="offer_post_delete")
 @receiver(post_save, sender=Offer, dispatch_uid="offer_post_save")
-def offer_post_save(sender, instance, *args, **kwargs):
+def offer_update(sender, instance, *args, **kwargs):
     """
         Send websocket notification to the router if offer is changed.
     """
 
     offer = instance
+    offers = Offer.objects.filter(type=offer.type, price=offer.price)
 
-    amount = sum((offer.amount for offer in Offer.objects.filter(price=offer.price)))
+    amount = sum((offer.amount for offer in offers))
+    # total = sum((offer.total for offer in offers))
 
-    to_repr = {value: key for key, value in constants.AVAILABLE_CURRENCIES.items()}
-    topic = constants.TOPIC_OFFERS.format(from_currency=to_repr[offer.from_currency],
-                                          to_currency=to_repr[offer.to_currency])
+    topic = constants.TOPIC_OFFERS.format(pair=offer.pair, type=offer.type)
 
     publishment = {
         "amount": str(amount),
-        "from_currency": to_repr[offer.from_currency],
-        "to_currency": to_repr[offer.to_currency],
+        # "total": str(total),
+        "pair": offer.pair,
+        "type": offer.type,
         "price": str(offer.price)
     }
 

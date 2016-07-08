@@ -21,7 +21,7 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 
 class IsAccountOwner(permissions.BasePermission):
     """
-    Object-level permission to only allow owners of an account to edit exchange
+    Object-level permission to only allow owners of an account to edit order
     Assumes the model instance has an `account` attribute.
     """
 
