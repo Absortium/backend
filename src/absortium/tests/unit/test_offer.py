@@ -140,11 +140,11 @@ class OfferTest(AbsoritumUnitTest):
             When we receive update with order_type="newTrade" and offer_type="buy" it means
             that someone create ETH buy order. == BTC-> ETH order.
         """
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_CREATED,
-                                                             order_type="buy",
+        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_MODIFIED,
+                                                             order_type="bid",
                                                              price="1",
                                                              amount="1"))
-        self.check_offer(price="1", amount="1")
+        self.check_offer(order_type=constants.ORDER_BUY, price="1", amount="1")
 
     def test_poloniex_two_updates(self):
         """
@@ -152,8 +152,8 @@ class OfferTest(AbsoritumUnitTest):
             When we receive update with order_type="newTrade" and offer_type="buy" it means
             that someone create ETH buy order. == BTC-> ETH order.
         """
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_CREATED,
-                                                             order_type="buy",
+        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_MODIFIED,
+                                                             order_type="bid",
                                                              price="1",
                                                              amount="1"))
 
@@ -162,47 +162,48 @@ class OfferTest(AbsoritumUnitTest):
                                                              price="1",
                                                              amount="2"))
 
-        self.check_offer(price="1", amount="2")
+        self.check_offer(order_type=constants.ORDER_BUY, price="1", amount="2")
 
     def test_poloniex_offer_remove(self):
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_CREATED,
-                                                             order_type="buy",
+        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_MODIFIED,
+                                                             order_type="bid",
                                                              price="1",
                                                              amount="1"))
 
-        self.check_offer(price="1", amount="1")
+        self.check_offer(order_type=constants.ORDER_BUY, price="1", amount="1", debug=True)
 
         PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_REMOVED,
-                                                             order_type="buy",
+                                                             order_type="bid",
                                                              price="1"))
 
         self.check_offers_empty()
 
     def test_poloniex_offer_remove_without_creating(self):
         PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_REMOVED,
-                                                             order_type="buy",
+                                                             order_type="bid",
                                                              price="1"))
 
         self.check_offers_empty()
 
     def test_poloniex_notification(self):
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_CREATED,
-                                                             order_type="buy",
+        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_MODIFIED,
+                                                             order_type="ask",
                                                              price="1",
                                                              amount="1"))
-        self.assertEqual(len(self.get_publishments("offers_btc_eth_buy")), 1)
+        logger.debug(self.get_publishments())
+        self.assertEqual(len(self.get_publishments("offers_btc_eth_sell")), 1)
 
     def test_notification_offer_amount_accumulation(self):
         """
             Create offers from different system and check that amount from different offers are accumulated into one.
         """
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_CREATED,
-                                                             order_type="buy",
+        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_MODIFIED,
+                                                             order_type="bid",
                                                              price="1",
                                                              amount="1"))
 
         self.make_deposit(self.get_account('btc'), amount="1.0")
-        self.create_order(price="1.0", amount="1.0", status=constants.ORDER_INIT)
+        self.create_order(order_type=constants.ORDER_BUY, price="1.0", amount="1.0", status=constants.ORDER_INIT)
 
         publishments = self.get_publishments("offers_btc_eth_buy")
 
@@ -210,8 +211,8 @@ class OfferTest(AbsoritumUnitTest):
         self.assertEqual(decimal.Decimal(publishments[1]['amount']), 2)
 
     def test_poloniex_offer_sync(self):
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_CREATED,
-                                                             order_type="buy",
+        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_MODIFIED,
+                                                             order_type="bid",
                                                              price="1",
                                                              amount="1"))
 
@@ -225,11 +226,12 @@ class OfferTest(AbsoritumUnitTest):
         )
         PoloniexApp.synchronize_offers(order_book_data)
 
-        self.check_offer(price="1", amount="2")
+        logger.debug(self.get_offers())
+        self.check_offer(order_type=constants.ORDER_BUY, price="1", amount="2")
 
     def test_offer_sum(self):
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_CREATED,
-                                                             order_type="buy",
+        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_MODIFIED,
+                                                             order_type="bid",
                                                              price="1",
                                                              amount="1"))
 

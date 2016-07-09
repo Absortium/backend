@@ -18,9 +18,9 @@ def update2offer(order):
     price = Decimal(order["rate"])
     amount = Decimal(order.get("amount", 0))
 
-    if order["type"] in ["buy", "bid", "bids"]:
+    if order["type"] in ["bid", "bids"]:
         offer_type = constants.ORDER_BUY
-    elif order["type"] in ["sell", "ask", "asks"]:
+    elif order["type"] in ["ask", "asks"]:
         offer_type = constants.ORDER_SELL
     else:
         raise Exception("Unknown order type")
@@ -36,17 +36,17 @@ def update2offer(order):
 
 class PoloniexApp(Application):
     @staticmethod
-    def updates_handler(**trade):
-        order = trade.get("data")
-        order["pair"] = trade.get("currency_pair")
+    def updates_handler(**update):
+        if update.get('type') in [constants.POLONIEX_OFFER_REMOVED, constants.POLONIEX_OFFER_MODIFIED]:
+            order = update.get("data")
+            order["pair"] = update.get("currency_pair")
 
-        offer = update2offer(order)
-
-        safe_offer_update(price=offer["price"],
-                          pair=offer["pair"],
-                          order_type=offer["type"],
-                          system=offer["system"],
-                          update=lambda *args: offer["amount"])
+            offer = update2offer(order)
+            safe_offer_update(price=offer["price"],
+                              pair=offer["pair"],
+                              order_type=offer["type"],
+                              system=offer["system"],
+                              update=lambda *args: offer["amount"])
 
     @staticmethod
     def synchronize_offers(orders):

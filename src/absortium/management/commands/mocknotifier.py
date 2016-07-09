@@ -28,8 +28,6 @@ class Command(BaseCommand):
     help = 'Send mock transaction notification to the backend'
 
     def handle(self, *args, **options):
-        to_repr = {value: key for key, value in constants.AVAILABLE_CURRENCIES}
-
         while True:
             accounts = Account.objects.filter(owner__isnull=False).all()
 
