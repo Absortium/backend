@@ -44,7 +44,7 @@ class Offer(models.Model):
                                 decimal_places=constants.DECIMAL_PLACES)
 
     class Meta:
-        ordering = ('-price',)
+        ordering = ('price',)
         unique_together = ('pair', 'price', 'system', 'type')
 
     def update(self, **kwargs):
