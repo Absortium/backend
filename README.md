@@ -1,3 +1,6 @@
+https://travis-ci.org/absortium/backend.svg?branch=master
+https://travis-ci.org/absortium/backend.svg?branch=development
+
 ## Getting started contributing
 * First of all clone repository.  
   ```bash
