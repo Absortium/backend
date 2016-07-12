@@ -3,17 +3,37 @@ sudo: required
 services:
   - docker
 
+env:
+    global:
+        - DOCKER_COMPOSE_VERSION=1.8.0-rc1
+
 before_install:
-- git clone --recursive https://github.com/absortium/deluge.git
-- pushd deluge
-- pushd services/backend
-- git checkout $TRAVIS_BRANCH
-- git pull
-- popd
-- touch .sensitive
-- echo "DJANGO_SECRET_KEY='django_secret_key'" >> .sensitive
-- echo "POSTGRES_PASSWORD='postgres'" >> .sensetive
-- echo "ETH_NOTIFICATION_TOKEN='eth_notification_token'" >> .sensitive
-- echo "BTC_NOTIFICATION_TOKEN='btc_notification_token'" >> .sensitive
+  # Reinstall docker-compose at specific version
+  - sudo rm /usr/local/bin/docker-compose
+  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
+  - chmod +x docker-compose
+  - sudo mv docker-compose /usr/local/bin
+
+  # Check docker and docker-compose versions
+  - docker version
+  - docker-compose version
+
+  # Clone `deluge` project
+  - git clone --recursive https://github.com/absortium/deluge.git
+  - pushd deluge
+
+  # Checkout and pull changes of `backend` service.
+  - pushd services/backend
+  - git checkout $TRAVIS_BRANCH
+  - git pull
+  - popd
+
+  # Create mock .sensetive
+  - touch .sensitive
+  - echo "DJANGO_SECRET_KEY='django_secret_key'" >> .sensitive
+  - echo "POSTGRES_PASSWORD='postgres'" >> .sensetive
+  - echo "ETH_NOTIFICATION_TOKEN='eth_notification_token'" >> .sensitive
+  - echo "BTC_NOTIFICATION_TOKEN='btc_notification_token'" >> .sensitive
+
 script:
-- ./useful/install.sh backend
+  - ./useful/install.sh backend
