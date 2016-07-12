@@ -6,10 +6,14 @@ services:
 before_install:
 - git clone --recursive https://github.com/absortium/deluge.git
 - pushd deluge
-- pushd services/frontend
+- pushd services/backend
 - git checkout $TRAVIS_BRANCH
 - git pull
 - popd
-
+- touch .sensetive
+- echo "DJANGO_SECRET_KEY='django_secret_key'" >> .sensetive
+- echo "POSTGRES_PASSWORD='postgres'" >> .sensetive
+- echo "ETH_NOTIFICATION_TOKEN='eth_notification_token'" >> .sensetive
+- echo "BTC_NOTIFICATION_TOKEN='btc_notification_token'" >> .sensetive 
 script:
-- ./useful/install.sh frontend
+- ./useful/install.sh backend
