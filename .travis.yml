@@ -7,19 +7,20 @@ env:
     global:
         - DOCKER_VERSION=1.10.1-0~trusty
         - DOCKER_COMPOSE_VERSION=1.8.0-rc1
+        - SERVICE=backend
 
 before_install:
   # Clone `deluge` project
   - git clone --recursive https://github.com/absortium/deluge.git
   - pushd deluge
 
-  # Create mock .sensitive
+  # Create mock '.sensitive' file
   - ./useful/create_mock_sensitive.sh
 
-  # upgrade docker-engine to specific version
+  # Upgrade docker-engine to specific version
   - ./useful/upgrade_docker_engine.sh
 
-  # Reinstall docker-compose at specific version
+  # Upgrade docker-compose to specific version
   - ./useful/upgrade_docker_compose.sh
 
   # Check docker and docker-compose versions
@@ -27,10 +28,10 @@ before_install:
   - docker-compose version
 
   # Checkout and pull changes of `backend` service.
-  - pushd services/backend
+  - pushd services/$SERVICE
   - git checkout $TRAVIS_BRANCH
   - git pull
   - popd
 
 script:
-  - ./useful/install.sh backend
+  - ./useful/install.sh $SERVICE
