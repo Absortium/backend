@@ -1,5 +1,4 @@
-https://travis-ci.org/absortium/backend.svg?branch=master
-https://travis-ci.org/absortium/backend.svg?branch=development
+[![Build Status](https://travis-ci.org/absortium/backend.svg?branch=master)](https://travis-ci.org/absortium/backend)
 
 ## Getting started contributing
 * First of all clone repository.  
