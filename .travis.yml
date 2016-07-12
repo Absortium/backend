@@ -5,9 +5,5 @@ language: python
 services:
   - docker
 
-before_install:
-- git clone --recursive https://github.com/absortium/deluge.git
-- cd deluge
-
 script:
-- ./useful/install.sh
+- ./useful/install.sh $TRAVIS_REPO_SLUG $TRAVIS_BRANCH
