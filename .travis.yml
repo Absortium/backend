@@ -5,9 +5,10 @@ services:
 
 before_install:
 - git clone --recursive https://github.com/absortium/deluge.git
-- cd deluge
-- pushd deluge/service/frontend
+- pushd deluge
+- pushd service/frontend
 - git checkout $TRAVIS_BRANCH
+- git pull
 - popd
 
 script:
