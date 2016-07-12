@@ -1,0 +1,13 @@
+sudo: required
+
+language: python
+
+services:
+  - docker
+
+before_install:
+- git clone --recursive https://github.com/absortium/deluge.git
+- cd deluge
+
+script:
+- ./useful/install.sh
