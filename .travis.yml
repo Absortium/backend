@@ -10,10 +10,10 @@ before_install:
 - git checkout $TRAVIS_BRANCH
 - git pull
 - popd
-- touch .sensetive
-- echo "DJANGO_SECRET_KEY='django_secret_key'" >> .sensetive
+- touch .sensitive
+- echo "DJANGO_SECRET_KEY='django_secret_key'" >> .sensitive
 - echo "POSTGRES_PASSWORD='postgres'" >> .sensetive
-- echo "ETH_NOTIFICATION_TOKEN='eth_notification_token'" >> .sensetive
-- echo "BTC_NOTIFICATION_TOKEN='btc_notification_token'" >> .sensetive 
+- echo "ETH_NOTIFICATION_TOKEN='eth_notification_token'" >> .sensitive
+- echo "BTC_NOTIFICATION_TOKEN='btc_notification_token'" >> .sensitive
 script:
 - ./useful/install.sh backend
