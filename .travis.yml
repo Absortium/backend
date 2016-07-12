@@ -1,9 +1,14 @@
 sudo: required
 
-language: python
-
 services:
   - docker
 
+before_install:
+- git clone --recursive https://github.com/absortium/deluge.git
+- cd deluge
+- pushd deluge/service/frontend
+- git checkout $TRAVIS_BRANCH
+- popd
+
 script:
-- ./useful/install.sh $TRAVIS_REPO_SLUG $TRAVIS_BRANCH
+- ./useful/install.sh frontend
