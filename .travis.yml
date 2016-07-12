@@ -31,7 +31,7 @@ before_install:
   # Create mock .sensetive
   - touch .sensitive
   - echo "DJANGO_SECRET_KEY='django_secret_key'" >> .sensitive
-  - echo "POSTGRES_PASSWORD='postgres'" >> .sensetive
+  - echo "POSTGRES_PASSWORD='postgres'" >> .sensitive
   - echo "ETH_NOTIFICATION_TOKEN='eth_notification_token'" >> .sensitive
   - echo "BTC_NOTIFICATION_TOKEN='btc_notification_token'" >> .sensitive
 
