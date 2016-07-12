@@ -1,11 +1,17 @@
-## Statuses
-branch | status
----------------
-master | [![Build Master Status](https://travis-ci.org/absortium/backend.svg?branch=master)](https://travis-ci.org/absortium/backend)
-development | [![Build Development Status](https://travis-ci.org/absortium/backend.svg?branch=development)](https://travis-ci.org/absortium/backend)
+    Branch  | Status 
+  --------| -------
+  master | [![Build Master Status](https://travis-ci.org/absortium/backend.svg?branch=master)](https://travis-ci.org/absortium/backend) 
+  development | [![Build Development Status](https://travis-ci.org/absortium/backend.svg?branch=development)](https://travis-ci.org/absortium/backend)
 
 
-## Getting started contributing
+## Getting started  
+#### Prerequisites
+  
+    Name  | Version 
+  --------| -------
+  docker-compose | 1.8.0-rc1
+  docker | 1.12.0-rc3
+
 * First of all clone repository.  
   ```bash
   $ git clone --recursive https://github.com/absortium/deluge.git
