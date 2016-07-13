@@ -14,7 +14,7 @@ before_install:
   - git clone --recursive https://github.com/absortium/deluge.git
   - pushd deluge
 
-  # Create mock '.sensitive' file
+  # Create mock .sensitive
   - ./useful/create_mock_sensitive.sh
 
   # list docker-engine versions
@@ -30,11 +30,5 @@ before_install:
   - docker version
   - docker-compose version
 
-  # Checkout and pull changes of `backend` service.
-  - pushd services/$SERVICE
-  - git checkout $TRAVIS_BRANCH
-  - git pull
-  - popd
-
 script:
-  - ./useful/install.sh $SERVICE
+  - ./useful/install.sh "$SERVICE" "$TRAVIS_BRANCH"
