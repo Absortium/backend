@@ -170,7 +170,7 @@ class OfferTest(AbsoritumUnitTest):
                                                              price="1",
                                                              amount="1"))
 
-        self.check_offer(order_type=constants.ORDER_BUY, price="1", amount="1", debug=True)
+        self.check_offer(order_type=constants.ORDER_BUY, price="1", amount="1")
 
         PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_REMOVED,
                                                              order_type="bid",
@@ -190,7 +190,6 @@ class OfferTest(AbsoritumUnitTest):
                                                              order_type="ask",
                                                              price="1",
                                                              amount="1"))
-        logger.debug(self.get_publishments())
         self.assertEqual(len(self.get_publishments("offers_btc_eth_sell")), 1)
 
     def test_notification_offer_amount_accumulation(self):
@@ -226,7 +225,6 @@ class OfferTest(AbsoritumUnitTest):
         )
         PoloniexApp.synchronize_offers(order_book_data)
 
-        logger.debug(self.get_offers())
         self.check_offer(order_type=constants.ORDER_BUY, price="1", amount="2")
 
     def test_offer_sum(self):

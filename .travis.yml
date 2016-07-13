@@ -23,7 +23,7 @@ env:
         # DOCKER_PASS
         - secure: "mwRlUvzNpfwHWna3dtSxUE+a+IPwsvAexDfcN8EOGRWMUPMoWlX0M677tshpsBkwldMRq2ShzY6j2E/fMKg1GjW026i8lTN7RVBw02XS82FbKe/M2krPio0Zg8bWxBGxsyczlDOCWy7ka4m7EgTW3QyZN2ztcMtT8Yj3NMVjC6j10u2qfMHWRit53/6Mh4A4mdWURJpTw+XLK+NPeAkzzZgmNdQbVEoe8zi+PirbzRG2uRc5HSArKs/Jt39Ns4o5xUCBgUfaX22D2y65aWTsZRKNadzu2dE+11i2GA2uHFbSHQyY32ir/U5KdpQj3Lg2jKZ5zIyQiSDsp1xS1sW0QeZbKl+ex8DsZwqEsUtLXHTJ5F0ObxdLc6FDkVQNZML3MD7jnCU8dcy64jxlL3A9AxBu/xrc46HAUOPQ8e8LgotyIlH7yw+yn135TK3ZTaz1CNpVRXm/A9Shqbo3vNH0u1/5Q6D0CY+cWf9LIYoSVo0iheD437YnSmW/5ZyY1BVX1PTepPUmCwp4K8ja2tOaf3w9N8NEwb57IEXOqEMrGuA1M/sHnWQroRPjl9KQem/MRQ7PfMoQS60oZOuVYMFtqAA8pdfy8M6FroF1b5o/2NOyzbbwiCiG7lZZzTsnqUV+e45FCYm9TXycFJr0ykjOyyUSu/romvxKja0tWONGRbk="
 
-after_success: test "$TRAVIS_PULL_REQUEST" == "false" && ./usefull/after_success.sh "$DOCKER_EMAIL" "$DOCKER_USER" "$DOCKER_PASS" "$SERVICE" "$TRAVIS_BRANCH"
+after_success: test "$TRAVIS_PULL_REQUEST" == "false" && ./useful/after_success.sh "$DOCKER_EMAIL" "$DOCKER_USER" "$DOCKER_PASS" "$SERVICE" "$TRAVIS_BRANCH"
 
 before_install:
   # Clone 'deluge' project
