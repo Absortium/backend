@@ -8,7 +8,7 @@
 #### Prerequisites
   
     Name  | Version 
-  --------| -------
+  --------|---------
   docker-compose | 1.8.0-rc1
   docker | 1.12.0-rc3
 
