@@ -11,53 +11,41 @@
   --------| -------
   docker-compose | 1.8.0-rc1
   docker | 1.12.0-rc3
-
-* First of all clone repository.  
+  
+  **Step №1**: Clone repository.  
   ```bash
   $ git clone --recursive https://github.com/absortium/deluge.git
+  $ cd deluge
   ```
 
-* Go into `useful` directory and copy `deluge`,`docker` and `docker-compose` aliases to your alias file.
-  * `zsh` - `~/.zsh_aliases`
-  * `bash` - `~/.bash_aliases`
- 
-* Set environment variables.
-  * `export DELUGE_PATH='YOUR_WORK_DIRECTORY_PATH'` 
-  * `export DEFAULT_MODE='unit'`
-
-* Add entry to the `/etc/hosts`
-   * If you run docker containers on the `docker-machine`, than check your `docker-machine` ip and pass it to the `/etc/hosts`
-   ```
-   $ docker-machine ip
-   $ sudo bash -c `echo "absortium.com <ip>" >> /etc/hosts`
-   ```
-   * Otherwise set localhost
-   ```
-   $ sudo bash -c `echo "absortium.com localhost" >> /etc/hosts`
-   ```
-   
-* Open new terminal and go into docker `dev` directory, if there is no such alias than you should check - `Are aliases were preloaded?`
-  ```
-  $ godd
-  ```
-
-* Run `postgres` service which serve as database.
-  ```
-  $ dc up -d postgres
-  ```
+  **Step №2**: Ask maintainer to give you `.sensitive` file.
   
-* Migrate `m-backend` database.
+  **Step №3**: Install `backend` and run tests.
+  ```bash
+  $ ./useful/install.sh backend
   ```
-  $ dc run m-backend migrate
+ 
+## Hot connect `frontend` to the `backend` and start developing?
+  **Step №1**: Install `frontend` and run tests.
+  ```bash
+  $ ./useful/install.sh frontend
   ```  
   
-* Run `backend` tests.
+  **Step №2**: For simplicity I prefer use [aliases](#alias-info) which I developed for this project, on first sign it might look overwhelming, but I think it may significantly help you for developing, so add env variables and aliases from `useful` directory - copy this in the `.bashrc` or `.zshrc` (this code install project aliases every time when you instantiate terminal window):
+  ```bash
+  export DELUGE_PATH="YOUR_WORK_DIRECTORY_PATH"
+  export DEFAULT_MODE="frontend"
+  for f in $DELUGE_PATH/useful/aliases/*; do
+    source "$f"
+  done  
   ```
-  $ dc run m-backend test --verbosity 2 absortium.tests.unit
+  
+  **Step №3**: Run `frontend`.
+  ```bash
+  $ dc up frontend
   ```
-    
-## Tips
-* If you use `docker-machine` than you must download project only in user directory.
+  
+  **Step №4**: Go to the `localhost:3000`
  
 ## Services
 * `m-backend` - main backend service.
