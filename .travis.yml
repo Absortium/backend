@@ -30,7 +30,7 @@ before_install:
   # Create mock '.sensitive'
   - ./useful/create_mock_sensitive.sh
 
-  # List docker-engine versions
+  # List 'docker-engine' versions
   - apt-cache madison docker-engine
 
   # Upgrade 'docker-engine' to specific version
