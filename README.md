@@ -25,7 +25,7 @@
   $ ./useful/install.sh backend
   ```
  
- ## Hot connect `frontend` to the `backend` and start developing?
+## Hot connect `frontend` to the `backend` and start developing?
   **Step №1**: Install `backend` and tun tests.
   ```bash
   $ ./useful/install.sh frontend
