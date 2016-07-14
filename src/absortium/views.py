@@ -13,7 +13,7 @@ from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK
 
 from absortium import constants
 from absortium.celery import tasks
-from absortium.mixins import CreateCeleryMixin
+from absortium.mixins import CreateCeleryMixin, DestroyCeleryMixin
 from absortium.model.models import Offer, Order, Account, MarketInfo
 from absortium.serializers import \
     UserSerializer, \
@@ -130,7 +130,7 @@ class AccountViewSet(CreateCeleryMixin,
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
 
-    def create_celery(self, request, *args, **kwargs):
+    def create_in_celery(self, request, *args, **kwargs):
         context = {
             "data": request.data,
             "user_pk": request.user.pk,
@@ -178,7 +178,7 @@ class WithdrawalViewSet(CreateCeleryMixin,
         return super().list(request, *args, **kwargs)
 
     @init_account()
-    def create_celery(self, request, *args, **kwargs):
+    def create_in_celery(self, request, *args, **kwargs):
         context = {
             "data": request.data,
             "account_pk": request.account.pk,
@@ -188,6 +188,8 @@ class WithdrawalViewSet(CreateCeleryMixin,
 
 
 class OrderViewSet(CreateCeleryMixin,
+                   DestroyCeleryMixin,
+                   mixins.DestroyModelMixin,
                    mixins.RetrieveModelMixin,
                    mixins.ListModelMixin,
                    viewsets.GenericViewSet):
@@ -222,13 +224,22 @@ class OrderViewSet(CreateCeleryMixin,
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-    def create_celery(self, request, *args, **kwargs):
+    def create_in_celery(self, request, *args, **kwargs):
         context = {
             "data": request.data,
             "user_pk": request.user.pk,
         }
 
         return tasks.do_order.delay(**context)
+
+    def destroy_in_celery(self, request, *args, **kwargs):
+        context = {
+            "order_pk": self.get_object().pk,
+            "user_pk": request.user.pk,
+
+        }
+
+        return tasks.cancel_order.delay(**context)
 
 
 class HistoryViewSet(generics.GenericAPIView,

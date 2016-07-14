@@ -38,7 +38,7 @@ def do_deposit(self, *args, **kwargs):
 
             account = Account.objects.select_for_update().get(pk=account_pk)
             deposit = serializer.save(account=account)
-            deposit.process_account()
+            deposit.freeze_money()
 
             return serializer.data
 
@@ -58,7 +58,7 @@ def do_withdrawal(self, *args, **kwargs):
 
             account = Account.objects.select_for_update().get(pk=account_pk)
             withdrawal = serializer.save(account=account)
-            withdrawal.process_account()
+            withdrawal.freeze_money()
 
             return serializer.data
 
@@ -108,10 +108,31 @@ def do_order(self, *args, **kwargs):
         with publishment.atomic():
             with transaction.atomic():
                 with lockorder(order):
-                    order.process_account()
+                    order.freeze_money()
                     history = process(order)
 
                 return [OrderSerializer(e).data for e in history]
+
+    except OperationalError:
+        raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
+
+
+@shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
+def cancel_order(self, *args, **kwargs):
+    data = kwargs['data']
+    user_pk = kwargs['user_pk']
+
+    try:
+        serializer = OrderSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        order = serializer.object(owner_id=user_pk)
+
+        with publishment.atomic():
+            with transaction.atomic():
+                with lockorder(order):
+                    order.unfreeze_money()
+                    order.delete()
+
 
     except OperationalError:
         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
