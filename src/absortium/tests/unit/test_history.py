@@ -39,22 +39,22 @@ class HistoryTest(AbsoritumUnitTest):
 
     def test_history_count(self):
         """
-            Check that we get only exchanges which belong to the user.
+            Check that we get only orders which belong to the user.
         """
         self.create_order(order_type=constants.ORDER_BUY, price="1", amount="1", status="init")
         self.create_order(order_type=constants.ORDER_BUY, price="1", amount="1", status="init")
-        self.assertEqual(len(self.get_exchanges_history()), 0)
+        self.assertEqual(len(self.get_orders_history()), 0)
 
         self.client.force_authenticate(self.some_user)
         self.create_order(order_type=constants.ORDER_SELL, price="1", amount="2", status="completed")
 
-        self.assertEqual(len(self.get_exchanges_history()), 4)
-        self.assertEqual(len(self.get_exchanges_history(order_type=constants.ORDER_SELL)), 2)
-        self.assertEqual(len(self.get_exchanges_history(order_type=constants.ORDER_BUY)), 2)
+        self.assertEqual(len(self.get_orders_history()), 4)
+        self.assertEqual(len(self.get_orders_history(order_type=constants.ORDER_SELL)), 2)
+        self.assertEqual(len(self.get_orders_history(order_type=constants.ORDER_BUY)), 2)
 
     def test_history_notifications(self):
         """
-            Check that we get only exchanges which belong to the user.
+            Check that we get only orders which belong to the user.
         """
         self.create_order(order_type=constants.ORDER_BUY, price="1", amount="1", status="init")
 

@@ -4,7 +4,7 @@ from absortium import constants
 
 __author__ = 'andrew.shvv@gmail.com'
 
-from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
+from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT, HTTP_200_OK
 
 from absortium.model.models import Order
 from core.utils.logging import getLogger
@@ -52,28 +52,47 @@ class CreateOrderMixin():
 
         self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_204_NO_CONTENT])
 
+        history = response.json()
+        order = history[-1]
+
         if with_checks:
-            history = response.json()
+            self.assertEqual(order['status'], status)
+            self.assertEqual(order['system'], system)
 
-            exchange = history[-1]
-            self.assertEqual(exchange['status'], status)
-            self.assertEqual(exchange['system'], system)
-
-            if exchange['status'] == "PENDING":
+            if order['status'] == "PENDING":
                 # Check that order exist in db
                 try:
-                    obj = Order.objects.get(pk=exchange["pk"])
+                    obj = Order.objects.get(pk=order["pk"])
                 except Order.DoesNotExist:
                     self.fail("Order object wasn't found in db")
 
                 # Check that order belongs to an user
                 self.assertNotEqual(obj.owner, None)
 
-                return exchange["pk"], obj
-
-            elif exchange['status'] == "COMPLETED":
+            elif order['status'] == "COMPLETED":
                 # TODO: Add check that order has status COMPLETED
                 pass
+
+        return order
+
+    def cancel_order(self,
+                     pk,
+                     user=None,
+                     with_checks=True,
+                     debug=False):
+
+        # Authenticate normal user
+        if user:
+            self.client.force_authenticate(user)
+
+        # Create order
+        url = '/api/orders/{pk}/'.format(pk=pk)
+        response = self.client.delete(url, format='json')
+
+        if debug:
+            logger.debug(response.content)
+
+        self.assertIn(response.status_code, [HTTP_200_OK, HTTP_204_NO_CONTENT])
 
     def check_order(self, price, amount, from_currency="btc", to_currency="eth", should_exist=True, debug=False):
         orders = self.get_orders(from_currency, to_currency)
@@ -82,9 +101,9 @@ class CreateOrderMixin():
             logger.debug(orders)
 
         is_exist = False
-        for exchange in orders:
-            if decimal.Decimal(exchange['price']) == decimal.Decimal(price) and decimal.Decimal(
-                    exchange['amount']) == decimal.Decimal(amount):
+        for order in orders:
+            if decimal.Decimal(order['price']) == decimal.Decimal(price) and decimal.Decimal(
+                    order['amount']) == decimal.Decimal(amount):
                 is_exist = True
 
         self.assertEqual(is_exist, should_exist)

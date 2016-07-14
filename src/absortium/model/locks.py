@@ -56,10 +56,6 @@ class opposites:
     """
         1. Search for opposite orders.
         2. Block order with pg_try_advisory_xact_lock postgres lock.
-
-        Example:
-            Order: pair: BTC_ETH price: 1 ETH = 0.1 BTC type:sell
-            Opposite order: pair=BTC_ETH Price: 1 ETH = 0.1 BTC type:buy
     """
 
     def __init__(self, order):
@@ -84,11 +80,11 @@ class opposites:
                                              'FROM absortium_order '
                                              'WHERE (status = %s OR status = %s) '
                                              'AND pg_try_advisory_xact_lock(id) '
-                                             'AND price ' + sign + ' %s '
-                                                                   'AND pair = %s '
-                                                                   'AND type = %s '
-                                                                   'FOR UPDATE '
-                                                                   'LIMIT 1 ',
+                                             'AND price {sign} %s '
+                                             'AND pair = %s '
+                                             'AND type = %s '
+                                             'FOR UPDATE '
+                                             'LIMIT 1 '.format(sign=sign),
                                              [constants.ORDER_PENDING, constants.ORDER_INIT,
                                               self.order.price,
                                               self.order.pair,
@@ -96,8 +92,8 @@ class opposites:
 
             except IndexError:
                 """
-                    Very dirty hack; While exchanges selection might happen that all exchanges are locked,
-                    so we may end up with skipping the exchanges processing, in order to low the likelihood of such situation, do it
+                    Very dirty hack; While orders selection might happen that all orders are locked,
+                    so we may end up with skipping the orders processing, in order to low the likelihood of such situation, do it
                     3 times.
                 """
                 self.times -= 1
@@ -108,7 +104,7 @@ class opposites:
 
             if self.order.owner_id == opposite.owner_id:
                 """
-                    If we process the same users that means that exchanges are opposite
+                    If we process the same users that means that orders are opposite
                     and we should not block the same accounts twice.
                 """
                 opposite.from_account = self.order.to_account

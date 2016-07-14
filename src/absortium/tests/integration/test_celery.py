@@ -204,7 +204,7 @@ class AccuracyTest(AbsoritumLiveTest):
         super().make_deposit(account, *args, **kwargs)
 
     @django_thread_decorator()
-    def threaded_create_exchange(self, account, *args, **kwargs):
+    def threaded_create_order(self, account, *args, **kwargs):
         amount = decimal.Decimal(kwargs['amount'])
         price = decimal.Decimal(kwargs['price'])
         from_currency = kwargs['from_currency']
@@ -213,7 +213,7 @@ class AccuracyTest(AbsoritumLiveTest):
         account[from_currency]['amount'] -= amount
         account[to_currency]['amount'] += amount * price
 
-        super().create_exchange(*args, **kwargs)
+        super().create_order(*args, **kwargs)
 
     @django_thread_decorator()
     def threaded_make_withdrawal(self, account, *args, **kwargs):
@@ -224,16 +224,16 @@ class AccuracyTest(AbsoritumLiveTest):
         for user, context in contexts.items():
             deposits = self.random_amounts(n)
             withdrawals = deposits
-            exchanges = deposits
+            orders = deposits
 
-            amounts = list(zip(deposits, withdrawals, exchanges))
+            amounts = list(zip(deposits, withdrawals, orders))
             for (d, w, e) in amounts:
                 self.threaded_make_deposit(context['btc'], user=user, amount=d, with_checks=False)
                 self.threaded_make_withdrawal(context['btc'], user=user, amount=w, with_checks=False)
                 self.threaded_make_deposit(context['eth'], user=user, amount=d, with_checks=False)
                 self.threaded_make_withdrawal(context['eth'], user=user, amount=w, with_checks=False)
 
-                self.threaded_create_exchange(context,
+                self.threaded_create_order(context,
                                               user=user,
                                               amount=e,
                                               from_currency="btc",
@@ -241,7 +241,7 @@ class AccuracyTest(AbsoritumLiveTest):
                                               price="1.0",
                                               with_checks=False)
 
-                self.threaded_create_exchange(context,
+                self.threaded_create_order(context,
                                               user=user,
                                               amount=e,
                                               from_currency="eth",

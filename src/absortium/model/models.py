@@ -150,7 +150,7 @@ class Order(models.Model):
 
     'owner' - user; owner of the order.
 
-    'pair' - represent the two currency between exchanges are happening.
+    'pair' - represent the two currency between orders are happening.
     Example: BTC_ETH, BTC - primary currency, ETH - secondary currency.
     """
 
@@ -255,7 +255,7 @@ class Order(models.Model):
         elif self.type == constants.ORDER_SELL:
             self.total = value
 
-    def process_account(self):
+    def freeze_money(self):
         # Check that we have enough money
         if self.from_account.amount >= self.from_amount:
 
@@ -264,6 +264,10 @@ class Order(models.Model):
             self.save()
         else:
             raise ValidationError("Not enough money for order creation")
+
+    def unfreeze_money(self):
+        self.from_account.amount += self.from_amount
+        self.save()
 
     def update(self, **kwargs):
         Account.objects.filter(pk=self.pk).update(**kwargs)
