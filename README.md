@@ -58,29 +58,26 @@
 
 ## Alias info
 * `god` - go to the `DELUGE_PATH` directory.
-* `godd` - go to the `docker` dev directory (in order to run docker service)
+* `godd` - go to the `docker` directory.
 * `gods` - go to the `services` directory.
-* `gods <service>` - go to the `<service>` project directory.
-* `dcinit <mode>` - init start mode, default mode is `DEFAULT_MODE` .
-    * `unit`
-        * external systems like `coinbase` and `ethwallet` are mocked.
-        * internal systems like `router` are mocked.
-        * generally, only `postgres` service  is required to be up in order to start tests.
-        * celery workers are not working and code is executing in main process.
-    * `integration`
-        * external systems like `coinbase` are mocked.
-        * `ethwallet` service might working in private net or might be mocked (it dependence).
-        * `postgres`, `rabbitmq`, `celery`, `router` services are required to be up in order to start tests.
-        * celery workers are working and celery tasks are executing in another processes.
-    * (for more information please read `README.md` in the `docker` directory)         
-   
-* `dc(b| build) <service>` - build service.
-* `dc(r| run) <service>` - run service.
-* `drmc <regex>` - delete containers that much regex expression.
-* `drmi <regex>` - delete images that much regex expression.
-* `dc(l| logs) <service>` - output service logs.
+* `gods <backend|frontend|ethwallet|router|ethnode>` - go to the `service` project directory.
 * `di` - list all images.
 * `dps` - list all working containers.
-* `ideluge` - init sensitive information that is needed for backend start.
+* `dcinit <unit|integration|frontend|testnet>` - init start mode, default mode is `DEFAULT_MODE` .
+    * `frontend`
+        * external systems like `coinbase` and `ethwallet` are mocked.
+        * `postgres`, `rabbitmq`, `celery`, `router` services are required to be up in order to celery task work.
+        * celery workers are working and celery tasks are executing like in real system.
+        * Service `notifier` is working and emulating money notification from `coinbase` and `ethwallet`.
+    * (for more information please read `README.md` in the `docker` directory)         
+
+* `dc` - alias for `docker-compose -f $DELUGE_PATH/docker/images/dev.yml -f $DELUGE_PATH/docker/composes/frontend.yml`.
+* `dc(b| build) <service>` - build service.
+* `dc(r| run) <service>` - run service.
+* `dc(u| up) <service>` - up service.
+* `dc(l| logs) <service>` - output service logs.
+* `drmc <regex>` - delete containers that much regex expression.
+* `drmi <regex>` - delete images that much regex expression.
+* `drmd <regex>` - delete volumes that much regex expression.
 
 
