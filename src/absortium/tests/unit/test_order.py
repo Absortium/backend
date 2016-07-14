@@ -105,9 +105,16 @@ class OrderTest(AbsoritumUnitTest):
             self.create_order(price=malformed_price, status=constants.ORDER_INIT)
 
     def test_buy_order_creation(self):
-        self.create_order(order_type=constants.ORDER_BUY, price="2.0", amount="0.5", status=constants.ORDER_INIT)
+        self.create_order(order_type=constants.ORDER_BUY, total="1.0", status=constants.ORDER_INIT)
 
         self.check_account_amount(self.primary_btc_account, amount="9.0")
+        self.check_account_amount(self.primary_eth_account, amount="0.0")
+
+    def test_cancel(self):
+        order = self.create_order(order_type=constants.ORDER_BUY, total="1.0", status=constants.ORDER_INIT)
+        self.cancel_order(pk=order['pk'])
+
+        self.check_account_amount(self.primary_btc_account, amount="10.0")
         self.check_account_amount(self.primary_eth_account, amount="0.0")
 
     def test_sell_order_creation(self):

@@ -4,7 +4,7 @@ from absortium import constants
 
 __author__ = 'andrew.shvv@gmail.com'
 
-from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
+from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT, HTTP_200_OK
 
 from absortium.model.models import Order
 from core.utils.logging import getLogger
@@ -52,10 +52,10 @@ class CreateOrderMixin():
 
         self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_204_NO_CONTENT])
 
-        if with_checks:
-            history = response.json()
+        history = response.json()
+        order = history[-1]
 
-            order = history[-1]
+        if with_checks:
             self.assertEqual(order['status'], status)
             self.assertEqual(order['system'], system)
 
@@ -69,11 +69,30 @@ class CreateOrderMixin():
                 # Check that order belongs to an user
                 self.assertNotEqual(obj.owner, None)
 
-                return order["pk"], obj
-
             elif order['status'] == "COMPLETED":
                 # TODO: Add check that order has status COMPLETED
                 pass
+
+        return order
+
+    def cancel_order(self,
+                     pk,
+                     user=None,
+                     with_checks=True,
+                     debug=False):
+
+        # Authenticate normal user
+        if user:
+            self.client.force_authenticate(user)
+
+        # Create order
+        url = '/api/orders/{pk}/'.format(pk=pk)
+        response = self.client.delete(url, format='json')
+
+        if debug:
+            logger.debug(response.content)
+
+        self.assertIn(response.status_code, [HTTP_200_OK, HTTP_204_NO_CONTENT])
 
     def check_order(self, price, amount, from_currency="btc", to_currency="eth", should_exist=True, debug=False):
         orders = self.get_orders(from_currency, to_currency)

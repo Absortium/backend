@@ -56,10 +56,6 @@ class opposites:
     """
         1. Search for opposite orders.
         2. Block order with pg_try_advisory_xact_lock postgres lock.
-
-        Example:
-            Order: pair: BTC_ETH price: 1 ETH = 0.1 BTC type:sell
-            Opposite order: pair=BTC_ETH Price: 1 ETH = 0.1 BTC type:buy
     """
 
     def __init__(self, order):
@@ -84,11 +80,11 @@ class opposites:
                                              'FROM absortium_order '
                                              'WHERE (status = %s OR status = %s) '
                                              'AND pg_try_advisory_xact_lock(id) '
-                                             'AND price ' + sign + ' %s '
-                                                                   'AND pair = %s '
-                                                                   'AND type = %s '
-                                                                   'FOR UPDATE '
-                                                                   'LIMIT 1 ',
+                                             'AND price {sign} %s '
+                                             'AND pair = %s '
+                                             'AND type = %s '
+                                             'FOR UPDATE '
+                                             'LIMIT 1 '.format(sign=sign),
                                              [constants.ORDER_PENDING, constants.ORDER_INIT,
                                               self.order.price,
                                               self.order.pair,

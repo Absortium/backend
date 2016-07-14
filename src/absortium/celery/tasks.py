@@ -38,7 +38,7 @@ def do_deposit(self, *args, **kwargs):
 
             account = Account.objects.select_for_update().get(pk=account_pk)
             deposit = serializer.save(account=account)
-            deposit.freeze_money()
+            deposit.process_account()
 
             return serializer.data
 
@@ -58,7 +58,7 @@ def do_withdrawal(self, *args, **kwargs):
 
             account = Account.objects.select_for_update().get(pk=account_pk)
             withdrawal = serializer.save(account=account)
-            withdrawal.freeze_money()
+            withdrawal.process_account()
 
             return serializer.data
 
@@ -119,19 +119,24 @@ def do_order(self, *args, **kwargs):
 
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
 def cancel_order(self, *args, **kwargs):
-    data = kwargs['data']
+    order_pk = kwargs['order_pk']
     user_pk = kwargs['user_pk']
 
     try:
-        serializer = OrderSerializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        order = serializer.object(owner_id=user_pk)
+        try:
+            order = Order.objects.select_for_update().get(owner__pk=user_pk, pk=order_pk)
 
-        with publishment.atomic():
-            with transaction.atomic():
-                with lockorder(order):
-                    order.unfreeze_money()
-                    order.delete()
+            with publishment.atomic():
+                with transaction.atomic():
+                    with lockorder(order):
+                        order.unfreeze_money()
+                        order.delete()
+
+        except Order.DoesNotExist():
+            """
+                If Order does not exist this means that it was processed or deleted.
+            """
+            pass
 
 
     except OperationalError:

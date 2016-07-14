@@ -189,7 +189,6 @@ class WithdrawalViewSet(CreateCeleryMixin,
 
 class OrderViewSet(CreateCeleryMixin,
                    DestroyCeleryMixin,
-                   mixins.DestroyModelMixin,
                    mixins.RetrieveModelMixin,
                    mixins.ListModelMixin,
                    viewsets.GenericViewSet):
