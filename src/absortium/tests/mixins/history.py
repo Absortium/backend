@@ -10,7 +10,7 @@ logger = getLogger(__name__)
 
 
 class HistoryMixin():
-    def get_exchanges_history(self, order_type=None, pair=constants.PAIR_BTC_ETH, debug=False):
+    def get_orders_history(self, order_type=None, pair=constants.PAIR_BTC_ETH, debug=False):
         data = {}
         if order_type is not None:
             data.update(type=order_type)

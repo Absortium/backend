@@ -67,7 +67,7 @@ def do_withdrawal(self, *args, **kwargs):
 
 
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
-def do_exchange(self, *args, **kwargs):
+def do_order(self, *args, **kwargs):
     data = kwargs['data']
     user_pk = kwargs['user_pk']
 
@@ -148,17 +148,17 @@ def calculate_market_info(self, *args, **kwargs):
                 info = MarketInfo()
                 info.pair = pair
 
-                # 1. Get exchanges for the last 24h.
+                # 1. Get orders for the last 24h.
                 day_ago = timezone.now() - timedelta(hours=constants.MARKET_INFO_DELTA)
-                exchanges_24h = Order.objects.filter(status=constants.ORDER_COMPLETED,
-                                                     pair=pair,
-                                                     created__gte=day_ago).all()
+                orders_24h = Order.objects.filter(status=constants.ORDER_COMPLETED,
+                                                  pair=pair,
+                                                  created__gte=day_ago).all()
 
                 rate_24h_max = 0
                 rate_24h_min = 0
                 volume_24h = 0
-                if exchanges_24h:
-                    rates = [exchange.price for exchange in exchanges_24h]
+                if orders_24h:
+                    rates = [order.price for order in orders_24h]
 
                     # 2. Get max rate.
                     rate_24h_max = max(rates)
@@ -167,20 +167,20 @@ def calculate_market_info(self, *args, **kwargs):
                     rate_24h_min = min(rates)
 
                     # 4. Calculate the market volume.
-                    volume_24h = sum((exchange.total for exchange in exchanges_24h))
+                    volume_24h = sum((order.total for order in orders_24h))
 
                 info.rate_24h_max = rate_24h_max
                 info.rate_24h_min = rate_24h_min
                 info.volume_24h = volume_24h
 
-                # 5. Get the last completed exchanges
-                last_exchanges = Order.objects.filter(status=constants.ORDER_COMPLETED,
-                                                      pair=pair).all()[:constants.MARKET_INFO_COUNT_OF_EXCHANGES]
+                # 5. Get the last completed orders
+                last_orders = Order.objects.filter(status=constants.ORDER_COMPLETED,
+                                                   pair=pair).all()[:constants.MARKET_INFO_COUNT_OF_EXCHANGES]
 
                 average_price = 0
-                if last_exchanges:
+                if last_orders:
                     # 6. Calculate average price
-                    average_price = sum([exchange.price for exchange in last_exchanges]) / len(last_exchanges)
+                    average_price = sum([order.price for order in last_orders]) / len(last_orders)
 
                 info.rate = average_price
                 info.save()

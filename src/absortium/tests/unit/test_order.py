@@ -42,7 +42,7 @@ class OrderTest(AbsoritumUnitTest):
 
     def test_orders_count(self):
         """
-            Check that we get only exchanges which belong to the user.
+            Check that we get only orders which belong to the user.
         """
         self.create_order(price="1", status="init")
         self.create_order(price="1", status="init")
@@ -53,15 +53,15 @@ class OrderTest(AbsoritumUnitTest):
 
     def test_to_amount(self):
         """
-            Check that we get only exchanges which belong to the user.
+            Check that we get only orders which belong to the user.
         """
         self.create_order(total="1", price="1", status="init")
         self.create_order(total="1", price="1", status="init")
         self.assertEqual(len(self.get_orders()), 2)
 
-    def test_exchanges_count_with_different_currency(self):
+    def test_orders_count_with_different_currency(self):
         """
-            Check that we get only exchanges which belong to the user.
+            Check that we get only orders which belong to the user.
         """
         self.make_deposit(self.primary_eth_account, amount="10.0")
 
@@ -74,11 +74,11 @@ class OrderTest(AbsoritumUnitTest):
         self.assertEqual(len(self.get_orders(constants.ORDER_BUY)), 1)
 
     def test_malformed(self, *args, **kwargs):
-        trash_exchange_pk = "972368423423"
+        trash_order_pk = "972368423423"
 
         # Create an account and try to get uncreated order
         account = self.get_account("btc")
-        url = "/api/orders/{exchange_pk}/".format(exchange_pk=trash_exchange_pk)
+        url = "/api/orders/{order_pk}/".format(order_pk=trash_order_pk)
 
         response = self.client.get(url, format="json")
         self.assertEqual(response.status_code, HTTP_404_NOT_FOUND)
@@ -119,7 +119,7 @@ class OrderTest(AbsoritumUnitTest):
 
     def test_run_out_deposit(self):
         """
-            Create exchanges without money
+            Create orders without money
         """
         with self.assertRaises(AssertionError):
             self.create_order(price="2.0", amount="999")
@@ -127,9 +127,9 @@ class OrderTest(AbsoritumUnitTest):
         self.check_account_amount(self.primary_btc_account, amount="10.0")
         self.check_account_amount(self.primary_eth_account, amount="0.0")
 
-    def test_simple_exchange(self):
+    def test_simple_order(self):
         """
-            Create exchanges which will be processed fully
+            Create orders which will be processed fully
         """
 
         self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="20", status=constants.ORDER_INIT)
@@ -145,9 +145,9 @@ class OrderTest(AbsoritumUnitTest):
         self.check_account_amount(self.primary_btc_account, amount="0.0")
         self.assertEqual(len(self.get_orders(constants.ORDER_BUY)), 1)
 
-    def test_multiple_exchanges(self):
+    def test_multiple_orders(self):
         """
-            Create exchanges which will be processed fully
+            Create orders which will be processed fully
         """
 
         self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="8", status=constants.ORDER_INIT)
@@ -165,9 +165,9 @@ class OrderTest(AbsoritumUnitTest):
         self.check_account_amount(self.primary_btc_account, amount="0.0")
         self.assertEqual(len(self.get_orders(constants.ORDER_BUY)), 3)
 
-    def test_exchange_pending(self):
+    def test_order_pending(self):
         """
-            Create exchanges which will not be fully processed
+            Create orders which will not be fully processed
         """
         self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="16.0", status=constants.ORDER_INIT)
 
@@ -182,7 +182,7 @@ class OrderTest(AbsoritumUnitTest):
 
     def test_same_account(self):
         """
-            Create opposite exchanges on the same account
+            Create opposite orders on the same account
         """
         self.make_deposit(self.primary_eth_account, amount="20.0")
 
@@ -194,9 +194,9 @@ class OrderTest(AbsoritumUnitTest):
         self.check_account_amount(self.primary_btc_account, amount="10.0")
         self.check_account_amount(self.primary_eth_account, amount="20.0")
 
-    def test_with_two_exchanges_with_diff_price(self):
+    def test_with_two_orders_with_diff_price(self):
         """
-            Create create two exchanges with different price and then one opposite with smaller price.
+            Create create two orders with different price and then one opposite with smaller price.
         """
         self.create_order(order_type=constants.ORDER_BUY, price="0.5", total="5.0", status=constants.ORDER_INIT)
         self.create_order(order_type=constants.ORDER_BUY, price="1.0", total="5.0", status=constants.ORDER_INIT)
@@ -210,7 +210,7 @@ class OrderTest(AbsoritumUnitTest):
         self.check_account_amount(self.primary_btc_account, amount="0.0")
         self.check_account_amount(self.primary_eth_account, amount="15.0")
 
-    def test_exchange_readonly_status(self):
+    def test_order_readonly_status(self):
         # check that we can't set the order status
         extra_data = {
             'status': constants.ORDER_PENDING
@@ -218,7 +218,7 @@ class OrderTest(AbsoritumUnitTest):
 
         self.create_order(price="1.0", amount="10.0", status=constants.ORDER_INIT, extra_data=extra_data)
 
-    def test_exchange_readonly_system(self):
+    def test_order_readonly_system(self):
         # check that we can't set the order status
         extra_data = {
             'system': constants.SYSTEM_POLONIEX

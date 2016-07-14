@@ -55,23 +55,23 @@ class CreateOrderMixin():
         if with_checks:
             history = response.json()
 
-            exchange = history[-1]
-            self.assertEqual(exchange['status'], status)
-            self.assertEqual(exchange['system'], system)
+            order = history[-1]
+            self.assertEqual(order['status'], status)
+            self.assertEqual(order['system'], system)
 
-            if exchange['status'] == "PENDING":
+            if order['status'] == "PENDING":
                 # Check that order exist in db
                 try:
-                    obj = Order.objects.get(pk=exchange["pk"])
+                    obj = Order.objects.get(pk=order["pk"])
                 except Order.DoesNotExist:
                     self.fail("Order object wasn't found in db")
 
                 # Check that order belongs to an user
                 self.assertNotEqual(obj.owner, None)
 
-                return exchange["pk"], obj
+                return order["pk"], obj
 
-            elif exchange['status'] == "COMPLETED":
+            elif order['status'] == "COMPLETED":
                 # TODO: Add check that order has status COMPLETED
                 pass
 
@@ -82,9 +82,9 @@ class CreateOrderMixin():
             logger.debug(orders)
 
         is_exist = False
-        for exchange in orders:
-            if decimal.Decimal(exchange['price']) == decimal.Decimal(price) and decimal.Decimal(
-                    exchange['amount']) == decimal.Decimal(amount):
+        for order in orders:
+            if decimal.Decimal(order['price']) == decimal.Decimal(price) and decimal.Decimal(
+                    order['amount']) == decimal.Decimal(amount):
                 is_exist = True
 
         self.assertEqual(is_exist, should_exist)

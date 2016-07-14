@@ -96,8 +96,8 @@ class opposites:
 
             except IndexError:
                 """
-                    Very dirty hack; While exchanges selection might happen that all exchanges are locked,
-                    so we may end up with skipping the exchanges processing, in order to low the likelihood of such situation, do it
+                    Very dirty hack; While orders selection might happen that all orders are locked,
+                    so we may end up with skipping the orders processing, in order to low the likelihood of such situation, do it
                     3 times.
                 """
                 self.times -= 1
@@ -108,7 +108,7 @@ class opposites:
 
             if self.order.owner_id == opposite.owner_id:
                 """
-                    If we process the same users that means that exchanges are opposite
+                    If we process the same users that means that orders are opposite
                     and we should not block the same accounts twice.
                 """
                 opposite.from_account = self.order.to_account

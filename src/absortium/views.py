@@ -228,7 +228,7 @@ class OrderViewSet(CreateCeleryMixin,
             "user_pk": request.user.pk,
         }
 
-        return tasks.do_exchange.delay(**context)
+        return tasks.do_order.delay(**context)
 
 
 class HistoryViewSet(generics.GenericAPIView,

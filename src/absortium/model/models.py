@@ -150,7 +150,7 @@ class Order(models.Model):
 
     'owner' - user; owner of the order.
 
-    'pair' - represent the two currency between exchanges are happening.
+    'pair' - represent the two currency between orders are happening.
     Example: BTC_ETH, BTC - primary currency, ETH - secondary currency.
     """
 

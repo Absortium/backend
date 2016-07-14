@@ -94,7 +94,7 @@ class MarketInfoTest(AbsoritumUnitTest):
             self.assertEqual(self.to_dec(last_info_btc_eth["rate_24h_max"]), 2.0)
             self.assertEqual(self.to_dec(last_info_btc_eth["rate_24h_min"]), 2.0)
 
-    def test_price_when_exchange_expired(self):
+    def test_price_when_order_expired(self):
         self.make_deposit(self.get_account("btc"), amount="999999.0")
         self.make_deposit(self.get_account("eth"), amount="999999.0")
 
