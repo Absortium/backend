@@ -47,10 +47,11 @@ class Offer(models.Model):
         ordering = ('price',)
         unique_together = ('pair', 'price', 'system', 'type')
 
-    def update(self, **kwargs):
+    @staticmethod
+    def update(pk, **kwargs):
         # update() is converted directly to an SQL statement; it doesn't exec save() on the model
         # instances, and so the pre_save and post_save signals aren't emitted.
-        Offer.objects.filter(pk=self.pk).update(**kwargs)
+        Offer.objects.filter(pk=pk).update(**kwargs)
 
     @property
     def primary_currency(self):
@@ -104,10 +105,19 @@ class Account(models.Model):
         unique_together = ('currency', 'owner', 'address')
         ordering = ('-created',)
 
-    def update(self, **kwargs):
+    @staticmethod
+    def lock(**kwargs):
+        return Account.objects.select_for_update().get(**kwargs)
+
+    @staticmethod
+    def locks(**kwargs):
+        return Account.objects.select_for_update().filter(**kwargs)
+
+    @staticmethod
+    def update(pk, **kwargs):
         # update() is converted directly to an SQL statement; it doesn't exec save() on the model
         # instances, and so the pre_save and post_save signals aren't emitted.
-        Account.objects.filter(pk=self.pk).update(**kwargs)
+        Account.objects.filter(pk=pk).update(**kwargs)
 
 
 def operation_wrapper(func):
@@ -258,6 +268,18 @@ class Order(models.Model):
         elif self.type == constants.ORDER_SELL:
             self.total = value
 
+    @staticmethod
+    def lock(**kwargs):
+        return Order.objects.select_for_update().get(**kwargs)
+
+    @staticmethod
+    def locks(**kwargs):
+        return Order.objects.select_for_update().filter(**kwargs)
+
+    @staticmethod
+    def update(pk, **kwargs):
+        Order.objects.filter(pk=pk).update(**kwargs)
+
     def freeze_money(self):
         # Check that we have enough money
         if self.from_account.amount >= self.from_amount:
@@ -271,9 +293,6 @@ class Order(models.Model):
     def unfreeze_money(self):
         self.from_account.amount += self.from_amount
         self.save()
-
-    def update(self, **kwargs):
-        Account.objects.filter(pk=self.pk).update(**kwargs)
 
     def split(self, opposite):
         """
@@ -368,7 +387,7 @@ class Deposit(models.Model):
 
     def process_account(self):
         amount = self.account.amount + self.amount
-        self.account.update(amount=amount)
+        Account.update(pk=self.account.pk, amount=amount)
 
 
 class Withdrawal(models.Model):
@@ -382,7 +401,7 @@ class Withdrawal(models.Model):
     def process_account(self):
         if self.account.amount - self.amount >= 0:
             amount = self.account.amount - self.amount
-            self.account.update(amount=amount)
+            Account.update(pk=self.account.pk, amount=amount)
 
             client = get_wallet_client(self.account.currency)
             client.send(self.amount, self.address)

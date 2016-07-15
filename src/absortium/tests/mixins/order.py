@@ -107,7 +107,7 @@ class CreateOrderMixin():
             self.client.force_authenticate(user)
 
         # Create order
-        url = '/api/orders/{pk}/approve'.format(pk=pk)
+        url = '/api/orders/{pk}/approve/'.format(pk=pk)
         response = self.client.post(url, format='json')
 
         if debug:

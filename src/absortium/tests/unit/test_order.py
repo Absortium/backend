@@ -111,6 +111,7 @@ class OrderTest(AbsoritumUnitTest):
         self.check_account_amount(self.primary_eth_account, amount="0.0")
 
     def test_approve(self):
+
         order = self.create_order(order_type=constants.ORDER_BUY,
                                   price="0.5",
                                   amount="20",
@@ -125,11 +126,11 @@ class OrderTest(AbsoritumUnitTest):
 
         # Unless order is not approved it should not be processed
         self.check_account_amount(self.some_btc_account, amount="0.0")
-        self.check_account_amount(self.some_eth_account, amount="20.0")
+        self.check_account_amount(self.some_eth_account, amount="0.0")
 
         self.client.force_authenticate(self.user)
         self.check_account_amount(self.primary_eth_account, amount="0.0")
-        self.check_account_amount(self.primary_btc_account, amount="10.0")
+        self.check_account_amount(self.primary_btc_account, amount="0.0")
 
         # After approve order should be processed
         self.approve_order(pk=order['pk'])

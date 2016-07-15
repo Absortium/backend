@@ -6,14 +6,14 @@ from django.db import transaction
 from django.db.models import Sum
 from django.http import HttpResponse
 from rest_framework import generics, mixins, viewsets
-from rest_framework.decorators import api_view, authentication_classes, permission_classes, detail_route
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK
 
 from absortium import constants
 from absortium.celery import tasks
-from absortium.mixins import CreateCeleryMixin, DestroyCeleryMixin
+from absortium.mixins import CreateCeleryMixin, DestroyCeleryMixin, ApproveCeleryMixin
 from absortium.model.models import Offer, Order, Account, MarketInfo
 from absortium.serializers import \
     UserSerializer, \
@@ -189,6 +189,7 @@ class WithdrawalViewSet(CreateCeleryMixin,
 
 class OrderViewSet(CreateCeleryMixin,
                    DestroyCeleryMixin,
+                   ApproveCeleryMixin,
                    mixins.RetrieveModelMixin,
                    mixins.ListModelMixin,
                    viewsets.GenericViewSet):
@@ -231,7 +232,6 @@ class OrderViewSet(CreateCeleryMixin,
 
         return tasks.do_order.delay(**context)
 
-    @detail_route(methods=['post'])
     def approve_in_celery(self, request, *args, **kwargs):
         context = {
             "order_pk": self.get_object().pk,

@@ -7,7 +7,7 @@ __author__ = 'andrew.shvv@gmail.com'
 logger = getLogger(__name__)
 
 
-class lockorder:
+class lockaccounts:
     def __init__(self, order=None):
         self.order = order
 
@@ -27,9 +27,9 @@ class lockorder:
 
             """
 
-            accounts = Account.objects.select_for_update().filter(owner__pk=self.order.owner_id,
-                                                                  currency__in=[self.order.primary_currency,
-                                                                                self.order.secondary_currency])
+            accounts = Account.locks(owner__pk=self.order.owner_id,
+                                     currency__in=[self.order.primary_currency,
+                                                   self.order.secondary_currency])
 
             for account in accounts:
                 if account.currency == self.order.from_currency:
@@ -45,8 +45,8 @@ class lockorder:
             """
                 Account always should be updated even if order in 'init' state, because we subtract order amount from account.
             """
-            self.order.from_account.update(amount=self.order.from_account.amount)
-            self.order.to_account.update(amount=self.order.to_account.amount)
+            Account.update(pk=self.order.from_account.pk, amount=self.order.from_account.amount)
+            Account.update(pk=self.order.to_account.pk, amount=self.order.to_account.amount)
 
             if self.order.status != constants.ORDER_INIT:
                 self.order.save()
