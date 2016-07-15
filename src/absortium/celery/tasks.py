@@ -109,7 +109,7 @@ def do_order(self, *args, **kwargs):
                     order.freeze_money()
                     history = process(order)
 
-                return [OrderSerializer(e).data for e in history]
+        return [OrderSerializer(e).data for e in history]
 
     except OperationalError:
         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
@@ -130,7 +130,7 @@ def cancel_order(self, *args, **kwargs):
                         order.unfreeze_money()
                         order.delete()
 
-        except Order.DoesNotExist():
+        except Order.DoesNotExist:
             """
                 If Order does not exist this means that it was processed or deleted.
             """
@@ -157,7 +157,7 @@ def approve_order(self, *args, **kwargs):
                     with lockaccounts(opposite):
                         order.merge(opposite)
 
-        except Order.DoesNotExist():
+        except Order.DoesNotExist:
             """
                 If Order does not exist this means that it was canceled.
             """

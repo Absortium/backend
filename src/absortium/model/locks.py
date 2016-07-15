@@ -10,6 +10,11 @@ logger = getLogger(__name__)
 class lockaccounts:
     def __init__(self, order=None):
         self.order = order
+        self.status = order.status
+        self.amount = order.amount
+
+        if order.pk is None:
+            self.order.save()
 
     def __enter__(self):
         if not self.order.from_account and not self.order.to_account:
@@ -41,14 +46,13 @@ class lockaccounts:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not exc_val:
-
             """
                 Account always should be updated even if order in 'init' state, because we subtract order amount from account.
             """
             Account.update(pk=self.order.from_account.pk, amount=self.order.from_account.amount)
             Account.update(pk=self.order.to_account.pk, amount=self.order.to_account.amount)
 
-            if self.order.status != constants.ORDER_INIT:
+            if self.status != self.order.status or self.amount != self.order.amount:
                 self.order.save()
 
 

@@ -286,13 +286,11 @@ class Order(models.Model):
 
             # Subtract money from account because it is locked by order
             self.from_account.amount -= self.from_amount
-            self.save()
         else:
             raise ValidationError("Not enough money for order creation")
 
     def unfreeze_money(self):
         self.from_account.amount += self.from_amount
-        self.save()
 
     def split(self, opposite):
         """
@@ -347,7 +345,7 @@ class Order(models.Model):
                 # merge opposite orders
                 fraction.merge(opposite)
 
-            if fraction.pk is None:
+            if order is not None:
                 fraction.save()
 
             return fraction, order
