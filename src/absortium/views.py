@@ -3,6 +3,7 @@ import json
 from django.contrib.auth.models import User, Group
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
+from django.db.models import Q
 from django.db.models import Sum
 from django.http import HttpResponse
 from rest_framework import generics, mixins, viewsets
@@ -260,7 +261,7 @@ class HistoryViewSet(generics.GenericAPIView,
         """
             This method used for filter origin orders queryset by the given pair/type currency.
         """
-        fields = {"status": constants.ORDER_COMPLETED}
+        fields = {}
 
         pair = get_field(self.request.GET, 'pair', constants.AVAILABLE_CURRENCY_PAIRS, throw=False)
         if pair is not None:
@@ -270,7 +271,7 @@ class HistoryViewSet(generics.GenericAPIView,
         if order_type is not None:
             fields.update(type=order_type)
 
-        return queryset.filter(**fields)
+        return queryset.filter(Q(status=constants.ORDER_COMPLETED) | Q(status=constants.ORDER_CANCELED), **fields)
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)

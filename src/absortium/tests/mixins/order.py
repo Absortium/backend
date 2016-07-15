@@ -1,7 +1,5 @@
 import decimal
 
-from rest_framework.decorators import detail_route, list_route
-
 from absortium import constants
 
 __author__ = 'andrew.shvv@gmail.com'
@@ -130,7 +128,10 @@ class CreateOrderMixin():
 
         self.assertEqual(is_exist, should_exist)
 
-    def get_orders(self, order_type="buy", pair="btc_eth", debug=False):
+    def get_orders(self,
+                   order_type=constants.ORDER_BUY,
+                   pair=constants.PAIR_BTC_ETH,
+                   debug=False):
 
         data = {
             "pair": pair,

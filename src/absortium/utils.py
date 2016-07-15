@@ -88,7 +88,6 @@ def safe_offer_update(price, order_type, pair, update, system=constants.SYSTEM_O
                                         system=system)
 
             offer.amount = update(offer.amount)
-
             if offer.amount > 0:
                 offer.save()
             else:

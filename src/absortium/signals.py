@@ -46,7 +46,7 @@ def order_post_save(sender, instance, *args, **kwargs):
                           order_type=new_order.type,
                           update=lambda amount: amount + new_order.amount)
 
-    elif new_order.status == constants.ORDER_COMPLETED:
+    elif new_order.status in [constants.ORDER_COMPLETED, constants.ORDER_CANCELED]:
         safe_offer_update(price=new_order.price,
                           pair=new_order.pair,
                           order_type=new_order.type,

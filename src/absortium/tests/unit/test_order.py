@@ -150,6 +150,8 @@ class OrderTest(AbsoritumUnitTest):
         self.check_account_amount(self.primary_btc_account, amount="10.0")
         self.check_account_amount(self.primary_eth_account, amount="0.0")
 
+        self.assertEqual(len(self.get_orders_history()), 1)
+
     def test_sell_order_creation(self):
         self.client.force_authenticate(self.some_user)
         self.create_order(order_type=constants.ORDER_SELL, price="0.5", amount="2.0", status=constants.ORDER_INIT)

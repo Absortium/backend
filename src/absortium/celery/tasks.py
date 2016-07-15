@@ -127,8 +127,14 @@ def cancel_order(self, *args, **kwargs):
                     order = Order.lock(owner__pk=user_pk, pk=order_pk)
 
                     with lockaccounts(order):
+                        if order.status == constants.ORDER_APPROVING:
+                            opposite = Order.lock(pk=order.link.pk)
+
+                            with lockaccounts(opposite):
+                                opposite.status = constants.ORDER_PENDING
+
                         order.unfreeze_money()
-                        order.delete()
+                        order.status = constants.ORDER_CANCELED
 
         except Order.DoesNotExist:
             """
