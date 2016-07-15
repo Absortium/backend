@@ -96,9 +96,9 @@ class CreateOrderMixin():
         self.assertIn(response.status_code, [HTTP_200_OK, HTTP_204_NO_CONTENT])
 
     def approve_order(self,
-                     pk,
-                     user=None,
-                     debug=False):
+                      pk,
+                      user=None,
+                      debug=False):
 
         # Authenticate normal user
         if user:
@@ -113,17 +113,28 @@ class CreateOrderMixin():
 
         self.assertIn(response.status_code, [HTTP_200_OK])
 
-
-    def check_order(self, price, amount, from_currency="btc", to_currency="eth", should_exist=True, debug=False):
-        orders = self.get_orders(from_currency, to_currency)
+    def check_order(self,
+                    price,
+                    amount,
+                    status,
+                    order_type=constants.ORDER_BUY,
+                    pair=constants.PAIR_BTC_ETH,
+                    should_exist=True,
+                    debug=False):
+        orders = self.get_orders(order_type=order_type,
+                                 pair=pair)
 
         if debug:
             logger.debug(orders)
 
         is_exist = False
         for order in orders:
-            if decimal.Decimal(order['price']) == decimal.Decimal(price) and decimal.Decimal(
-                    order['amount']) == decimal.Decimal(amount):
+            c1 = decimal.Decimal(order['price']) == decimal.Decimal(price)
+            c2 = decimal.Decimal(order['amount']) == decimal.Decimal(amount)
+            c3 = order['status'] == status
+            c4 = order['type'] == order_type
+
+            if c1 and c2 and c3 and c4:
                 is_exist = True
 
         self.assertEqual(is_exist, should_exist)
