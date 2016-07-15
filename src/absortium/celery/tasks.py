@@ -14,7 +14,7 @@ from absortium.wallet.pool import AccountPool
 from absortium.celery.base import get_base_class
 from absortium.crossbarhttp import publishment
 from absortium.exceptions import AlreadyExistError
-from absortium.model.locks import lockorder, opposites
+from absortium.model.locks import lockorder, get_opposites
 from absortium.model.models import Account, Order, MarketInfo
 from absortium.serializers import \
     OrderSerializer, \
@@ -78,11 +78,17 @@ def do_order(self, *args, **kwargs):
 
         def process(order):
             history = []
-            for opposite in opposites(order):
+
+            for opposite in get_opposites(order):
                 with lockorder(opposite):
-                    if order > opposite:
+                    if order >= opposite:
                         (fraction, order) = order - opposite
-                        history.append(fraction)
+
+                        if order is None:
+                            order = fraction
+                            break
+                        else:
+                            history.append(fraction)
 
                     elif order < opposite:
                         """
@@ -90,14 +96,6 @@ def do_order(self, *args, **kwargs):
                             than add order to the history
                         """
                         (_, opposite) = opposite - order
-                        break
-
-                    else:
-                        """
-                            In this case order will be in the ORDER_COMPLETED status, so just break loop and
-                            than add order to the history
-                        """
-                        (_, order) = order - opposite
                         break
 
             return history + [order]

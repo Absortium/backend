@@ -283,6 +283,7 @@ class Order(models.Model):
 
         if order.from_amount <= opposite.to_amount:
             fraction = order
+            return fraction, None
         else:
             from copy import deepcopy
             fraction = deepcopy(order)
@@ -295,7 +296,7 @@ class Order(models.Model):
             order.from_amount -= opposite.to_amount
             order.to_amount -= opposite.from_amount
 
-        return fraction, order
+            return fraction, order
 
     def merge(self, opposite):
         fraction = self

@@ -52,7 +52,7 @@ class lockorder:
                 self.order.save()
 
 
-class opposites:
+class get_opposites:
     """
         1. Search for opposite orders.
         2. Block order with pg_try_advisory_xact_lock postgres lock.
