@@ -81,8 +81,8 @@ def do_order(self, *args, **kwargs):
             for opposite in opposites(order):
                 with lockorder(opposite):
                     if order > opposite:
-                        (completed, order) = order - opposite
-                        history.append(completed)
+                        (fraction, order) = order - opposite
+                        history.append(fraction)
 
                     elif order < opposite:
                         """
@@ -124,10 +124,10 @@ def cancel_order(self, *args, **kwargs):
 
     try:
         try:
-            order = Order.objects.select_for_update().get(owner__pk=user_pk, pk=order_pk)
-
             with publishment.atomic():
                 with transaction.atomic():
+                    order = Order.objects.select_for_update().get(owner__pk=user_pk, pk=order_pk)
+
                     with lockorder(order):
                         order.unfreeze_money()
                         order.delete()
@@ -135,6 +135,30 @@ def cancel_order(self, *args, **kwargs):
         except Order.DoesNotExist():
             """
                 If Order does not exist this means that it was processed or deleted.
+            """
+            pass
+
+
+    except OperationalError:
+        raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
+
+
+@shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
+def approve_order(self, *args, **kwargs):
+    order_pk = kwargs['order_pk']
+    user_pk = kwargs['user_pk']
+
+    try:
+        try:
+            with transaction.atomic():
+                order = Order.objects.select_for_update().get(owner__pk=user_pk, pk=order_pk)
+
+                with lockorder(order):
+                    order.status = constants.ORDER_APPROVING
+
+        except Order.DoesNotExist():
+            """
+                If Order does not exist this means that it was canceled.
             """
             pass
 

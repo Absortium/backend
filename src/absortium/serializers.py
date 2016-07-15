@@ -97,9 +97,11 @@ class OrderSerializer(serializers.ModelSerializer):
                                      decimal_places=constants.DECIMAL_PLACES,
                                      min_value=constants.PRICE_MIN_VALUE)
 
+    need_approve = serializers.BooleanField(default=False)
+
     class Meta:
         model = Order
-        fields = ('pk', 'price', 'created', 'status', 'type', 'system', 'amount', 'total', 'pair')
+        fields = ('pk', 'price', 'created', 'status', 'type', 'system', 'amount', 'total', 'pair', 'need_approve')
 
     def __init__(self, *args, **kwargs):
         data = kwargs.get('data')

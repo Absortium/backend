@@ -6,7 +6,7 @@ from django.db import transaction
 from django.db.models import Sum
 from django.http import HttpResponse
 from rest_framework import generics, mixins, viewsets
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes, detail_route
 from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK
@@ -231,11 +231,19 @@ class OrderViewSet(CreateCeleryMixin,
 
         return tasks.do_order.delay(**context)
 
+    @detail_route(methods=['post'])
+    def approve_in_celery(self, request, *args, **kwargs):
+        context = {
+            "order_pk": self.get_object().pk,
+            "user_pk": request.user.pk,
+        }
+
+        return tasks.approve_order.delay(**context)
+
     def destroy_in_celery(self, request, *args, **kwargs):
         context = {
             "order_pk": self.get_object().pk,
             "user_pk": request.user.pk,
-
         }
 
         return tasks.cancel_order.delay(**context)

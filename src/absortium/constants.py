@@ -4,10 +4,12 @@ __author__ = 'andrew.shvv@gmail.com'
 
 ORDER_INIT = 'init'
 ORDER_PENDING = 'pending'
+ORDER_APPROVING = 'approving'
 ORDER_COMPLETED = 'completed'
 AVAILABLE_ORDER_STATUSES = [
     ORDER_INIT,
     ORDER_PENDING,
+    ORDER_APPROVING,
     ORDER_COMPLETED
 ]
 

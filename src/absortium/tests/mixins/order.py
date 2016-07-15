@@ -1,5 +1,7 @@
 import decimal
 
+from rest_framework.decorators import detail_route, list_route
+
 from absortium import constants
 
 __author__ = 'andrew.shvv@gmail.com'
@@ -21,6 +23,7 @@ class CreateOrderMixin():
                      pair=constants.PAIR_BTC_ETH,
                      status=constants.ORDER_COMPLETED,
                      system=constants.SYSTEM_OWN,
+                     need_approve=False,
                      user=None,
                      with_checks=True,
                      debug=False,
@@ -28,7 +31,8 @@ class CreateOrderMixin():
         data = {
             'type': order_type,
             'price': price,
-            'pair': pair
+            'pair': pair,
+            'need_approve': need_approve
         }
 
         if total is not None:
@@ -78,7 +82,6 @@ class CreateOrderMixin():
     def cancel_order(self,
                      pk,
                      user=None,
-                     with_checks=True,
                      debug=False):
 
         # Authenticate normal user
@@ -93,6 +96,25 @@ class CreateOrderMixin():
             logger.debug(response.content)
 
         self.assertIn(response.status_code, [HTTP_200_OK, HTTP_204_NO_CONTENT])
+
+    def approve_order(self,
+                     pk,
+                     user=None,
+                     debug=False):
+
+        # Authenticate normal user
+        if user:
+            self.client.force_authenticate(user)
+
+        # Create order
+        url = '/api/orders/{pk}/approve'.format(pk=pk)
+        response = self.client.post(url, format='json')
+
+        if debug:
+            logger.debug(response.content)
+
+        self.assertIn(response.status_code, [HTTP_200_OK])
+
 
     def check_order(self, price, amount, from_currency="btc", to_currency="eth", should_exist=True, debug=False):
         orders = self.get_orders(from_currency, to_currency)

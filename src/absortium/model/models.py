@@ -178,6 +178,9 @@ class Order(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
 
+    need_approve = models.BooleanField(default=False)
+    link = models.ForeignKey('Order', null=True)
+
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="orders")
 
     class Meta:
@@ -272,43 +275,62 @@ class Order(models.Model):
     def update(self, **kwargs):
         Account.objects.filter(pk=self.pk).update(**kwargs)
 
-    def split(self, to_amount, from_amount):
+    def split(self, opposite):
         """
-            Divide order on two parts - completed part and remain part
+            Divide order on two parts.
         """
+        order = self
 
-        if self.from_amount <= to_amount:
-            self.status = constants.ORDER_COMPLETED
-            completed = self
+        if order.from_amount <= opposite.to_amount:
+            fraction = order
         else:
             from copy import deepcopy
-            completed = deepcopy(self)
-            completed.from_amount = to_amount
-            completed.to_amount = from_amount
-            completed.pk = None
-            completed.status = constants.ORDER_COMPLETED
-            completed.save()
+            fraction = deepcopy(order)
+            fraction.from_amount = opposite.to_amount
+            fraction.to_amount = opposite.from_amount
+            fraction.to_account = order.to_account
+            fraction.from_account = order.from_account
+            fraction.pk = None
 
-            self.from_amount -= to_amount
-            self.to_amount -= from_amount
+            order.from_amount -= opposite.to_amount
+            order.to_amount -= opposite.from_amount
 
-        return completed, self
+        return fraction, order
+
+    def merge(self, opposite):
+        fraction = self
+
+        fraction.to_account.amount += opposite.from_amount
+        opposite.to_account.amount += opposite.to_amount
+
+        fraction.status = constants.ORDER_COMPLETED
+        opposite.status = constants.ORDER_COMPLETED
 
     def __sub__(self, obj):
         if isinstance(obj, Order):
             opposite = obj
             order = self
-
             order.status = constants.ORDER_PENDING
-            opposite.status = constants.ORDER_COMPLETED
-
-            order.to_account.amount += opposite.from_amount
-            opposite.to_account.amount += opposite.to_amount
 
             # save fraction of order to store history of orders
-            (completed, order) = order.split(opposite.to_amount, opposite.from_amount)
+            (fraction, order) = order.split(opposite)
 
-            return completed, order
+            fraction.link = opposite
+            opposite.link = fraction
+
+            if fraction.need_approve or opposite.need_approve:
+                # wait for approving
+                fraction.status = constants.ORDER_APPROVING
+                opposite.status = constants.ORDER_APPROVING
+
+            else:
+                # merge opposite orders
+                fraction.merge(opposite)
+
+            if fraction.pk is None:
+                fraction.save()
+
+            return fraction, order
         else:
             return NotImplemented
 
