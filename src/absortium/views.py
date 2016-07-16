@@ -13,7 +13,7 @@ from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK
 
 from absortium import constants
 from absortium.celery import tasks
-from absortium.mixins import CreateCeleryMixin, DestroyCeleryMixin, ApproveCeleryMixin
+from absortium.mixins import CreateCeleryMixin, DestroyCeleryMixin, ApproveCeleryMixin, UpdateCeleryMixin
 from absortium.model.models import Offer, Order, Account, MarketInfo
 from absortium.serializers import \
     UserSerializer, \
@@ -190,6 +190,7 @@ class WithdrawalViewSet(CreateCeleryMixin,
 class OrderViewSet(CreateCeleryMixin,
                    DestroyCeleryMixin,
                    ApproveCeleryMixin,
+                   UpdateCeleryMixin,
                    mixins.RetrieveModelMixin,
                    mixins.ListModelMixin,
                    viewsets.GenericViewSet):
@@ -230,7 +231,16 @@ class OrderViewSet(CreateCeleryMixin,
             "user_pk": request.user.pk,
         }
 
-        return tasks.do_order.delay(**context)
+        return tasks.create_order.delay(**context)
+
+    def update_in_celery(self, request, *args, **kwargs):
+        context = {
+            "data": request.data,
+            "order_pk": self.get_object().pk,
+            "user_pk": request.user.pk,
+        }
+
+        return tasks.update_order.delay(**context)
 
     def approve_in_celery(self, request, *args, **kwargs):
         context = {

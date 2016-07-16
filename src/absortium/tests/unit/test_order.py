@@ -1,12 +1,11 @@
-from absortium import constants
-
-__author__ = "andrew.shvv@gmail.com"
-
 from django.contrib.auth import get_user_model
 from rest_framework.status import HTTP_404_NOT_FOUND
 
+from absortium import constants
 from absortium.tests.base import AbsoritumUnitTest
 from core.utils.logging import getLogger
+
+__author__ = "andrew.shvv@gmail.com"
 
 logger = getLogger(__name__)
 
