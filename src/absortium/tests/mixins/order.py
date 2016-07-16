@@ -132,8 +132,12 @@ class CreateOrderMixin():
         order = response.json()
 
         if with_checks:
-            self.assertEqual(decimal.Decimal(order['price']), decimal.Decimal(price))
-            self.assertEqual(decimal.Decimal(order['amount']), decimal.Decimal(amount))
+
+            if price is not None:
+                self.assertEqual(decimal.Decimal(order['price']), decimal.Decimal(price))
+
+            if amount is not None:
+                self.assertEqual(decimal.Decimal(order['amount']), decimal.Decimal(amount))
 
         return order
 

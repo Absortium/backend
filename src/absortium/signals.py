@@ -2,7 +2,7 @@
     In order to avoid cycle import problem we should separate models and signals
 """
 from django.contrib.auth import get_user_model
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch.dispatcher import receiver
 
 from absortium import constants
@@ -33,29 +33,40 @@ def user_post_save(sender, instance, *args, **kwargs):
         tasks.create_account.delay(**context)
 
 
+@receiver(pre_save, sender=Order, dispatch_uid="order_pre_save")
+def order_pre_save(sender, instance, *args, **kwargs):
+    order = instance
+    is_new_order = order.pk is None
+
+    def do(update):
+        safe_offer_update(price=order.price,
+                          pair=order.pair,
+                          order_type=order.type,
+                          update=update)
+
+    if order.status in [constants.ORDER_INIT, constants.ORDER_PENDING] and is_new_order:
+        do(update=lambda amount: amount + order.amount)
+
+    elif order.status in [constants.ORDER_INIT, constants.ORDER_PENDING] and not is_new_order:
+        old_order = Order.objects.get(pk=order.pk)
+        do(update=lambda amount: amount + order.amount - old_order.amount)
+
+    elif order.status in [constants.ORDER_COMPLETED, constants.ORDER_CANCELED]:
+        do(update=lambda amount: amount - order.amount)
+
+
 @receiver(post_save, sender=Order, dispatch_uid="order_post_save")
 def order_post_save(sender, instance, *args, **kwargs):
     """
         Create or change offer object if order object is received and saved.
     """
-    new_order = instance
+    order = instance
 
-    if new_order.status == constants.ORDER_INIT:
-        safe_offer_update(price=new_order.price,
-                          pair=new_order.pair,
-                          order_type=new_order.type,
-                          update=lambda amount: amount + new_order.amount)
-
-    elif new_order.status in [constants.ORDER_COMPLETED, constants.ORDER_CANCELED]:
-        safe_offer_update(price=new_order.price,
-                          pair=new_order.pair,
-                          order_type=new_order.type,
-                          update=lambda amount: amount - new_order.amount)
-
-        serializer = OrderSerializer(new_order)
+    if order.status in [constants.ORDER_COMPLETED, constants.ORDER_CANCELED]:
+        serializer = OrderSerializer(order)
         publishment = serializer.data
 
-        topic = constants.TOPIC_HISTORY.format(pair=new_order.pair, type=new_order.type)
+        topic = constants.TOPIC_HISTORY.format(pair=order.pair, type=order.type)
 
         client = get_crossbar_client()
         client.publish(topic, **publishment)

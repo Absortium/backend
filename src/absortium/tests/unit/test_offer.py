@@ -120,6 +120,10 @@ class OfferTest(AbsoritumUnitTest):
         self.assertEqual(len(self.get_publishments("offers_btc_eth_sell")), 2)
         self.assertEqual(len(self.get_publishments("offers_btc_eth_buy")), 2)
 
+    def test_update_order(self):
+        order = self.create_order(order_type=constants.ORDER_SELL, amount="1.0", price="1.0", status=constants.ORDER_INIT)
+        self.update_order(pk=order['pk'], amount="2.0")
+
     def test_cancel_order(self):
         order = self.create_order(order_type=constants.ORDER_SELL, status=constants.ORDER_INIT)
         self.cancel_order(order['pk'])
