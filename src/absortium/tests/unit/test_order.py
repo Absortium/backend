@@ -133,10 +133,8 @@ class OrderTest(AbsoritumUnitTest):
 
         # After approve order should be processed
         self.approve_order(pk=order['pk'])
-        logger.debug(self.get_orders(order_type=constants.ORDER_BUY))
 
         self.client.force_authenticate(self.some_user)
-        logger.debug(self.get_orders(order_type=constants.ORDER_SELL))
         self.check_account_amount(self.some_btc_account, amount="10.0")
         self.check_account_amount(self.some_eth_account, amount="0.0")
 
