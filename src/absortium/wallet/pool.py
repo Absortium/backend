@@ -15,7 +15,7 @@ class AccountPool():
     def assign_account(self, user_pk):
         try:
             account = Account.objects.filter(currency=self.currency, owner__isnull=True)[0]
-            account.update(owner_id=user_pk)
+            Account.update(pk=account.pk, owner_id=user_pk)
             return account
 
         except IndexError:
