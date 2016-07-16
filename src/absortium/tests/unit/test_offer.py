@@ -22,6 +22,9 @@ class OfferTest(AbsoritumUnitTest):
         super().setUp()
         self.publishments_flush()
 
+        self.make_deposit(self.get_account('btc'), amount="999999.0")
+        self.make_deposit(self.get_account('eth'), amount="999999.0")
+
     def random_amount(self):
         amount = -1
 
@@ -30,25 +33,21 @@ class OfferTest(AbsoritumUnitTest):
         return amount
 
     def test_simple(self, *args, **kwargs):
-        account = self.get_account('btc')
-        self.make_deposit(account, amount="2")
-        self.check_account_amount(account=account, amount="2")
-
-        self.create_order(order_type=constants.ORDER_BUY, amount="2", price="0.1", status=constants.ORDER_INIT)
-        self.check_offer(amount="2", price="0.1")
+        self.create_order(order_type=constants.ORDER_BUY, amount="2", price="1", status=constants.ORDER_INIT)
+        self.check_offer(amount="2", price="1")
 
     def test_multiple(self, *args, **kwargs):
-        account = self.get_account('btc')
-        self.make_deposit(account, amount="2")
-        self.check_account_amount(account=account, amount="2")
+        self.create_order(order_type=constants.ORDER_BUY, amount="1", price="1", status=constants.ORDER_INIT)
+        self.create_order(order_type=constants.ORDER_BUY, amount="1", price="1", status=constants.ORDER_INIT)
 
-        self.create_order(order_type=constants.ORDER_BUY, amount="1", price="0.1", status=constants.ORDER_INIT)
-        self.create_order(order_type=constants.ORDER_BUY, amount="1", price="0.1", status=constants.ORDER_INIT)
-
-        self.check_offer(amount="2", price="0.1")
+        self.check_offer(amount="2", price="1")
 
     def test_calculation_accuracy(self, *args, **kwargs):
-        account = self.get_account('btc')
+        User = get_user_model()
+        some_user = User(username="some_user")
+        some_user.save()
+        self.client.force_authenticate(some_user)
+
         n = 20
         amounts = [self.random_amount() for _ in range(0, n)]
 
@@ -56,14 +55,11 @@ class OfferTest(AbsoritumUnitTest):
         for amount in amounts:
             should_be += amount
 
-            self.make_deposit(account, amount=amount)
-            self.check_account_amount(account=account, amount=amount)
+            self.make_deposit(self.get_account('btc'), amount=amount)
             self.create_order(amount=str(amount), price="1", status=constants.ORDER_INIT)
             self.check_offer(amount=should_be, price="1")
 
     def test_different_price(self, *args, **kwargs):
-        self.make_deposit(self.get_account('btc'), amount="999999.0")
-
         self.create_order(amount="1.0", price="1", status=constants.ORDER_INIT)
         self.create_order(amount="1.0", price="2", status=constants.ORDER_INIT)
 
@@ -71,8 +67,6 @@ class OfferTest(AbsoritumUnitTest):
         self.check_offer(amount="1.0", price="2.0")
 
     def test_offer_deletion(self, *args, **kwargs):
-        self.make_deposit(self.get_account('btc'), amount="999999.0")
-        self.make_deposit(self.get_account('eth'), amount="999999.0")
         self.create_order(amount="1.0", price="1.0", status=constants.ORDER_INIT)
         self.check_offer(amount="1.0", price="1.0")
 
@@ -92,8 +86,6 @@ class OfferTest(AbsoritumUnitTest):
         self.check_offer(amount="1.0", price="1.0", should_exist=False)
 
     def test_offer_deletion_complex(self, *args, **kwargs):
-        self.make_deposit(self.get_account('btc'), amount="999999.0")
-        self.make_deposit(self.get_account('eth'), amount="999999.0")
 
         self.create_order(order_type=constants.ORDER_BUY, amount="1.0", price="1.0", status=constants.ORDER_INIT)
         self.create_order(order_type=constants.ORDER_BUY, amount="1.0", price="1.0", status=constants.ORDER_INIT)
@@ -116,23 +108,22 @@ class OfferTest(AbsoritumUnitTest):
         self.check_offers_empty()
 
     def test_creation_notification(self):
-        self.make_deposit(self.get_account('btc'), amount="999999.0")
-        self.make_deposit(self.get_account('eth'), amount="999999.0")
-
         self.create_order(order_type=constants.ORDER_SELL, status=constants.ORDER_INIT)
         self.create_order(order_type=constants.ORDER_SELL, status=constants.ORDER_INIT)
 
         self.assertEqual(len(self.get_publishments("offers_btc_eth_sell")), 2)
 
     def test_creation_and_deletion_notification(self):
-        self.make_deposit(self.get_account('btc'), amount="999999.0")
-        self.make_deposit(self.get_account('eth'), amount="999999.0")
-
         self.create_order(order_type=constants.ORDER_SELL, status=constants.ORDER_INIT)
         self.create_order(order_type=constants.ORDER_BUY, status=constants.ORDER_COMPLETED)
 
         self.assertEqual(len(self.get_publishments("offers_btc_eth_sell")), 2)
         self.assertEqual(len(self.get_publishments("offers_btc_eth_buy")), 2)
+
+    def test_cancel_order(self):
+        order = self.create_order(order_type=constants.ORDER_SELL, status=constants.ORDER_INIT)
+        self.cancel_order(order['pk'])
+        self.check_offers_empty()
 
     def test_poloniex_update(self):
         """

@@ -14,7 +14,7 @@ from absortium.wallet.pool import AccountPool
 from absortium.celery.base import get_base_class
 from absortium.crossbarhttp import publishment
 from absortium.exceptions import AlreadyExistError
-from absortium.model.locks import lockorder, opposites
+from absortium.model.locks import lockaccounts, get_opposites
 from absortium.model.models import Account, Order, MarketInfo
 from absortium.serializers import \
     OrderSerializer, \
@@ -36,7 +36,7 @@ def do_deposit(self, *args, **kwargs):
             serializer = DepositSerializer(data=data)
             serializer.is_valid(raise_exception=True)
 
-            account = Account.objects.select_for_update().get(pk=account_pk)
+            account = Account.lock(pk=account_pk)
             deposit = serializer.save(account=account)
             deposit.process_account()
 
@@ -56,7 +56,7 @@ def do_withdrawal(self, *args, **kwargs):
             serializer = WithdrawSerializer(data=data)
             serializer.is_valid(raise_exception=True)
 
-            account = Account.objects.select_for_update().get(pk=account_pk)
+            account = Account.lock(pk=account_pk)
             withdrawal = serializer.save(account=account)
             withdrawal.process_account()
 
@@ -78,11 +78,17 @@ def do_order(self, *args, **kwargs):
 
         def process(order):
             history = []
-            for opposite in opposites(order):
-                with lockorder(opposite):
-                    if order > opposite:
-                        (completed, order) = order - opposite
-                        history.append(completed)
+
+            for opposite in get_opposites(order):
+                with lockaccounts(opposite):
+                    if order >= opposite:
+                        (fraction, order) = order - opposite
+
+                        if order is None:
+                            order = fraction
+                            break
+                        else:
+                            history.append(fraction)
 
                     elif order < opposite:
                         """
@@ -92,14 +98,6 @@ def do_order(self, *args, **kwargs):
                         (_, opposite) = opposite - order
                         break
 
-                    else:
-                        """
-                            In this case order will be in the ORDER_COMPLETED status, so just break loop and
-                            than add order to the history
-                        """
-                        (_, order) = order - opposite
-                        break
-
             return history + [order]
 
         if order.total <= constants.ORDER_MIN_TOTAL_AMOUNT:
@@ -107,11 +105,11 @@ def do_order(self, *args, **kwargs):
 
         with publishment.atomic():
             with transaction.atomic():
-                with lockorder(order):
+                with lockaccounts(order):
                     order.freeze_money()
                     history = process(order)
 
-                return [OrderSerializer(e).data for e in history]
+        return [OrderSerializer(e).data for e in history]
 
     except OperationalError:
         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
@@ -124,20 +122,57 @@ def cancel_order(self, *args, **kwargs):
 
     try:
         try:
-            order = Order.objects.select_for_update().get(owner__pk=user_pk, pk=order_pk)
-
             with publishment.atomic():
                 with transaction.atomic():
-                    with lockorder(order):
-                        order.unfreeze_money()
-                        order.delete()
+                    order = Order.lock(owner__pk=user_pk, pk=order_pk)
 
-        except Order.DoesNotExist():
+                    with lockaccounts(order):
+                        if order.status in [constants.ORDER_APPROVING, constants.ORDER_APPROVED]:
+                            opposite = Order.lock(pk=order.link.pk)
+
+                            with lockaccounts(opposite):
+                                opposite.status = constants.ORDER_PENDING
+
+                        order.unfreeze_money()
+                        order.status = constants.ORDER_CANCELED
+
+        except Order.DoesNotExist:
             """
                 If Order does not exist this means that it was processed or deleted.
             """
             pass
 
+
+    except OperationalError:
+        raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
+
+
+@shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
+def approve_order(self, *args, **kwargs):
+    order_pk = kwargs['order_pk']
+    user_pk = kwargs['user_pk']
+
+    try:
+        try:
+            with transaction.atomic():
+                with lockaccounts(Order.lock(owner__pk=user_pk, pk=order_pk)) as order:
+
+                    if order.need_approve and order.status != constants.ORDER_APPROVED:
+                        order.status = constants.ORDER_APPROVED
+
+                        with lockaccounts(Order.lock(pk=order.link.pk)) as opposite:
+
+                            if opposite.need_approve:
+                                if opposite.status == constants.ORDER_APPROVED:
+                                    order.merge(opposite)
+                            else:
+                                order.merge(opposite)
+
+        except Order.DoesNotExist:
+            """
+                If Order does not exist this means that it was canceled.
+            """
+            pass
 
     except OperationalError:
         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)

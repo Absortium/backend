@@ -47,10 +47,11 @@ class Offer(models.Model):
         ordering = ('price',)
         unique_together = ('pair', 'price', 'system', 'type')
 
-    def update(self, **kwargs):
+    @staticmethod
+    def update(pk, **kwargs):
         # update() is converted directly to an SQL statement; it doesn't exec save() on the model
         # instances, and so the pre_save and post_save signals aren't emitted.
-        Offer.objects.filter(pk=self.pk).update(**kwargs)
+        Offer.objects.filter(pk=pk).update(**kwargs)
 
     @property
     def primary_currency(self):
@@ -104,10 +105,19 @@ class Account(models.Model):
         unique_together = ('currency', 'owner', 'address')
         ordering = ('-created',)
 
-    def update(self, **kwargs):
+    @staticmethod
+    def lock(**kwargs):
+        return Account.objects.select_for_update().get(**kwargs)
+
+    @staticmethod
+    def locks(**kwargs):
+        return Account.objects.select_for_update().filter(**kwargs)
+
+    @staticmethod
+    def update(pk, **kwargs):
         # update() is converted directly to an SQL statement; it doesn't exec save() on the model
         # instances, and so the pre_save and post_save signals aren't emitted.
-        Account.objects.filter(pk=self.pk).update(**kwargs)
+        Account.objects.filter(pk=pk).update(**kwargs)
 
 
 def operation_wrapper(func):
@@ -177,6 +187,9 @@ class Order(models.Model):
                                 default=0)
 
     created = models.DateTimeField(auto_now_add=True)
+
+    need_approve = models.BooleanField(default=False)
+    link = models.ForeignKey('Order', null=True)
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="orders")
 
@@ -255,60 +268,87 @@ class Order(models.Model):
         elif self.type == constants.ORDER_SELL:
             self.total = value
 
+    @staticmethod
+    def lock(**kwargs):
+        return Order.objects.select_for_update().get(**kwargs)
+
+    @staticmethod
+    def locks(**kwargs):
+        return Order.objects.select_for_update().filter(**kwargs)
+
+    @staticmethod
+    def update(pk, **kwargs):
+        Order.objects.filter(pk=pk).update(**kwargs)
+
     def freeze_money(self):
         # Check that we have enough money
         if self.from_account.amount >= self.from_amount:
 
             # Subtract money from account because it is locked by order
             self.from_account.amount -= self.from_amount
-            self.save()
         else:
             raise ValidationError("Not enough money for order creation")
 
     def unfreeze_money(self):
         self.from_account.amount += self.from_amount
-        self.save()
 
-    def update(self, **kwargs):
-        Account.objects.filter(pk=self.pk).update(**kwargs)
-
-    def split(self, to_amount, from_amount):
+    def split(self, opposite):
         """
-            Divide order on two parts - completed part and remain part
+            Divide order on two parts.
         """
+        order = self
 
-        if self.from_amount <= to_amount:
-            self.status = constants.ORDER_COMPLETED
-            completed = self
+        if order.from_amount <= opposite.to_amount:
+            fraction = order
+            return fraction, None
         else:
             from copy import deepcopy
-            completed = deepcopy(self)
-            completed.from_amount = to_amount
-            completed.to_amount = from_amount
-            completed.pk = None
-            completed.status = constants.ORDER_COMPLETED
-            completed.save()
+            fraction = deepcopy(order)
+            fraction.from_amount = opposite.to_amount
+            fraction.to_amount = opposite.from_amount
+            fraction.to_account = order.to_account
+            fraction.from_account = order.from_account
+            fraction.pk = None
 
-            self.from_amount -= to_amount
-            self.to_amount -= from_amount
+            order.from_amount -= opposite.to_amount
+            order.to_amount -= opposite.from_amount
 
-        return completed, self
+            return fraction, order
+
+    def merge(self, opposite):
+        fraction = self
+
+        fraction.to_account.amount += opposite.from_amount
+        opposite.to_account.amount += opposite.to_amount
+
+        fraction.status = constants.ORDER_COMPLETED
+        opposite.status = constants.ORDER_COMPLETED
 
     def __sub__(self, obj):
         if isinstance(obj, Order):
             opposite = obj
             order = self
-
             order.status = constants.ORDER_PENDING
-            opposite.status = constants.ORDER_COMPLETED
-
-            order.to_account.amount += opposite.from_amount
-            opposite.to_account.amount += opposite.to_amount
 
             # save fraction of order to store history of orders
-            (completed, order) = order.split(opposite.to_amount, opposite.from_amount)
+            (fraction, order) = order.split(opposite)
 
-            return completed, order
+            fraction.link = opposite
+            opposite.link = fraction
+
+            if fraction.need_approve or opposite.need_approve:
+                # wait for approving
+                fraction.status = constants.ORDER_APPROVING
+                opposite.status = constants.ORDER_APPROVING
+
+            else:
+                # merge opposite orders
+                fraction.merge(opposite)
+
+            if order is not None:
+                fraction.save()
+
+            return fraction, order
         else:
             return NotImplemented
 
@@ -345,7 +385,7 @@ class Deposit(models.Model):
 
     def process_account(self):
         amount = self.account.amount + self.amount
-        self.account.update(amount=amount)
+        Account.update(pk=self.account.pk, amount=amount)
 
 
 class Withdrawal(models.Model):
@@ -359,7 +399,7 @@ class Withdrawal(models.Model):
     def process_account(self):
         if self.account.amount - self.amount >= 0:
             amount = self.account.amount - self.amount
-            self.account.update(amount=amount)
+            Account.update(pk=self.account.pk, amount=amount)
 
             client = get_wallet_client(self.account.currency)
             client.send(self.amount, self.address)
