@@ -1,3 +1,5 @@
+import decimal
+from decimal import Decimal
 from random import choice
 from sqlite3 import IntegrityError
 from string import printable
@@ -105,3 +107,41 @@ def safe_offer_update(price, order_type, pair, update, system=constants.SYSTEM_O
             thread/process do the same thing. So if we encounter this exception try to do() second time.
         """
         do()
+
+
+def calculate_total_or_amount(data):
+    amount = data.get('amount')
+    total = data.get('total')
+
+    if total is not None and amount is not None:
+        raise ValidationError("only one of the 'amount' or 'total' fields should be presented")
+
+    elif total is None and amount is None:
+        raise ValidationError("one of the 'amount' or 'total' fields should be presented")
+
+    price = data.get('price')
+    if price is None:
+        raise ValidationError("'price' field should be present")
+
+    try:
+        price = round(Decimal(price), constants.DECIMAL_PLACES)
+    except decimal.InvalidOperation:
+        raise ValidationError("'price' field should be decimal serializable")
+
+    if amount is not None and total is None:
+        try:
+            amount = round(Decimal(amount), constants.DECIMAL_PLACES)
+        except decimal.InvalidOperation:
+            raise ValidationError("'amount' field should be decimal serializable")
+
+        data['total'] = str(round(amount * price, constants.DECIMAL_PLACES))
+
+    elif total is not None and amount is None:
+        try:
+            total = round(Decimal(total), constants.DECIMAL_PLACES)
+        except decimal.InvalidOperation:
+            raise ValidationError("'total' field should be decimal serializable")
+
+        data['amount'] = str(round(total / price, constants.DECIMAL_PLACES))
+
+    return data

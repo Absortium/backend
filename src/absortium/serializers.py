@@ -1,12 +1,9 @@
-import decimal
-from decimal import Decimal
-
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 
 from absortium import constants
 from absortium.model.models import Account, Order, Offer, Deposit, Withdrawal, MarketInfo
+from absortium.utils import calculate_total_or_amount
 from core.serializer.fields import MyChoiceField
 from core.serializer.serializers import DynamicFieldsModelSerializer
 from core.utils.logging import getPrettyLogger
@@ -104,44 +101,10 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = ('pk', 'price', 'created', 'status', 'type', 'system', 'amount', 'total', 'pair', 'need_approve')
 
     def __init__(self, *args, **kwargs):
+
         data = kwargs.get('data')
-
         if data is not None:
-            amount = data.get('amount')
-            total = data.get('total')
-
-            if total is not None and amount is not None:
-                raise ValidationError("only one of the 'amount' or 'total' fields should be presented")
-
-            elif total is None and amount is None:
-                raise ValidationError("one of the 'amount' or 'total' fields should be presented")
-
-            price = data.get('price')
-            if price is None:
-                raise ValidationError("'price' field should be present")
-
-            try:
-                price = round(Decimal(price), constants.DECIMAL_PLACES)
-            except decimal.InvalidOperation:
-                raise ValidationError("'price' field should be decimal serializable")
-
-            if amount is not None and total is None:
-                try:
-                    amount = round(Decimal(amount), constants.DECIMAL_PLACES)
-                except decimal.InvalidOperation:
-                    raise ValidationError("'amount' field should be decimal serializable")
-
-                data['total'] = str(round(amount * price, constants.DECIMAL_PLACES))
-
-            elif total is not None and amount is None:
-                try:
-                    total = round(Decimal(total), constants.DECIMAL_PLACES)
-                except decimal.InvalidOperation:
-                    raise ValidationError("'total' field should be decimal serializable")
-
-                data['amount'] = str(round(total / price, constants.DECIMAL_PLACES))
-
-            kwargs['data'] = data
+            kwargs['data'] = calculate_total_or_amount(data)
 
         super().__init__(*args, **kwargs)
         self._object = None

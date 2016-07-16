@@ -287,7 +287,7 @@ class Order(models.Model):
             # Subtract money from account because it is locked by order
             self.from_account.amount -= self.from_amount
         else:
-            raise ValidationError("Not enough money for order creation")
+            raise ValidationError("Not enough money for order creation/update")
 
     def unfreeze_money(self):
         self.from_account.amount += self.from_amount

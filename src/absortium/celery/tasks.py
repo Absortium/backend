@@ -1,7 +1,10 @@
+import decimal
 from datetime import timedelta
 
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
+
+from absortium.utils import calculate_total_or_amount
 
 __author__ = 'andrew.shvv@gmail.com'
 
@@ -67,7 +70,7 @@ def do_withdrawal(self, *args, **kwargs):
 
 
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
-def do_order(self, *args, **kwargs):
+def create_order(self, *args, **kwargs):
     data = kwargs['data']
     user_pk = kwargs['user_pk']
 
@@ -167,6 +170,43 @@ def approve_order(self, *args, **kwargs):
                                     order.merge(opposite)
                             else:
                                 order.merge(opposite)
+
+        except Order.DoesNotExist:
+            """
+                If Order does not exist this means that it was canceled.
+            """
+            pass
+
+    except OperationalError:
+        raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
+
+
+@shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
+def update_order(self, *args, **kwargs):
+    data = kwargs['data']
+    order_pk = kwargs['order_pk']
+    user_pk = kwargs['user_pk']
+
+    try:
+        try:
+            with transaction.atomic():
+                with lockaccounts(Order.lock(owner__pk=user_pk, pk=order_pk)) as order:
+                    if order.status in [constants.ORDER_INIT, constants.ORDER_PENDING]:
+
+                        order.unfreeze_money()
+
+                        if data.get('price') is None:
+                            data['price'] = str(order.price)
+
+                        data = calculate_total_or_amount(data)
+                        order.price = decimal.Decimal(data.get('price'))
+                        order.amount = decimal.Decimal(data.get('amount'))
+                        order.total = decimal.Decimal(data.get('total'))
+                        order.freeze_money()
+                    else:
+                        raise ValidationError("You can't modify orders in status '{}'".format(order.status))
+
+                    return OrderSerializer(order).data
 
         except Order.DoesNotExist:
             """
