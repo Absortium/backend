@@ -133,8 +133,10 @@ class OrderTest(AbsoritumUnitTest):
 
         # After approve order should be processed
         self.approve_order(pk=order['pk'])
+        logger.debug(self.get_orders(order_type=constants.ORDER_BUY))
 
         self.client.force_authenticate(self.some_user)
+        logger.debug(self.get_orders(order_type=constants.ORDER_SELL))
         self.check_account_amount(self.some_btc_account, amount="10.0")
         self.check_account_amount(self.some_eth_account, amount="0.0")
 
@@ -178,6 +180,44 @@ class OrderTest(AbsoritumUnitTest):
                          price="0.5",
                          amount="20",
                          status=constants.ORDER_PENDING)
+
+    def test_double_side_approve(self):
+        first_order = self.create_order(order_type=constants.ORDER_BUY,
+                                        price="0.5",
+                                        amount="20",
+                                        need_approve=True,
+                                        status=constants.ORDER_INIT)
+
+        self.client.force_authenticate(self.some_user)
+        second_order = self.create_order(order_type=constants.ORDER_SELL,
+                                         price="0.5",
+                                         amount="20",
+                                         need_approve=True,
+                                         status=constants.ORDER_APPROVING)
+
+        self.check_account_amount(self.some_eth_account, amount="0.0")
+        self.check_account_amount(self.some_btc_account, amount="0.0")
+
+        self.client.force_authenticate(self.user)
+        self.check_account_amount(self.primary_eth_account, amount="0.0")
+        self.check_account_amount(self.primary_btc_account, amount="0.0")
+
+        self.approve_order(pk=first_order['pk'])
+
+        self.check_account_amount(self.primary_eth_account, amount="0.0")
+        self.check_account_amount(self.primary_btc_account, amount="0.0")
+
+        self.client.force_authenticate(self.some_user)
+        self.check_account_amount(self.some_eth_account, amount="0.0")
+        self.check_account_amount(self.some_btc_account, amount="0.0")
+
+        self.approve_order(pk=second_order['pk'])
+        self.check_account_amount(self.some_eth_account, amount="0.0")
+        self.check_account_amount(self.some_btc_account, amount="10.0")
+
+        self.client.force_authenticate(self.user)
+        self.check_account_amount(self.primary_eth_account, amount="20.0")
+        self.check_account_amount(self.primary_btc_account, amount="0.0")
 
     def test_another_user_cancel_during_approve(self):
         self.create_order(order_type=constants.ORDER_BUY,

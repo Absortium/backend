@@ -127,7 +127,7 @@ def cancel_order(self, *args, **kwargs):
                     order = Order.lock(owner__pk=user_pk, pk=order_pk)
 
                     with lockaccounts(order):
-                        if order.status == constants.ORDER_APPROVING:
+                        if order.status in [constants.ORDER_APPROVING, constants.ORDER_APPROVED]:
                             opposite = Order.lock(pk=order.link.pk)
 
                             with lockaccounts(opposite):
@@ -155,13 +155,18 @@ def approve_order(self, *args, **kwargs):
     try:
         try:
             with transaction.atomic():
-                order = Order.lock(owner__pk=user_pk, pk=order_pk)
+                with lockaccounts(Order.lock(owner__pk=user_pk, pk=order_pk)) as order:
 
-                with lockaccounts(order):
-                    opposite = Order.lock(pk=order.link.pk)
+                    if order.need_approve and order.status != constants.ORDER_APPROVED:
+                        order.status = constants.ORDER_APPROVED
 
-                    with lockaccounts(opposite):
-                        order.merge(opposite)
+                        with lockaccounts(Order.lock(pk=order.link.pk)) as opposite:
+
+                            if opposite.need_approve:
+                                if opposite.status == constants.ORDER_APPROVED:
+                                    order.merge(opposite)
+                            else:
+                                order.merge(opposite)
 
         except Order.DoesNotExist:
             """
