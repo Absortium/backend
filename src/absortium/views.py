@@ -13,7 +13,7 @@ from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK
 
 from absortium import constants
 from absortium.celery import tasks
-from absortium.mixins import CreateCeleryMixin, DestroyCeleryMixin
+from absortium.mixins import CreateCeleryMixin, DestroyCeleryMixin, ApproveCeleryMixin
 from absortium.model.models import Offer, Order, Account, MarketInfo
 from absortium.serializers import \
     UserSerializer, \
@@ -189,6 +189,7 @@ class WithdrawalViewSet(CreateCeleryMixin,
 
 class OrderViewSet(CreateCeleryMixin,
                    DestroyCeleryMixin,
+                   ApproveCeleryMixin,
                    mixins.RetrieveModelMixin,
                    mixins.ListModelMixin,
                    viewsets.GenericViewSet):
@@ -231,11 +232,18 @@ class OrderViewSet(CreateCeleryMixin,
 
         return tasks.do_order.delay(**context)
 
+    def approve_in_celery(self, request, *args, **kwargs):
+        context = {
+            "order_pk": self.get_object().pk,
+            "user_pk": request.user.pk,
+        }
+
+        return tasks.approve_order.delay(**context)
+
     def destroy_in_celery(self, request, *args, **kwargs):
         context = {
             "order_pk": self.get_object().pk,
             "user_pk": request.user.pk,
-
         }
 
         return tasks.cancel_order.delay(**context)
@@ -252,7 +260,7 @@ class HistoryViewSet(generics.GenericAPIView,
         """
             This method used for filter origin orders queryset by the given pair/type currency.
         """
-        fields = {"status": constants.ORDER_COMPLETED}
+        fields = {'status': constants.ORDER_COMPLETED}
 
         pair = get_field(self.request.GET, 'pair', constants.AVAILABLE_CURRENCY_PAIRS, throw=False)
         if pair is not None:

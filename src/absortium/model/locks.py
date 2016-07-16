@@ -7,9 +7,14 @@ __author__ = 'andrew.shvv@gmail.com'
 logger = getLogger(__name__)
 
 
-class lockorder:
+class lockaccounts:
     def __init__(self, order=None):
         self.order = order
+        self.status = order.status
+        self.amount = order.amount
+
+        if order.pk is None:
+            self.order.save()
 
     def __enter__(self):
         if not self.order.from_account and not self.order.to_account:
@@ -27,9 +32,9 @@ class lockorder:
 
             """
 
-            accounts = Account.objects.select_for_update().filter(owner__pk=self.order.owner_id,
-                                                                  currency__in=[self.order.primary_currency,
-                                                                                self.order.secondary_currency])
+            accounts = Account.locks(owner__pk=self.order.owner_id,
+                                     currency__in=[self.order.primary_currency,
+                                                   self.order.secondary_currency])
 
             for account in accounts:
                 if account.currency == self.order.from_currency:
@@ -41,18 +46,17 @@ class lockorder:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not exc_val:
-
             """
                 Account always should be updated even if order in 'init' state, because we subtract order amount from account.
             """
-            self.order.from_account.update(amount=self.order.from_account.amount)
-            self.order.to_account.update(amount=self.order.to_account.amount)
+            Account.update(pk=self.order.from_account.pk, amount=self.order.from_account.amount)
+            Account.update(pk=self.order.to_account.pk, amount=self.order.to_account.amount)
 
-            if self.order.status != constants.ORDER_INIT:
+            if self.status != self.order.status or self.amount != self.order.amount:
                 self.order.save()
 
 
-class opposites:
+class get_opposites:
     """
         1. Search for opposite orders.
         2. Block order with pg_try_advisory_xact_lock postgres lock.
