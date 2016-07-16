@@ -400,6 +400,38 @@ class CancelTest(BaseTest):
         self.assertEqual(len(self.get_orders()), 1)
 
 
+class UpdateTest(BaseTest):
+    def test_simple(self):
+        order = self.create_order(order_type=constants.ORDER_BUY,
+                                  amount="1.0",
+                                  price="1.0",
+                                  status=constants.ORDER_INIT)
+
+        self.update_order(pk=order['pk'], price="2.0", amount="1.0")
+        self.check_order(pk=order['pk'], price="2.0", amount="1.0", total="2.0")
+
+    def test_not_enough_money(self):
+        order = self.create_order(order_type=constants.ORDER_BUY,
+                                  amount="1.0",
+                                  price="1.0",
+                                  status=constants.ORDER_INIT)
+
+        with self.assertRaises(AssertionError):
+            self.update_order(pk=order['pk'], amount="999.0")
+
+    def test_not_init_and_pending_status(self):
+        self.create_order(order_type=constants.ORDER_BUY,
+                          price="1.0",
+                          amount="1.0",
+                          status=constants.ORDER_INIT)
+
+        self.client.force_authenticate(self.some_user)
+        order = self.create_order(order_type=constants.ORDER_SELL, price="1.0", amount="1.0")
+
+        with self.assertRaises(AssertionError):
+            self.update_order(pk=order['pk'], amount="2.0")
+
+
 class NotificationTest(BaseTest):
     def test_notification(self):
         self.create_order(order_type=constants.ORDER_BUY, total="5.0", price="0.5", status=constants.ORDER_INIT)

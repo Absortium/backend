@@ -95,6 +95,48 @@ class CreateOrderMixin():
 
         self.assertIn(response.status_code, [HTTP_200_OK, HTTP_204_NO_CONTENT])
 
+    def update_order(self,
+                     pk,
+                     amount=None,
+                     price=None,
+                     user=None,
+                     with_checks=True,
+                     debug=False,
+                     extra_data=None):
+
+        data = {}
+
+        if price:
+            data['price'] = price
+
+        if amount:
+            data['amount'] = amount
+
+        if extra_data:
+            for k, v in extra_data.items():
+                data[k] = v
+
+        # Authenticate normal user
+        if user:
+            self.client.force_authenticate(user)
+
+        # Create order
+        url = '/api/orders/{pk}/'.format(pk=pk)
+        response = self.client.put(url, data=data, format='json')
+
+        if debug:
+            logger.debug(response.content)
+
+        self.assertIn(response.status_code, [HTTP_200_OK, HTTP_204_NO_CONTENT])
+
+        order = response.json()
+
+        if with_checks:
+            self.assertEqual(decimal.Decimal(order['price']), decimal.Decimal(price))
+            self.assertEqual(decimal.Decimal(order['amount']), decimal.Decimal(amount))
+
+        return order
+
     def approve_order(self,
                       pk,
                       user=None,
@@ -112,32 +154,6 @@ class CreateOrderMixin():
             logger.debug(response.content)
 
         self.assertIn(response.status_code, [HTTP_200_OK])
-
-    def check_order(self,
-                    price,
-                    amount,
-                    status,
-                    order_type=constants.ORDER_BUY,
-                    pair=constants.PAIR_BTC_ETH,
-                    should_exist=True,
-                    debug=False):
-        orders = self.get_orders(order_type=order_type,
-                                 pair=pair)
-
-        if debug:
-            logger.debug(orders)
-
-        is_exist = False
-        for order in orders:
-            c1 = decimal.Decimal(order['price']) == decimal.Decimal(price)
-            c2 = decimal.Decimal(order['amount']) == decimal.Decimal(amount)
-            c3 = order['status'] == status
-            c4 = order['type'] == order_type
-
-            if c1 and c2 and c3 and c4:
-                is_exist = True
-
-        self.assertEqual(is_exist, should_exist)
 
     def get_orders(self,
                    order_type=constants.ORDER_BUY,
@@ -157,3 +173,33 @@ class CreateOrderMixin():
             logger.debug(response.content)
 
         return response.json()
+
+    def check_order(self,
+                    price=None,
+                    amount=None,
+                    status=None,
+                    total=None,
+                    pk=None,
+                    order_type=constants.ORDER_BUY,
+                    pair=constants.PAIR_BTC_ETH,
+                    should_exist=True,
+                    debug=False):
+        orders = self.get_orders(order_type=order_type,
+                                 pair=pair)
+
+        if debug:
+            logger.debug(orders)
+
+        is_exist = False
+        for order in orders:
+            c1 = decimal.Decimal(order['price']) == decimal.Decimal(price) if price is not None else True
+            c2 = decimal.Decimal(order['amount']) == decimal.Decimal(amount) if amount is not None else True
+            c3 = decimal.Decimal(order['total']) == decimal.Decimal(total) if total is not None else True
+            c4 = order['status'] == status if status is not None else True
+            c5 = order['type'] == order_type if order_type is not None else True
+            c6 = order['pk'] == pk if pk is not None else True
+
+            if c1 and c2 and c3 and c4 and c5 and c6:
+                is_exist = True
+
+        self.assertEqual(is_exist, should_exist)

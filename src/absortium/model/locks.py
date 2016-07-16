@@ -12,6 +12,8 @@ class lockaccounts:
         self.order = order
         self.status = order.status
         self.amount = order.amount
+        self.price = order.price
+        self.total = order.total
 
         if order.pk is None:
             self.order.save()
@@ -52,7 +54,12 @@ class lockaccounts:
             Account.update(pk=self.order.from_account.pk, amount=self.order.from_account.amount)
             Account.update(pk=self.order.to_account.pk, amount=self.order.to_account.amount)
 
-            if self.status != self.order.status or self.amount != self.order.amount:
+            c1 = self.status != self.order.status
+            c2 = self.amount != self.order.amount
+            c3 = self.price != self.order.price
+            c4 = self.total != self.order.total
+
+            if c1 or c2 or c3 or c4:
                 self.order.save()
 
 
