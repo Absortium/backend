@@ -11,7 +11,7 @@ from core.utils.logging import getLogger
 logger = getLogger(__name__)
 
 
-class OrderTest(AbsoritumUnitTest):
+class BaseTest(AbsoritumUnitTest):
     def setUp(self):
         super().setUp()
         self.publishments_flush()
@@ -40,6 +40,8 @@ class OrderTest(AbsoritumUnitTest):
 
         self.client.force_authenticate(self.user)
 
+
+class CreateTest(BaseTest):
     def test_orders_count(self):
         """
             Check that we get only orders which belong to the user.
@@ -73,6 +75,146 @@ class OrderTest(AbsoritumUnitTest):
         self.assertEqual(len(self.get_orders(constants.ORDER_SELL)), 1)
         self.assertEqual(len(self.get_orders(constants.ORDER_BUY)), 1)
 
+    def test_buy_order_creation(self):
+        self.create_order(order_type=constants.ORDER_BUY, total="1.0", status=constants.ORDER_INIT)
+
+        self.check_account_amount(self.primary_btc_account, amount="9.0")
+        self.check_account_amount(self.primary_eth_account, amount="0.0")
+
+    def test_sell_order_creation(self):
+        self.client.force_authenticate(self.some_user)
+        self.create_order(order_type=constants.ORDER_SELL, price="0.5", amount="2.0", status=constants.ORDER_INIT)
+
+        self.check_account_amount(self.some_btc_account, amount="0.0")
+        self.check_account_amount(self.some_eth_account, amount="18.0")
+
+    def test_run_out_deposit(self):
+        """
+            Create orders without money
+        """
+        with self.assertRaises(AssertionError):
+            self.create_order(price="2.0", amount="999")
+
+        self.check_account_amount(self.primary_btc_account, amount="10.0")
+        self.check_account_amount(self.primary_eth_account, amount="0.0")
+
+    def test_simple_order(self):
+        """
+            Create orders which will be processed fully
+        """
+
+        self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="20", status=constants.ORDER_INIT)
+
+        self.client.force_authenticate(self.some_user)
+        self.create_order(order_type=constants.ORDER_SELL, price="0.5", amount="20")
+        self.check_account_amount(self.some_btc_account, amount="10.0")
+        self.check_account_amount(self.some_eth_account, amount="0.0")
+        self.assertEqual(len(self.get_orders(constants.ORDER_SELL)), 1)
+
+        self.client.force_authenticate(self.user)
+        self.check_account_amount(self.primary_eth_account, amount="20.0")
+        self.check_account_amount(self.primary_btc_account, amount="0.0")
+        self.assertEqual(len(self.get_orders(constants.ORDER_BUY)), 1)
+
+    def test_multiple_orders(self):
+        """
+            Create orders which will be processed fully
+        """
+
+        self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="8", status=constants.ORDER_INIT)
+        self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="8", status=constants.ORDER_INIT)
+        self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="4", status=constants.ORDER_INIT)
+
+        self.client.force_authenticate(self.some_user)
+        self.create_order(order_type=constants.ORDER_SELL, price="0.5", amount="20")
+        self.check_account_amount(self.some_btc_account, amount="10.0")
+        self.check_account_amount(self.some_eth_account, amount="0.0")
+        self.assertEqual(len(self.get_orders(constants.ORDER_SELL)), 3)
+
+        self.client.force_authenticate(self.user)
+        self.check_account_amount(self.primary_eth_account, amount="20.0")
+        self.check_account_amount(self.primary_btc_account, amount="0.0")
+        self.assertEqual(len(self.get_orders(constants.ORDER_BUY)), 3)
+
+    def test_order_pending(self):
+        """
+            Create orders which will not be fully processed
+        """
+        self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="16.0", status=constants.ORDER_INIT)
+
+        self.client.force_authenticate(self.some_user)
+        self.create_order(order_type=constants.ORDER_SELL, price="0.5", amount="20.0", status="pending")
+        self.check_account_amount(self.some_eth_account, amount="0.0")
+        self.check_account_amount(self.some_btc_account, amount="8.0")
+
+        self.client.force_authenticate(self.user)
+        self.check_account_amount(self.primary_btc_account, amount="2.0")
+        self.check_account_amount(self.primary_eth_account, amount="16.0")
+
+    def test_same_account(self):
+        """
+            Create opposite orders on the same account
+        """
+        self.make_deposit(self.primary_eth_account, amount="20.0")
+
+        self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="20.0", status=constants.ORDER_INIT)
+        self.check_account_amount(self.primary_btc_account, amount="0.0")
+
+        self.create_order(order_type=constants.ORDER_SELL, price="0.5", amount="20.0")
+
+        self.check_account_amount(self.primary_btc_account, amount="10.0")
+        self.check_account_amount(self.primary_eth_account, amount="20.0")
+
+    def test_with_two_orders_with_diff_price(self):
+        """
+            Create create two orders with different price and then one opposite with smaller price.
+        """
+        self.create_order(order_type=constants.ORDER_BUY, price="0.5", total="5.0", status=constants.ORDER_INIT)
+        self.create_order(order_type=constants.ORDER_BUY, price="1.0", total="5.0", status=constants.ORDER_INIT)
+
+        self.client.force_authenticate(self.some_user)
+        self.create_order(order_type=constants.ORDER_SELL, price="0.1", amount="15.0", status=constants.ORDER_COMPLETED)
+        self.check_account_amount(self.some_eth_account, amount="5.0")
+        self.check_account_amount(self.some_btc_account, amount="10.0")
+
+        self.client.force_authenticate(self.user)
+        self.check_account_amount(self.primary_btc_account, amount="0.0")
+        self.check_account_amount(self.primary_eth_account, amount="15.0")
+
+    def test_sell_with_small_amount(self):
+        self.client.force_authenticate(self.some_user)
+
+        amount = constants.ORDER_MIN_TOTAL_AMOUNT - constants.ORDER_MIN_TOTAL_AMOUNT / 10
+
+        with self.assertRaises(AssertionError):
+            self.create_order(order_type=constants.ORDER_SELL, total=amount)
+        self.check_account_amount(self.some_eth_account, amount="20.0")
+
+    def test_buy_with_small_amount(self):
+        amount = constants.ORDER_MIN_TOTAL_AMOUNT - constants.ORDER_MIN_TOTAL_AMOUNT / 10
+
+        with self.assertRaises(AssertionError):
+            self.create_order(price="0.1", total=amount)
+        self.check_account_amount(self.primary_btc_account, amount="10.0")
+
+
+class MalformedTest(BaseTest):
+    def test_order_readonly_status(self):
+        # check that we can't set the order status
+        extra_data = {
+            'status': constants.ORDER_PENDING
+        }
+
+        self.create_order(price="1.0", amount="10.0", status=constants.ORDER_INIT, extra_data=extra_data)
+
+    def test_order_readonly_system(self):
+        # check that we can't set the order status
+        extra_data = {
+            'system': constants.SYSTEM_POLONIEX
+        }
+
+        self.create_order(price="1.0", amount="10.0", status=constants.ORDER_INIT, extra_data=extra_data)
+
     def test_malformed(self, *args, **kwargs):
         trash_order_pk = "972368423423"
 
@@ -104,12 +246,8 @@ class OrderTest(AbsoritumUnitTest):
         with self.assertRaises(AssertionError):
             self.create_order(price=malformed_price, status=constants.ORDER_INIT)
 
-    def test_buy_order_creation(self):
-        self.create_order(order_type=constants.ORDER_BUY, total="1.0", status=constants.ORDER_INIT)
 
-        self.check_account_amount(self.primary_btc_account, amount="9.0")
-        self.check_account_amount(self.primary_eth_account, amount="0.0")
-
+class ApproveTest(BaseTest):
     def test_approve(self):
         order = self.create_order(order_type=constants.ORDER_BUY,
                                   price="0.5",
@@ -251,6 +389,8 @@ class OrderTest(AbsoritumUnitTest):
                          amount="20",
                          status=constants.ORDER_PENDING)
 
+
+class CancelTest(BaseTest):
     def test_cancel(self):
         order = self.create_order(order_type=constants.ORDER_BUY, total="1.0", status=constants.ORDER_INIT)
         self.cancel_order(pk=order['pk'])
@@ -260,138 +400,8 @@ class OrderTest(AbsoritumUnitTest):
 
         self.assertEqual(len(self.get_orders()), 1)
 
-    def test_sell_order_creation(self):
-        self.client.force_authenticate(self.some_user)
-        self.create_order(order_type=constants.ORDER_SELL, price="0.5", amount="2.0", status=constants.ORDER_INIT)
 
-        self.check_account_amount(self.some_btc_account, amount="0.0")
-        self.check_account_amount(self.some_eth_account, amount="18.0")
-
-    def test_run_out_deposit(self):
-        """
-            Create orders without money
-        """
-        with self.assertRaises(AssertionError):
-            self.create_order(price="2.0", amount="999")
-
-        self.check_account_amount(self.primary_btc_account, amount="10.0")
-        self.check_account_amount(self.primary_eth_account, amount="0.0")
-
-    def test_simple_order(self):
-        """
-            Create orders which will be processed fully
-        """
-
-        self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="20", status=constants.ORDER_INIT)
-
-        self.client.force_authenticate(self.some_user)
-        self.create_order(order_type=constants.ORDER_SELL, price="0.5", amount="20")
-        self.check_account_amount(self.some_btc_account, amount="10.0")
-        self.check_account_amount(self.some_eth_account, amount="0.0")
-        self.assertEqual(len(self.get_orders(constants.ORDER_SELL)), 1)
-
-        self.client.force_authenticate(self.user)
-        self.check_account_amount(self.primary_eth_account, amount="20.0")
-        self.check_account_amount(self.primary_btc_account, amount="0.0")
-        self.assertEqual(len(self.get_orders(constants.ORDER_BUY)), 1)
-
-    def test_multiple_orders(self):
-        """
-            Create orders which will be processed fully
-        """
-
-        self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="8", status=constants.ORDER_INIT)
-        self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="8", status=constants.ORDER_INIT)
-        self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="4", status=constants.ORDER_INIT)
-
-        self.client.force_authenticate(self.some_user)
-        self.create_order(order_type=constants.ORDER_SELL, price="0.5", amount="20")
-        self.check_account_amount(self.some_btc_account, amount="10.0")
-        self.check_account_amount(self.some_eth_account, amount="0.0")
-        self.assertEqual(len(self.get_orders(constants.ORDER_SELL)), 3)
-
-        self.client.force_authenticate(self.user)
-        self.check_account_amount(self.primary_eth_account, amount="20.0")
-        self.check_account_amount(self.primary_btc_account, amount="0.0")
-        self.assertEqual(len(self.get_orders(constants.ORDER_BUY)), 3)
-
-    def test_order_pending(self):
-        """
-            Create orders which will not be fully processed
-        """
-        self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="16.0", status=constants.ORDER_INIT)
-
-        self.client.force_authenticate(self.some_user)
-        self.create_order(order_type=constants.ORDER_SELL, price="0.5", amount="20.0", status="pending")
-        self.check_account_amount(self.some_eth_account, amount="0.0")
-        self.check_account_amount(self.some_btc_account, amount="8.0")
-
-        self.client.force_authenticate(self.user)
-        self.check_account_amount(self.primary_btc_account, amount="2.0")
-        self.check_account_amount(self.primary_eth_account, amount="16.0")
-
-    def test_same_account(self):
-        """
-            Create opposite orders on the same account
-        """
-        self.make_deposit(self.primary_eth_account, amount="20.0")
-
-        self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="20.0", status=constants.ORDER_INIT)
-        self.check_account_amount(self.primary_btc_account, amount="0.0")
-
-        self.create_order(order_type=constants.ORDER_SELL, price="0.5", amount="20.0")
-
-        self.check_account_amount(self.primary_btc_account, amount="10.0")
-        self.check_account_amount(self.primary_eth_account, amount="20.0")
-
-    def test_with_two_orders_with_diff_price(self):
-        """
-            Create create two orders with different price and then one opposite with smaller price.
-        """
-        self.create_order(order_type=constants.ORDER_BUY, price="0.5", total="5.0", status=constants.ORDER_INIT)
-        self.create_order(order_type=constants.ORDER_BUY, price="1.0", total="5.0", status=constants.ORDER_INIT)
-
-        self.client.force_authenticate(self.some_user)
-        self.create_order(order_type=constants.ORDER_SELL, price="0.1", amount="15.0", status=constants.ORDER_COMPLETED)
-        self.check_account_amount(self.some_eth_account, amount="5.0")
-        self.check_account_amount(self.some_btc_account, amount="10.0")
-
-        self.client.force_authenticate(self.user)
-        self.check_account_amount(self.primary_btc_account, amount="0.0")
-        self.check_account_amount(self.primary_eth_account, amount="15.0")
-
-    def test_order_readonly_status(self):
-        # check that we can't set the order status
-        extra_data = {
-            'status': constants.ORDER_PENDING
-        }
-
-        self.create_order(price="1.0", amount="10.0", status=constants.ORDER_INIT, extra_data=extra_data)
-
-    def test_order_readonly_system(self):
-        # check that we can't set the order status
-        extra_data = {
-            'system': constants.SYSTEM_POLONIEX
-        }
-
-        self.create_order(price="1.0", amount="10.0", status=constants.ORDER_INIT, extra_data=extra_data)
-
-    def test_sell_with_small_amount(self):
-        self.client.force_authenticate(self.some_user)
-
-        amount = constants.ORDER_MIN_TOTAL_AMOUNT - constants.ORDER_MIN_TOTAL_AMOUNT / 10
-
-        with self.assertRaises(AssertionError):
-            self.create_order(order_type=constants.ORDER_SELL, total=amount)
-        self.check_account_amount(self.some_eth_account, amount="20.0")
-
-    def test_buy_with_small_amount(self):
-        amount = constants.ORDER_MIN_TOTAL_AMOUNT - constants.ORDER_MIN_TOTAL_AMOUNT / 10
-
-        with self.assertRaises(AssertionError):
-            self.create_order(price="0.1", total=amount)
-        self.check_account_amount(self.primary_btc_account, amount="10.0")
-
+class NotificationTest(BaseTest):
     def test_notification(self):
         self.create_order(order_type=constants.ORDER_BUY, total="5.0", price="0.5", status=constants.ORDER_INIT)
         self.create_order(order_type=constants.ORDER_BUY, total="5.0", price="0.5", status=constants.ORDER_INIT)
