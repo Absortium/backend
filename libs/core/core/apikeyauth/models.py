@@ -11,3 +11,6 @@ class Client(models.Model):
     api_key = models.CharField(max_length=API_KEY_LEN, default=generate_token)
     api_secret = models.CharField(max_length=API_SECRETS_LEN, default=generate_token)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="client")
+
+    class Meta:
+        app_label = 'apikeyauth'

@@ -12,7 +12,7 @@ from absortium.model.models import Order, Offer, MarketInfo
 from absortium.serializers import MarketInfoSerializer, OrderSerializer
 from absortium.utils import safe_offer_update
 from core.utils.logging import getPrettyLogger
-
+from core.apikeyauth.models import Client
 __author__ = 'andrew.shvv@gmail.com'
 
 logger = getPrettyLogger(__name__)
@@ -21,6 +21,9 @@ logger = getPrettyLogger(__name__)
 @receiver(post_save, sender=get_user_model(), dispatch_uid="user_post_save")
 def user_post_save(sender, instance, *args, **kwargs):
     user = instance
+
+    c = Client(owner_id=user.pk)
+    c.save()
 
     for currency in constants.AVAILABLE_CURRENCIES:
         context = {

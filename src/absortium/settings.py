@@ -91,7 +91,8 @@ INSTALLED_APPS = [
     'django_extensions',
     'rest_framework',
     'absortium',
-    'absortium.celery'
+    'absortium.celery',
+    'core.apikeyauth'
 
 ]
 
