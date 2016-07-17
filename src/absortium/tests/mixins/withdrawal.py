@@ -12,7 +12,8 @@ class CreateWithdrawalMixin():
     def make_withdrawal(self, account, amount="0.01", user=None, with_checks=True, debug=False):
         data = {
             'amount': amount,
-            'address': '1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX'
+            'address': '1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX',
+            'currency': account['currency']
         }
 
         if user:
@@ -20,9 +21,7 @@ class CreateWithdrawalMixin():
             # TODO: now it is usual user but then we should change it to notification service user!!
             self.client.force_authenticate(user)
 
-        # Create withdrawal
-        url = '/api/accounts/{account_pk}/withdrawals/'.format(account_pk=account['pk'])
-        response = self.client.post(url, data=data, format='json')
+        response = self.client.post('/api/withdrawals/', data=data, format='json')
 
         if debug:
             logger.debug(response.content)
@@ -39,6 +38,7 @@ class CreateWithdrawalMixin():
                 self.fail("Withdrawal object wasn't found in db")
 
             # Check that withdrawal belongs to an account
-            self.assertEqual(obj.account.pk, account['pk'])
+            self.assertEqual(obj.owner.pk, self.user.pk)
+            self.assertEqual(withdrawal['currency'], account['currency'])
 
-            return withdrawal['pk'], obj
+            return withdrawal

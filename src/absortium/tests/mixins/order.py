@@ -45,9 +45,7 @@ class CreateOrderMixin():
         if user:
             self.client.force_authenticate(user)
 
-        # Create order
-        url = '/api/orders/'
-        response = self.client.post(url, data=data, format='json')
+        response = self.client.post('/api/orders/', data=data, format='json')
 
         if debug:
             logger.debug(response.content)
@@ -58,22 +56,14 @@ class CreateOrderMixin():
         order = history[-1]
 
         if with_checks:
+            try:
+                obj = Order.objects.get(pk=order["pk"])
+            except Order.DoesNotExist:
+                self.fail("Order object wasn't found in db")
+
             self.assertEqual(order['status'], status)
             self.assertEqual(order['system'], system)
-
-            if order['status'] == "PENDING":
-                # Check that order exist in db
-                try:
-                    obj = Order.objects.get(pk=order["pk"])
-                except Order.DoesNotExist:
-                    self.fail("Order object wasn't found in db")
-
-                # Check that order belongs to an user
-                self.assertNotEqual(obj.owner, None)
-
-            elif order['status'] == "COMPLETED":
-                # TODO: Add check that order has status COMPLETED
-                pass
+            self.assertEqual(obj.owner_id, self.client.handler._force_user.pk)
 
         return order
 

@@ -121,25 +121,23 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class DepositSerializer(serializers.ModelSerializer):
-    address = serializers.ReadOnlyField(source='account.address')
     amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                       min_value=constants.DEPOSIT_AMOUNT_MIN_VALUE,
                                       decimal_places=constants.DECIMAL_PLACES)
 
     class Meta:
         model = Deposit
-        fields = ('pk', 'address', 'amount', 'created')
+        fields = ('pk', 'address', 'amount', 'created', 'currency')
 
 
 class WithdrawSerializer(serializers.ModelSerializer):
-    address = serializers.CharField()
     amount = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
                                       min_value=constants.WITHDRAW_AMOUNT_MIN_VALUE,
                                       decimal_places=constants.DECIMAL_PLACES)
 
     class Meta:
         model = Withdrawal
-        fields = ('pk', 'address', 'amount', 'created')
+        fields = ('pk', 'address', 'amount', 'created', 'currency')
 
 
 class MarketInfoSerializer(serializers.ModelSerializer):

@@ -1,11 +1,10 @@
 import json
 
-from django.contrib.auth.models import User, Group
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import Sum
 from django.http import HttpResponse
-from rest_framework import generics, mixins, viewsets
+from rest_framework import mixins, viewsets
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
 from rest_framework.response import Response
@@ -16,8 +15,6 @@ from absortium.celery import tasks
 from absortium.mixins import CreateCeleryMixin, DestroyCeleryMixin, ApproveCeleryMixin, UpdateCeleryMixin
 from absortium.model.models import Offer, Order, Account, MarketInfo
 from absortium.serializers import \
-    UserSerializer, \
-    GroupSerializer, \
     OfferSerializer, \
     AccountSerializer, \
     OrderSerializer, \
@@ -32,25 +29,7 @@ __author__ = 'andrew.shvv@gmail.com'
 logger = getPrettyLogger(__name__)
 
 
-class UserList(generics.ListAPIView):
-    queryset = User.objects.all().order_by('-date_joined')
-    serializer_class = UserSerializer
-
-
-class UserDetail(generics.RetrieveAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-
-class GroupViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows groups to be viewed or edited.
-    """
-    queryset = Group.objects.all()
-    serializer_class = GroupSerializer
-
-
-class OfferListView(generics.GenericAPIView):
+class OfferViewSet(viewsets.GenericViewSet):
     """
     This view should return a list of all offers
     by the given currencies.
@@ -77,7 +56,7 @@ class OfferListView(generics.GenericAPIView):
 
         return queryset.filter(**fields)
 
-    def get(self, request, *args, **kwargs):
+    def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         queryset = queryset.values("price", "type", "pair").annotate(amount=Sum('amount'))
         return HttpResponse(json.dumps(list(queryset), cls=DjangoJSONEncoder), content_type="application/json")
@@ -105,7 +84,6 @@ def init_account(pk_name="accounts_pk"):
 
 
 class AccountViewSet(CreateCeleryMixin,
-                     mixins.RetrieveModelMixin,
                      mixins.ListModelMixin,
                      viewsets.GenericViewSet):
     serializer_class = AccountSerializer
@@ -113,22 +91,14 @@ class AccountViewSet(CreateCeleryMixin,
     def get_queryset(self):
         return self.request.user.accounts.all()
 
-    def list(self, request, *args, **kwargs):
+    def filter_queryset(self, queryset):
+        fields = {}
+
         currency = get_field(self.request.GET, 'currency', constants.AVAILABLE_CURRENCIES, throw=False)
-        queryset = self.filter_queryset(self.get_queryset())
-
         if currency is not None:
-            queryset = queryset.filter(currency=currency).all()
+            fields.update(currency=currency)
 
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-
-    def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
-
-    @init_account(pk_name="pk")
-    def retrieve(self, request, *args, **kwargs):
-        return super().retrieve(request, *args, **kwargs)
+        return queryset.filter(**fields)
 
     def create_in_celery(self, request, *args, **kwargs):
         context = {
@@ -143,45 +113,44 @@ class AccountViewSet(CreateCeleryMixin,
             serializer.save(owner=self.request.user)
 
 
-class DepositViewSet(mixins.RetrieveModelMixin,
-                     mixins.ListModelMixin,
+class DepositViewSet(mixins.ListModelMixin,
                      viewsets.GenericViewSet):
     serializer_class = DepositSerializer
 
     def get_queryset(self):
-        return self.request.account.deposits.all()
+        return self.request.user.deposits.all()
 
-    @init_account()
-    def retrieve(self, request, *args, **kwargs):
-        return super().retrieve(request, *args, **kwargs)
+    def filter_queryset(self, queryset):
+        fields = {}
 
-    @init_account()
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+        currency = get_field(self.request.GET, 'currency', constants.AVAILABLE_CURRENCIES, throw=False)
+        if currency is not None:
+            fields.update(account__currency=currency)
+
+        return queryset.filter(**fields)
 
 
 class WithdrawalViewSet(CreateCeleryMixin,
-                        mixins.RetrieveModelMixin,
                         mixins.ListModelMixin,
                         viewsets.GenericViewSet):
     serializer_class = WithdrawSerializer
 
     def get_queryset(self):
-        return self.request.account.withdrawals.all()
+        return self.request.user.withdrawals.all()
 
-    @init_account()
-    def retrieve(self, request, *args, **kwargs):
-        return super().retrieve(request, *args, **kwargs)
+    def filter_queryset(self, queryset):
+        fields = {}
 
-    @init_account()
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+        currency = get_field(self.request.GET, 'currency', constants.AVAILABLE_CURRENCIES, throw=False)
+        if currency is not None:
+            fields.update(account__currency=currency)
 
-    @init_account()
+        return queryset.filter(**fields)
+
     def create_in_celery(self, request, *args, **kwargs):
         context = {
             "data": request.data,
-            "account_pk": request.account.pk,
+            "user_pk": request.user.pk,
         }
 
         return tasks.do_withdrawal.delay(**context)
@@ -259,7 +228,7 @@ class OrderViewSet(CreateCeleryMixin,
         return tasks.cancel_order.delay(**context)
 
 
-class HistoryViewSet(generics.GenericAPIView,
+class HistoryViewSet(viewsets.GenericViewSet,
                      mixins.ListModelMixin):
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
@@ -282,12 +251,9 @@ class HistoryViewSet(generics.GenericAPIView,
 
         return queryset.filter(**fields)
 
-    def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
-
 
 class MarketInfoSet(mixins.ListModelMixin,
-                    generics.GenericAPIView):
+                    viewsets.GenericViewSet):
     serializer_class = MarketInfoSerializer
     queryset = MarketInfo.objects.all()
     permission_classes = ()
@@ -313,9 +279,6 @@ class MarketInfoSet(mixins.ListModelMixin,
 
         serializer = self.get_serializer(objs, many=True)
         return Response(serializer.data)
-
-    def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
 
 
 @api_view(http_method_names=['POST'])
@@ -360,9 +323,11 @@ def base_notification_handler(currency, data):
     except Account.DoesNotExist:
         raise NotFound("Could not found account with such address: {}".format(data.get('address')))
 
+    data['currency'] = currency
+
     context = {
         "data": data,
-        "account_pk": account.pk,
+        "user_pk": account.owner.pk,
     }
 
     async_result = tasks.do_deposit.delay(**context)

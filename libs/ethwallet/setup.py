@@ -20,7 +20,8 @@ setup(
     author='Andrey Samokhvalov',
     author_email='andrew.shvv@gmail.com',
     install_requires=[
-        'pp-ez'
+        'pp-ez',
+        'requests'
     ],
     classifiers=[
         'Operating System :: OS Independent',

@@ -34,13 +34,12 @@ def do_deposit(self, *args, **kwargs):
     try:
         with transaction.atomic():
             data = kwargs['data']
-            account_pk = kwargs['account_pk']
+            user_pk = kwargs['user_pk']
 
             serializer = DepositSerializer(data=data)
             serializer.is_valid(raise_exception=True)
 
-            account = Account.lock(pk=account_pk)
-            deposit = serializer.save(account=account)
+            deposit = serializer.save(owner_id=user_pk)
             deposit.process_account()
 
             return serializer.data
@@ -54,13 +53,12 @@ def do_withdrawal(self, *args, **kwargs):
     try:
         with transaction.atomic():
             data = kwargs['data']
-            account_pk = kwargs['account_pk']
+            user_pk = kwargs['user_pk']
 
             serializer = WithdrawSerializer(data=data)
             serializer.is_valid(raise_exception=True)
 
-            account = Account.lock(pk=account_pk)
-            withdrawal = serializer.save(account=account)
+            withdrawal = serializer.save(owner_id=user_pk)
             withdrawal.process_account()
 
             return serializer.data

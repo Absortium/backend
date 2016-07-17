@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 __author__ = "andrew.shvv@gmail.com"
 
 from django.conf import settings
@@ -20,7 +22,7 @@ class CreateDepositMixin():
             url = "/notifications/{token}/".format(token=settings.ETH_NOTIFICATION_TOKEN)
         else:
             raise Exception("Unexpected currency")
-            
+
         if user:
             # Authenticate normal user
             # TODO: now it is usual user but then we should change it to notification service user!!
@@ -42,7 +44,8 @@ class CreateDepositMixin():
             except Deposit.DoesNotExist:
                 self.fail("Deposit object wasn't found in db")
 
-            # Check that deposit belongs to an account
-            self.assertEqual(obj.account.pk, account["pk"])
+            self.assertEqual(obj.owner_id, self.client.handler._force_user.pk)
+            self.assertEqual(Decimal(deposit['amount']), Decimal(amount))
+            self.assertEqual(deposit['currency'], account['currency'])
 
-            return deposit["pk"], obj
+            return deposit

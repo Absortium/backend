@@ -379,30 +379,47 @@ class Order(models.Model):
 
 class Deposit(models.Model):
     created = models.DateTimeField(auto_now_add=True)
-    account = models.ForeignKey(Account, related_name="deposits")
+
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="deposits")
+
     amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                  decimal_places=constants.DECIMAL_PLACES, default=0)
 
+    currency = models.CharField(max_length=calculate_len(constants.AVAILABLE_CURRENCIES))
+
+    @property
+    def address(self):
+        return Account.objects.get(owner_id=self.owner_id, currency=self.currency).address
+
     def process_account(self):
-        amount = self.account.amount + self.amount
-        Account.update(pk=self.account.pk, amount=amount)
+        account = Account.lock(currency=self.currency, owner_id=self.owner_id)
+
+        amount = account.amount + self.amount
+        Account.update(pk=account.pk, amount=amount)
 
 
 class Withdrawal(models.Model):
     created = models.DateTimeField(auto_now_add=True)
-    account = models.ForeignKey(Account, related_name="withdrawals")
+
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="withdrawals")
+
     amount = models.DecimalField(max_digits=constants.MAX_DIGITS,
                                  decimal_places=constants.DECIMAL_PLACES, default=0)
+
+    currency = models.CharField(max_length=calculate_len(constants.AVAILABLE_CURRENCIES))
 
     address = models.CharField(max_length=50)
 
     def process_account(self):
-        if self.account.amount - self.amount >= 0:
-            amount = self.account.amount - self.amount
-            Account.update(pk=self.account.pk, amount=amount)
+        account = Account.lock(currency=self.currency, owner_id=self.owner_id)
 
-            client = get_wallet_client(self.account.currency)
+        if account.amount - self.amount >= 0:
+            amount = account.amount - self.amount
+
+            client = get_wallet_client(self.currency)
             client.send(self.amount, self.address)
+
+            Account.update(pk=account.pk, amount=amount)
         else:
             raise ValidationError("Not enough money for withdrawal")
 

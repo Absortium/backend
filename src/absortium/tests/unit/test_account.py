@@ -1,6 +1,6 @@
-import decimal
-
 __author__ = 'andrew.shvv@gmail.com'
+
+from decimal import Decimal as D
 
 from django.contrib.auth import get_user_model
 from rest_framework.status import HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN, HTTP_405_METHOD_NOT_ALLOWED, HTTP_201_CREATED
@@ -14,7 +14,7 @@ logger = getLogger(__name__)
 from absortium import constants
 
 
-class AccountTest(AbsoritumUnitTest):
+class GeneralTest(AbsoritumUnitTest):
     def test_creation_mixin(self):
         accounts = Account.objects.all()
         self.assertEqual(len(accounts), len(constants.AVAILABLE_CURRENCIES))
@@ -23,40 +23,24 @@ class AccountTest(AbsoritumUnitTest):
 
     def test_serialization(self, *args, **kwargs):
         account = self.get_account('btc')
-        self.make_deposit(account)
 
         # Check that 'address' and 'btc' serialized properly
         self.assertEqual(account['currency'], 'btc')
-        self.assertEqual(account['amount'], 0)
+        self.assertEqual(D(account['amount']), D("0.0"))
 
-    def test_permissions(self, *args, **kwargs):
+
+class PermissionTest(AbsoritumUnitTest):
+    def test_try_delete(self, *args, **kwargs):
         account = self.get_account('btc')
-        # User trying to delete account
-        response = self.client.delete('/api/accounts/{pk}/'.format(pk=account['pk']), format='json')
-        self.assertEqual(response.status_code, HTTP_405_METHOD_NOT_ALLOWED)
 
-        # Create hacker user
-        User = get_user_model()
-        hacker = User(username="hacker")
-        hacker.save()
+        with self.assertRaises(AssertionError):
+            self.delete_account(pk=account['pk'])
 
-        # Authenticate hacker
-        self.client.force_authenticate(hacker)
+    def test_access_foreign_account(self):
+        account = self.get_account('btc')
 
-        # Hacker trying access info of normal user account
-        response = self.client.get('/api/accounts/{pk}/'.format(pk=account['pk']), format='json')
-        self.assertEqual(response.status_code, HTTP_403_FORBIDDEN)
-
-    def test_malformed(self):
-        trash_account_pk = "19087698021"
-
-        # User trying to delete not created account
-        response = self.client.delete('/api/accounts/{pk}/'.format(pk=trash_account_pk), format='json')
-        self.assertEqual(response.status_code, HTTP_405_METHOD_NOT_ALLOWED)
-
-        # User trying to delete not created account
-        response = self.client.get('/api/accounts/{pk}/'.format(pk=trash_account_pk), format='json')
-        self.assertEqual(response.status_code, HTTP_404_NOT_FOUND)
+        with self.assertRaises(AssertionError):
+            self.retrieve_account(pk=account['pk'])
 
     def test_with_amount(self):
         """
@@ -67,17 +51,20 @@ class AccountTest(AbsoritumUnitTest):
         accounts = Account.objects.all()
         accounts.delete()
 
-        data = {
-            'currency': 'btc',
+        extra_data = {
             'amount': '10'
         }
 
         # Create btc account with amount
-        response = self.client.post('/api/accounts/', data=data, format='json')
-        self.assertEqual(response.status_code, HTTP_201_CREATED)
-
-        # Check that amount equal to zero
+        self.create_account('btc', extra_data=extra_data)
         account = self.get_account('btc')
-        self.assertEqual(account['amount'], decimal.Decimal('0'))
+        self.assertEqual(D(account['amount']), D('0.0'))
 
-        self.assertEqual(len(self.get_accounts()), 1)
+
+class MalformedTest(AbsoritumUnitTest):
+    def test_malformed(self):
+        trash_account_pk = "19087698021"
+
+        # User trying to delete not created account
+        with self.assertRaises(AssertionError):
+            self.delete_account(pk=trash_account_pk)

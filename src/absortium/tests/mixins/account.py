@@ -1,44 +1,69 @@
-from decimal import Decimal
+from decimal import Decimal as D
+
+from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK, HTTP_409_CONFLICT
+
+from absortium.model.models import Account
+from core.utils.logging import getLogger
 
 __author__ = 'andrew.shvv@gmail.com'
 
-from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK, HTTP_409_CONFLICT
-from core.utils.logging import getLogger
-
 logger = getLogger(__name__)
+
+ACCOUNT_URL = "/api/accounts/"
 
 
 class CreateAccountMixin():
-    def create_account(self, currency, with_checks=True, user=None):
+    def create_account(self, currency, with_checks=True, user=None, extra_data=None):
         if user:
             # Authenticate normal user
             self.client.force_authenticate(user)
 
-        data = {
-            'currency': currency
-        }
+        data = {'currency': currency}
 
-        # Create account
-        response = self.client.post('/api/accounts/', data=data, format='json')
+        if extra_data:
+            for k, v in extra_data.items():
+                data[k] = v
+
+        response = self.client.post(ACCOUNT_URL, data=data, format='json')
+        self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_409_CONFLICT])
+
+        account = response.json()
+
         if with_checks:
-            self.assertIn(response.status_code, [HTTP_201_CREATED, HTTP_409_CONFLICT])
+            try:
+                obj = Account.objects.get(pk=account["pk"])
+            except Account.DoesNotExist:
+                self.fail("Account object wasn't found in db")
 
-        account_pk = response.json()['pk']
-
-        return account_pk, response
-
-    def get_account(self, currency):
-        accounts = self.get_accounts()
-        for account in accounts:
-            if account['currency'] == currency:
-                account['amount'] = Decimal(account['amount'])
-                return account
-
-    def get_accounts(self):
-        response = self.client.get('/api/accounts/', format='json')
-        self.assertEqual(response.status_code, HTTP_200_OK)
+            self.assertEqual(obj.owner_id, self.client.handler._force_user.pk)
+            self.assertEqual(D(account['amount']), D('0.0'))
+            self.assertEqual(account['currency'], currency)
 
         return response.json()
+
+    def get_account(self, currency=None):
+
+        data = {}
+        if currency is not None:
+            data['currency'] = currency
+
+        response = self.client.get(ACCOUNT_URL, data=data, format='json')
+        self.assertEqual(response.status_code, HTTP_200_OK)
+
+        if currency is not None:
+            return response.json()[0]
+        else:
+            return response.json()
+
+    def delete_account(self, pk):
+        response = self.client.delete('{url}{pk}/'.format(url=ACCOUNT_URL, pk=pk), format='json')
+        self.assertEqual(response.status_code, HTTP_200_OK)
+        return response
+
+    def retrieve_account(self, pk):
+        response = self.client.get('{url}{pk}/'.format(url=ACCOUNT_URL, pk=pk), format='json')
+        self.assertEqual(response.status_code, HTTP_200_OK)
+        return response
 
     def check_account_amount(self, account, amount, user=None, debug=False):
         if user:
@@ -46,16 +71,7 @@ class CreateAccountMixin():
             self.client.force_authenticate(user)
 
         if type(amount) == str:
-            amount = Decimal(amount)
+            amount = D(amount)
 
-        # Create account
-        response = self.client.get('/api/accounts/{account_pk}/'.format(account_pk=account['pk']), format='json')
-
-        if debug:
-            logger.debug(response.content)
-
-        self.assertEqual(response.status_code, HTTP_200_OK)
-
-        account = response.json()
-
-        self.assertEqual(Decimal(account['amount']),amount)
+        account = self.get_account(account['currency'])
+        self.assertEqual(D(account['amount']), amount)
