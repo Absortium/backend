@@ -1,6 +1,6 @@
 __author__ = 'andrew.shvv@gmail.com'
 
-from services.backend.absortium.crossbarhttp.client import set_crossbar_client, get_crossbar_client
+from absortium.crossbarhttp.client import set_crossbar_client, get_crossbar_client
 
 
 class atomic:

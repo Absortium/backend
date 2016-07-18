@@ -6,7 +6,7 @@ from django.conf import settings
 from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 from absortium.model.models import Deposit
-from services.backend.absortium.tests import create_btc_notification, create_eth_notification
+from absortium.tests.utils import create_btc_notification, create_eth_notification
 from core.utils.logging import getPrettyLogger
 
 logger = getPrettyLogger(__name__)

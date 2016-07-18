@@ -8,7 +8,7 @@ from absortium.model.models import Account, Offer
 from django.contrib.auth import get_user_model
 
 from core.utils.logging import getLogger
-from services.backend.absortium.tests import AbsoritumLiveTest
+from absortium.tests.base import AbsoritumLiveTest
 
 logger = getLogger(__name__)
 

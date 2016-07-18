@@ -3,9 +3,9 @@ from absortium.wallet.pool import AccountPool
 __author__ = "andrew.shvv@gmail.com"
 
 from absortium import constants, wallet
-from services.backend.absortium.tests import AbsoritumUnitTest
+from absortium.tests.base import AbsoritumUnitTest
 from absortium.wallet.base import get_wallet_client
-from services.backend.absortium.celery import tasks
+from absortium.celery import tasks
 from core.utils.logging import getLogger
 
 logger = getLogger(__name__)

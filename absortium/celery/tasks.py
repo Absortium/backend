@@ -16,7 +16,7 @@ from absortium.wallet.pool import AccountPool
 from absortium.celery.base import get_base_class
 from absortium.crossbarhttp import publishment
 from absortium.exceptions import AlreadyExistError
-from services.backend.absortium.model.locks import lockaccounts, get_opposites
+from absortium.model.locks import lockaccounts, get_opposites
 from absortium.model.models import Account, Order, MarketInfo
 from absortium.serializers import \
     OrderSerializer, \

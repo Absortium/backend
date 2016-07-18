@@ -23,17 +23,17 @@ if settings.MODE in ['frontend', 'integration']:
     """
 
     if settings.MODE == 'integration':
-        from services.backend.absortium.tests import CeleryMockMixin
+        from absortium.tests.mixins.celery import CeleryMockMixin
 
         CeleryMockMixin().mock_celery()
         logger.debug("Mock DBTask celery class")
 
-    from services.backend.absortium.tests import BitcoinClientMockMixin
+    from absortium.tests.mixins.bitcoin import BitcoinClientMockMixin
 
     BitcoinClientMockMixin().mock_bitcoin_client()
     logger.debug("Mock Bitcoin client")
 
-    from services.backend.absortium.tests import EthereumClientMockMixin
+    from absortium.tests.mixins.ethereum import EthereumClientMockMixin
 
     EthereumClientMockMixin().mock_ethereum_client()
     logger.debug("Mock Ethereum client")

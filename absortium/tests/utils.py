@@ -1,6 +1,6 @@
 from absortium.utils import random_string
 
-from services.backend.absortium.tests import payment_notification
+from absortium.tests.data.coinbase import payment_notification
 
 __author__ = 'andrew.shvv@gmail.com'
 

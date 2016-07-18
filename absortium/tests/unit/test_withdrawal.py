@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.status import HTTP_404_NOT_FOUND
 
 from core.utils.logging import getLogger
-from services.backend.absortium.tests import AbsoritumUnitTest
+from absortium.tests.base import AbsoritumUnitTest
 
 logger = getLogger(__name__)
 

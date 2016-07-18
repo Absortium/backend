@@ -11,4 +11,5 @@ class AbsortiumConfig(AppConfig):
 
         # This will make sure the signals is always imported when
         # Django starts so that exclude import cycles
+        import absortium.signals
 

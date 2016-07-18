@@ -1,5 +1,3 @@
-__author__ = "andrew.shvv@gmail.com"
-
 from django.conf import settings
 from django.conf.urls import url, include
 from rest_framework_nested import routers
@@ -14,6 +12,8 @@ from absortium.views import \
     HistoryViewSet, \
     btc_notification_handler, \
     eth_notification_handler
+
+__author__ = "andrew.shvv@gmail.com"
 
 router = routers.SimpleRouter()
 router.register(prefix=r"accounts", viewset=AccountViewSet, base_name="Account")

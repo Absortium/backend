@@ -6,7 +6,7 @@ from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch.dispatcher import receiver
 
 from absortium import constants
-from services.backend.absortium.celery import tasks
+from absortium.celery import tasks
 from absortium.crossbarhttp import get_crossbar_client
 from absortium.model.models import Order, Offer, MarketInfo
 from absortium.serializers import MarketInfoSerializer, OrderSerializer

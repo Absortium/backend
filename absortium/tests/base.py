@@ -10,16 +10,16 @@ from rest_framework.status import HTTP_200_OK
 from rest_framework.test import APITestCase, APIClient, APITransactionTestCase
 
 from core.utils.logging import getLogger
-from services.backend.absortium.tests import BitcoinClientMockMixin
-from services.backend.absortium.tests import CheckOfferMixin
-from services.backend.absortium.tests import CreateAccountMixin
-from services.backend.absortium.tests import CreateDepositMixin
-from services.backend.absortium.tests import CreateOrderMixin
-from services.backend.absortium.tests import CreateWithdrawalMixin
-from services.backend.absortium.tests import EthereumClientMockMixin
-from services.backend.absortium.tests import HistoryMixin
-from services.backend.absortium.tests import MarketInfoMixin
-from services.backend.absortium.tests import RouterMockMixin
+from absortium.tests.mixins.bitcoin import BitcoinClientMockMixin
+from absortium.tests.mixins.offer import CheckOfferMixin
+from absortium.tests.mixins.account import CreateAccountMixin
+from absortium.tests.mixins.deposit import CreateDepositMixin
+from absortium.tests.mixins.order import CreateOrderMixin
+from absortium.tests.mixins.withdrawal import CreateWithdrawalMixin
+from absortium.tests.mixins.ethereum import EthereumClientMockMixin
+from absortium.tests.mixins.history import HistoryMixin
+from absortium.tests.mixins.market import MarketInfoMixin
+from absortium.tests.mixins.router import RouterMockMixin
 
 logger = getLogger(__name__)
 

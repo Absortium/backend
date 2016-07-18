@@ -9,7 +9,7 @@ from django.contrib.auth import settings
 from django.core.management.base import BaseCommand
 
 from core.utils.logging import getPrettyLogger
-from services.backend.absortium.tests import create_btc_notification, create_eth_notification
+from absortium.tests.utils import create_btc_notification, create_eth_notification
 
 logger = getPrettyLogger(__name__)
 

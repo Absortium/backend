@@ -2,7 +2,7 @@ from absortium import constants
 from django.contrib.auth import get_user_model
 
 from core.utils.logging import getLogger
-from services.backend.absortium.tests import AbsoritumUnitTest
+from absortium.tests.base import AbsoritumUnitTest
 
 __author__ = 'andrew.shvv@gmail.com'
 logger = getLogger(__name__)

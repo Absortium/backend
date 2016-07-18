@@ -4,7 +4,7 @@ from absortium.crossbarhttp import publishment
 from absortium.crossbarhttp.client import get_crossbar_client
 
 from core.utils.logging import getLogger
-from services.backend.absortium.tests import AbsoritumUnitTest
+from absortium.tests.base import AbsoritumUnitTest
 
 logger = getLogger(__name__)
 

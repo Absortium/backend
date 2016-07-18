@@ -1,6 +1,4 @@
 import decimal
-import os
-import sys
 from decimal import Decimal
 from random import choice
 from sqlite3 import IntegrityError

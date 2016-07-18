@@ -3,7 +3,7 @@ from absortium.celery import tasks
 from freezegun import freeze_time
 
 from core.utils.logging import getLogger
-from services.backend.absortium.tests import AbsoritumUnitTest
+from absortium.tests.base import AbsoritumUnitTest
 
 __author__ = "andrew.shvv@gmail.com"
 

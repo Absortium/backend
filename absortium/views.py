@@ -22,7 +22,7 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK
 
 from core.utils.logging import getPrettyLogger
-from services.backend.absortium.mixins import CreateCeleryMixin, DestroyCeleryMixin, ApproveCeleryMixin, UpdateCeleryMixin
+from absortium.mixins import CreateCeleryMixin, DestroyCeleryMixin, ApproveCeleryMixin, UpdateCeleryMixin
 
 __author__ = 'andrew.shvv@gmail.com'
 
