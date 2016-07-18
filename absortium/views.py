@@ -125,7 +125,7 @@ class DepositViewSet(mixins.ListModelMixin,
 
         currency = get_field(self.request.GET, 'currency', constants.AVAILABLE_CURRENCIES, throw=False)
         if currency is not None:
-            fields.update(account__currency=currency)
+            fields.update(currency=currency)
 
         return queryset.filter(**fields)
 
@@ -143,7 +143,7 @@ class WithdrawalViewSet(CreateCeleryMixin,
 
         currency = get_field(self.request.GET, 'currency', constants.AVAILABLE_CURRENCIES, throw=False)
         if currency is not None:
-            fields.update(account__currency=currency)
+            fields.update(currency=currency)
 
         return queryset.filter(**fields)
 
