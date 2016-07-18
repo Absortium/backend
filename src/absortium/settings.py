@@ -11,50 +11,28 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 """
 
 import os
-import sys
 from datetime import timedelta
 
 from kombu import Exchange, Queue
 
-required_docker_environments = {
-    'SECRET_KEY': 'DJANGO_SECRET_KEY',
+from core.utils.general import load_environments, get_attr_from_module
 
-    'POSTGRES_PASSWORD': 'POSTGRES_PASSWORD',
+load_environments(__name__, [
+    ('SECRET_KEY', 'DJANGO_SECRET_KEY', True),
+    ('POSTGRES_PASSWORD', 'POSTGRES_PASSWORD', True),
+    ('WHOAMI', 'WHOAMI'),
+    ('MODE', 'MODE'),
+    ('AUTH0_SECRET_KEY', 'AUTH0_SECRET_KEY'),
+    ('AUTH0_API_KEY', 'AUTH0_API_KEY'),
+    ('ETH_NOTIFICATION_TOKEN', 'ETH_NOTIFICATION_TOKEN'),
+    ('BTC_NOTIFICATION_TOKEN', 'BTC_NOTIFICATION_TOKEN'),
+    ('COINBASE_API_KEY', 'COINBASE_API_KEY'),
+    ('COINBASE_API_SECRET', 'COINBASE_API_SECRET'),
+    ('ETHWALLET_API_KEY', 'ETHWALLET_API_KEY'),
+    ('ETHWALLET_API_SECRET', 'ETHWALLET_API_SECRET')
+])
 
-    'ETH_NOTIFICATION_TOKEN': 'ETH_NOTIFICATION_TOKEN',
-    'BTC_NOTIFICATION_TOKEN': 'BTC_NOTIFICATION_TOKEN',
-    'WHOAMI': 'WHOAMI',
-}
-
-optional_docker_environments = {
-    'AUTH0_SECRET_KEY': 'AUTH0_SECRET_KEY',
-    'AUTH0_API_KEY': 'AUTH0_API_KEY',
-
-    'COINBASE_API_KEY': 'COINBASE_API_KEY',
-    'COINBASE_API_SECRET': 'COINBASE_API_SECRET',
-
-    'ETHWALLET_API_KEY': 'ETHWALLET_API_KEY',
-    'ETHWALLET_API_SECRET': 'ETHWALLET_API_SECRET',
-
-    'POLONIEX_API_SECRET' : 'POLONIEX_API_SECRET',
-    'POLONIEX_API_KEY': 'POLONIEX_API_KEY',
-
-    'MODE': 'MODE'
-
-}
-
-settings_module = sys.modules[__name__]
-for name, env_name in optional_docker_environments.items():
-    value = os.environ[env_name] if env_name in os.environ else None
-    setattr(settings_module, name, value)
-
-for name, env_name in required_docker_environments.items():
-    value = os.environ[env_name] if env_name in os.environ else None
-    if not value:
-        raise NotImplementedError("Specify the '{}' environment variable.".format(env_name))
-    setattr(settings_module, name, value)
-
-COINBASE_SANDBOX = getattr(settings_module, 'MODE') in ['testnet']
+COINBASE_SANDBOX = get_attr_from_module(__name__, 'MODE') in ['testnet']
 if COINBASE_SANDBOX:
     COINBASE_API_URL = 'https://api.sandbox.coinbase.com'
 else:
@@ -73,7 +51,7 @@ CELERY_QUEUES = (
     Queue('absortium', Exchange('absortium'), routing_key='absortium'),
 )
 
-MODE = getattr(settings_module, 'MODE')
+MODE = get_attr_from_module(__name__, 'MODE')
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -114,8 +92,8 @@ ROOT_URLCONF = 'absortium.urls'
 JWT_AUTH = {
     'JWT_DECODE_HANDLER': 'absortium.jwt.jwt_decode_handler',
     'JWT_PAYLOAD_GET_USERNAME_HANDLER': 'absortium.jwt.jwt_get_username_from_payload',
-    'JWT_AUDIENCE': getattr(settings_module, 'AUTH0_API_KEY'),
-    'JWT_SECRET_KEY': getattr(settings_module, 'AUTH0_SECRET_KEY'),
+    'JWT_AUDIENCE': get_attr_from_module(__name__, 'AUTH0_API_KEY'),
+    'JWT_SECRET_KEY': get_attr_from_module(__name__, 'AUTH0_SECRET_KEY'),
 }
 
 CELERYBEAT_SCHEDULE = {
@@ -140,7 +118,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': dbname,
         'USER': 'postgres',
-        'PASSWORD': getattr(settings_module, 'POSTGRES_PASSWORD'),
+        'PASSWORD': get_attr_from_module(__name__, 'POSTGRES_PASSWORD'),
         'HOST': 'docker.postgres',
         'PORT': '5432',
         'CONN_MAX_AGE': 500
