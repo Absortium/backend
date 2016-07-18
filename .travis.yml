@@ -27,7 +27,7 @@ before_install:
   - cd ..
   - git clone --recursive https://github.com/absortium/deluge.git
   - rm -rf "deluge/services/$SERVICE"
-  - cp -R "$SERVICE" "deluge/services/$SERVICE"
+  - mv "$SERVICE" "deluge/services/$SERVICE"
   - pushd deluge
 
   # Create mock '.sensitive'
