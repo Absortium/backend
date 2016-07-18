@@ -23,8 +23,11 @@ env:
 after_success: test "$TRAVIS_PULL_REQUEST" == "false" && ./useful/after_success.sh "$DOCKER_USERNAME" "$DOCKER_PASS" "$SERVICE" "$TRAVIS_BRANCH"
 
 before_install:
-  # Clone 'deluge' project
+  # Clone 'deluge' project and replace service folder.
+  - cd ..
   - git clone --recursive https://github.com/absortium/deluge.git
+  - rm -rf "deluge/services/$SERVICE"
+  - cp -R "$SERVICE" "services/$SERVICE"
   - pushd deluge
 
   # Create mock '.sensitive'
