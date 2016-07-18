@@ -27,7 +27,7 @@ before_install:
   - cd ..
   - git clone --recursive https://github.com/absortium/deluge.git
   - rm -rf "deluge/services/$SERVICE"
-  - cp -R "$SERVICE" "services/$SERVICE"
+  - cp -R "$SERVICE" "deluge/services/$SERVICE"
   - pushd deluge
 
   # Create mock '.sensitive'
@@ -47,4 +47,4 @@ before_install:
   - docker-compose version
 
 script:
-  - ./useful/install.sh "$SERVICE" "$TRAVIS_BRANCH" "$TRAVIS"
+  - ./useful/install.sh  -s "$SERVICE"  -t "$TRAVIS"
