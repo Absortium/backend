@@ -1,13 +1,13 @@
 import decimal
 import random
 
-from absortium import constants
-from absortium.poloniexsync import PoloniexApp
 from django.contrib.auth import get_user_model
 
-from core.utils.logging import getLogger
+from absortium import constants
+from absortium.poloniexsync import PoloniexApp
 from absortium.tests.base import AbsoritumUnitTest
 from absortium.tests.data.poloniex import create_poloniex_update, create_order_book
+from core.utils.logging import getLogger
 
 __author__ = 'andrew.shvv@gmail.com'
 
@@ -24,6 +24,15 @@ class OfferTest(AbsoritumUnitTest):
 
         self.make_deposit(self.get_account('btc'), amount="999999.0")
         self.make_deposit(self.get_account('eth'), amount="999999.0")
+
+        User = get_user_model()
+        self.some_user = User(username="some_user")
+        self.some_user.save()
+
+        self.make_deposit(self.get_account('btc', self.some_user), amount="999999.0")
+        self.make_deposit(self.get_account('eth', self.some_user), amount="999999.0")
+
+        self.client.force_authenticate(self.user)
 
     def random_amount(self):
         amount = -1
@@ -44,9 +53,9 @@ class OfferTest(AbsoritumUnitTest):
 
     def test_calculation_accuracy(self, *args, **kwargs):
         User = get_user_model()
-        some_user = User(username="some_user")
-        some_user.save()
-        self.client.force_authenticate(some_user)
+        another_user = User(username="another_user")
+        another_user.save()
+        self.client.force_authenticate(another_user)
 
         n = 20
         amounts = [self.random_amount() for _ in range(0, n)]
@@ -70,14 +79,7 @@ class OfferTest(AbsoritumUnitTest):
         self.create_order(amount="1.0", price="1.0", status=constants.ORDER_INIT)
         self.check_offer(amount="1.0", price="1.0")
 
-        # Create some another user
-        User = get_user_model()
-        some_user = User(username="some_user")
-        some_user.save()
-
-        self.client.force_authenticate(some_user)
-        self.make_deposit(self.get_account('btc'), amount="999999.0")
-        self.make_deposit(self.get_account('eth'), amount="999999.0")
+        self.client.force_authenticate(self.some_user)
 
         self.create_order(order_type=constants.ORDER_SELL, amount="1.0", price="3.0", status=constants.ORDER_INIT)
         self.check_offer(order_type=constants.ORDER_SELL, amount="1.0", price="3.0")
@@ -92,14 +94,7 @@ class OfferTest(AbsoritumUnitTest):
         self.create_order(order_type=constants.ORDER_BUY, amount="1.0", price="1.0", status=constants.ORDER_INIT)
         self.check_offer(order_type=constants.ORDER_BUY, amount="3.0", price="1.0")
 
-        # Create some another user
-        User = get_user_model()
-        some_user = User(username="some_user")
-        some_user.save()
-
-        self.client.force_authenticate(some_user)
-        self.make_deposit(self.get_account('btc'), amount="999999.0")
-        self.make_deposit(self.get_account('eth'), amount="999999.0")
+        self.client.force_authenticate(self.some_user)
 
         self.create_order(order_type=constants.ORDER_SELL, amount="1.0", price="1")
         self.create_order(order_type=constants.ORDER_SELL, amount="1.0", price="1")
@@ -114,14 +109,15 @@ class OfferTest(AbsoritumUnitTest):
         self.assertEqual(len(self.get_publishments("offers_btc_eth_sell")), 2)
 
     def test_creation_and_deletion_notification(self):
-        self.create_order(order_type=constants.ORDER_SELL, status=constants.ORDER_INIT)
-        self.create_order(order_type=constants.ORDER_BUY, status=constants.ORDER_COMPLETED)
+        self.create_order(user=self.some_user, order_type=constants.ORDER_SELL, status=constants.ORDER_INIT)
+        self.create_order(user=self.user, order_type=constants.ORDER_BUY, status=constants.ORDER_COMPLETED)
 
         self.assertEqual(len(self.get_publishments("offers_btc_eth_sell")), 2)
         self.assertEqual(len(self.get_publishments("offers_btc_eth_buy")), 2)
 
     def test_update_order(self):
-        order = self.create_order(order_type=constants.ORDER_SELL, amount="1.0", price="1.0", status=constants.ORDER_INIT)
+        order = self.create_order(order_type=constants.ORDER_SELL, amount="1.0", price="1.0",
+                                  status=constants.ORDER_INIT)
         self.update_order(pk=order['pk'], amount="2.0")
 
     def test_cancel_order(self):

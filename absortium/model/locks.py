@@ -94,12 +94,14 @@ class get_opposites:
                                              'AND price {sign} %s '
                                              'AND pair = %s '
                                              'AND type = %s '
+                                             'AND owner_id <> %s '
                                              'FOR UPDATE '
                                              'LIMIT 1 '.format(sign=sign),
                                              [constants.ORDER_PENDING, constants.ORDER_INIT,
                                               self.order.price,
                                               self.order.pair,
-                                              self.order.opposite_type])[0]
+                                              self.order.opposite_type,
+                                              self.order.owner_id])[0]
 
             except IndexError:
                 """
@@ -112,13 +114,5 @@ class get_opposites:
                     continue
                 else:
                     raise StopIteration()
-
-            if self.order.owner_id == opposite.owner_id:
-                """
-                    If we process the same users that means that orders are opposite
-                    and we should not block the same accounts twice.
-                """
-                opposite.from_account = self.order.to_account
-                opposite.to_account = self.order.from_account
 
             return opposite
