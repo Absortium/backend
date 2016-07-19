@@ -100,7 +100,7 @@ def create_order(self, *args, **kwargs):
 
             return history + [order]
 
-        if order.total <= constants.ORDER_MIN_TOTAL_AMOUNT:
+        if order.total < constants.ORDER_MIN_TOTAL_AMOUNT:
             raise ValidationError("Total amount lower than {}".format(constants.ORDER_MIN_TOTAL_AMOUNT))
 
         with publishment.atomic():
@@ -126,15 +126,20 @@ def cancel_order(self, *args, **kwargs):
                 with transaction.atomic():
                     order = Order.lock(owner__pk=user_pk, pk=order_pk)
 
-                    with lockaccounts(order):
-                        if order.status in [constants.ORDER_APPROVING, constants.ORDER_APPROVED]:
-                            opposite = Order.lock(pk=order.link.pk)
+                    if order.status not in [constants.ORDER_CANCELED, constants.ORDER_COMPLETED]:
+                        with lockaccounts(order):
+                            if order.status in [constants.ORDER_APPROVING, constants.ORDER_APPROVED]:
+                                opposite = Order.lock(pk=order.link.pk)
 
-                            with lockaccounts(opposite):
-                                opposite.status = constants.ORDER_PENDING
+                                with lockaccounts(opposite):
+                                    opposite.status = constants.ORDER_PENDING
 
-                        order.unfreeze_money()
-                        order.status = constants.ORDER_CANCELED
+                            order.unfreeze_money()
+                            order.status = constants.ORDER_CANCELED
+
+                        return OrderSerializer(order).data
+                    else:
+                        raise ValidationError("Order already canceled")
 
         except Order.DoesNotExist:
             """
@@ -155,7 +160,8 @@ def approve_order(self, *args, **kwargs):
     try:
         try:
             with transaction.atomic():
-                with lockaccounts(Order.lock(owner__pk=user_pk, pk=order_pk)) as order:
+                order = Order.lock(owner__pk=user_pk, pk=order_pk)
+                with lockaccounts(order):
 
                     if order.need_approve and order.status != constants.ORDER_APPROVED:
                         order.status = constants.ORDER_APPROVED
@@ -167,6 +173,8 @@ def approve_order(self, *args, **kwargs):
                                     order.merge(opposite)
                             else:
                                 order.merge(opposite)
+
+                return OrderSerializer(order).data
 
         except Order.DoesNotExist:
             """
@@ -187,7 +195,8 @@ def update_order(self, *args, **kwargs):
     try:
         try:
             with transaction.atomic():
-                with lockaccounts(Order.lock(owner__pk=user_pk, pk=order_pk)) as order:
+                order = Order.lock(owner__pk=user_pk, pk=order_pk)
+                with lockaccounts(order):
                     if order.status in [constants.ORDER_INIT, constants.ORDER_PENDING]:
 
                         order.unfreeze_money()
@@ -203,7 +212,7 @@ def update_order(self, *args, **kwargs):
                     else:
                         raise ValidationError("You can't modify orders in status '{}'".format(order.status))
 
-                    return OrderSerializer(order).data
+                return OrderSerializer(order).data
 
         except Order.DoesNotExist:
             """
