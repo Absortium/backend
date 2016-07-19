@@ -159,10 +159,10 @@ class CreateTest(BaseTest):
         self.create_order(order_type=constants.ORDER_BUY, price="0.5", amount="20.0", status=constants.ORDER_INIT)
         self.check_account_amount(self.primary_btc_account, amount="0.0")
 
-        self.create_order(order_type=constants.ORDER_SELL, price="0.5", amount="20.0")
+        self.create_order(order_type=constants.ORDER_SELL, price="0.5", amount="20.0", status=constants.ORDER_INIT)
 
-        self.check_account_amount(self.primary_btc_account, amount="10.0")
-        self.check_account_amount(self.primary_eth_account, amount="20.0")
+        self.check_account_amount(self.primary_btc_account, amount="0.0")
+        self.check_account_amount(self.primary_eth_account, amount="0.0")
 
     def test_with_two_orders_with_diff_price(self):
         """

@@ -13,7 +13,7 @@ logger = getPrettyLogger(__name__)
 
 
 class CreateDepositMixin():
-    def make_deposit(self, account, amount="99999", with_checks=True, user=None, debug=False):
+    def make_deposit(self, account, amount="99999", with_checks=True, debug=False):
         if account["currency"] == "btc":
             data = create_btc_notification(account["address"], str(amount))
             url = "/notifications/{token}/".format(token=settings.BTC_NOTIFICATION_TOKEN)
@@ -22,11 +22,6 @@ class CreateDepositMixin():
             url = "/notifications/{token}/".format(token=settings.ETH_NOTIFICATION_TOKEN)
         else:
             raise Exception("Unexpected currency")
-
-        if user:
-            # Authenticate normal user
-            # TODO: now it is usual user but then we should change it to notification service user!!
-            self.client.force_authenticate(user)
 
         response = self.client.post(url, data=data, format="json")
 

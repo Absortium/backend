@@ -41,11 +41,14 @@ class CreateAccountMixin():
 
         return response.json()
 
-    def get_account(self, currency=None, debug=False):
+    def get_account(self, currency=None, user=None, debug=False):
 
         data = {}
         if currency is not None:
             data['currency'] = currency
+
+        if user:
+            self.client.force_authenticate(user)
 
         response = self.client.get(ACCOUNT_URL, data=data, format='json')
 
