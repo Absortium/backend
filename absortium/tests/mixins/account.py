@@ -41,34 +41,24 @@ class CreateAccountMixin():
 
         return response.json()
 
-    def get_account(self, currency=None, user=None, debug=False):
-
-        data = {}
-        if currency is not None:
-            data['currency'] = currency
-
+    def get_account(self, currency, user=None, debug=False):
         if user:
             self.client.force_authenticate(user)
 
-        response = self.client.get(ACCOUNT_URL, data=data, format='json')
+        response = self.client.get('{url}{currency}/'.format(url=ACCOUNT_URL, currency=currency), format='json')
 
         if debug:
             logger.debug(response.content)
 
         self.assertEqual(response.status_code, HTTP_200_OK)
+        return response.json()
 
-        if currency is not None:
-            return response.json()[0]
-        else:
-            return response.json()
+    def delete_account(self, currency, debug=False):
+        response = self.client.delete('{url}{currency}/'.format(url=ACCOUNT_URL, currency=currency), format='json')
 
-    def delete_account(self, pk):
-        response = self.client.delete('{url}{pk}/'.format(url=ACCOUNT_URL, pk=pk), format='json')
-        self.assertEqual(response.status_code, HTTP_200_OK)
-        return response
+        if debug:
+            logger.debug(response.content)
 
-    def retrieve_account(self, pk):
-        response = self.client.get('{url}{pk}/'.format(url=ACCOUNT_URL, pk=pk), format='json')
         self.assertEqual(response.status_code, HTTP_200_OK)
         return response
 

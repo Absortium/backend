@@ -53,6 +53,7 @@ class AccountSerializer(serializers.ModelSerializer):
     currency = MyChoiceField(choices=constants.AVAILABLE_CURRENCIES)
 
     class Meta:
+        lookup_field = 'currency'
         model = Account
         fields = ('pk', 'address', 'currency', 'amount')
         read_only_fields = ('address', 'amount')

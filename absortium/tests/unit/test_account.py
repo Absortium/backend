@@ -3,9 +3,8 @@ __author__ = 'andrew.shvv@gmail.com'
 from decimal import Decimal as D
 
 from absortium.model.models import Account
-
-from core.utils.logging import getLogger
 from absortium.tests.base import AbsoritumUnitTest
+from core.utils.logging import getLogger
 
 logger = getLogger(__name__)
 
@@ -29,16 +28,8 @@ class GeneralTest(AbsoritumUnitTest):
 
 class PermissionTest(AbsoritumUnitTest):
     def test_try_delete(self, *args, **kwargs):
-        account = self.get_account('btc')
-
         with self.assertRaises(AssertionError):
-            self.delete_account(pk=account['pk'])
-
-    def test_access_foreign_account(self):
-        account = self.get_account('btc')
-
-        with self.assertRaises(AssertionError):
-            self.retrieve_account(pk=account['pk'])
+            self.delete_account('btc')
 
     def test_with_amount(self):
         """
@@ -60,9 +51,12 @@ class PermissionTest(AbsoritumUnitTest):
 
 
 class MalformedTest(AbsoritumUnitTest):
-    def test_malformed(self):
-        trash_account_pk = "19087698021"
-
+    def test_malformed_delete(self):
         # User trying to delete not created account
         with self.assertRaises(AssertionError):
-            self.delete_account(pk=trash_account_pk)
+            self.delete_account("19087698021")
+
+    def test_malformed_retrieve(self):
+        # User trying to delete not created account
+        with self.assertRaises(AssertionError):
+            self.get_account("19087698021", debug=True)

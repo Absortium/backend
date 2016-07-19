@@ -85,20 +85,13 @@ def init_account(pk_name="accounts_pk"):
 
 class AccountViewSet(CreateCeleryMixin,
                      mixins.ListModelMixin,
+                     mixins.RetrieveModelMixin,
                      viewsets.GenericViewSet):
     serializer_class = AccountSerializer
+    lookup_field = 'currency'
 
     def get_queryset(self):
         return self.request.user.accounts.all()
-
-    def filter_queryset(self, queryset):
-        fields = {}
-
-        currency = get_field(self.request.GET, 'currency', constants.AVAILABLE_CURRENCIES, throw=False)
-        if currency is not None:
-            fields.update(currency=currency)
-
-        return queryset.filter(**fields)
 
     def create_in_celery(self, request, *args, **kwargs):
         context = {
