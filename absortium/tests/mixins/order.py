@@ -149,6 +149,42 @@ class CreateOrderMixin():
 
         self.assertIn(response.status_code, [HTTP_200_OK])
 
+    def lock_order(self,
+                   pk,
+                   user=None,
+                   debug=False):
+
+        # Authenticate normal user
+        if user:
+            self.client.force_authenticate(user)
+
+        # Create order
+        url = '/api/orders/{pk}/lock/'.format(pk=pk)
+        response = self.client.post(url, format='json')
+
+        if debug:
+            logger.debug(response.content)
+
+        self.assertIn(response.status_code, [HTTP_200_OK])
+
+    def unlock_order(self,
+                     pk,
+                     user=None,
+                     debug=False):
+
+        # Authenticate normal user
+        if user:
+            self.client.force_authenticate(user)
+
+        # Create order
+        url = '/api/orders/{pk}/unlock/'.format(pk=pk)
+        response = self.client.post(url, format='json')
+
+        if debug:
+            logger.debug(response.content)
+
+        self.assertIn(response.status_code, [HTTP_200_OK])
+
     def get_orders(self,
                    order_type=constants.ORDER_BUY,
                    pair=constants.PAIR_BTC_ETH,

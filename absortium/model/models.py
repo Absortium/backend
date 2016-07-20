@@ -4,6 +4,7 @@ from django.db import models
 from absortium import constants
 from absortium.exceptions import NotEnoughMoneyError
 from absortium.wallet.base import get_wallet_client
+from absortium.mixins.model import OrderMixin
 from core.utils.logging import getLogger
 
 __author__ = 'andrew.shvv@gmail.com'
@@ -120,21 +121,7 @@ class Account(models.Model):
         Account.objects.filter(pk=pk).update(**kwargs)
 
 
-def operation_wrapper(func):
-    def decorator(self, obj):
-        if isinstance(obj, Order):
-            value = obj.amount
-        elif isinstance(obj, (int, float)):
-            value = obj
-        else:
-            return NotImplemented
-
-        return func(self, value)
-
-    return decorator
-
-
-class Order(models.Model):
+class Order(models.Model, OrderMixin):
     """
     'status' - status of the order:
         'init' - order was created, processed but no opposite order was found for now.
@@ -279,102 +266,6 @@ class Order(models.Model):
     @staticmethod
     def update(pk, **kwargs):
         Order.objects.filter(pk=pk).update(**kwargs)
-
-    def freeze_money(self):
-        # Check that we have enough money
-        if self.from_account.amount >= self.from_amount:
-
-            # Subtract money from account because it is locked by order
-            self.from_account.amount -= self.from_amount
-        else:
-            raise NotEnoughMoneyError("Not enough money for order creation/update")
-
-    def unfreeze_money(self):
-        self.from_account.amount += self.from_amount
-
-    def split(self, opposite):
-        """
-            Divide order on two parts.
-        """
-        order = self
-
-        if order.from_amount <= opposite.to_amount:
-            fraction = order
-            return fraction, None
-        else:
-            from copy import deepcopy
-            fraction = deepcopy(order)
-            fraction.from_amount = opposite.to_amount
-            fraction.to_amount = opposite.from_amount
-            fraction.to_account = order.to_account
-            fraction.from_account = order.from_account
-            fraction.pk = None
-
-            order.from_amount -= opposite.to_amount
-            order.to_amount -= opposite.from_amount
-
-            return fraction, order
-
-    def merge(self, opposite):
-        fraction = self
-
-        fraction.to_account.amount += opposite.from_amount
-        opposite.to_account.amount += opposite.to_amount
-
-        fraction.status = constants.ORDER_COMPLETED
-        opposite.status = constants.ORDER_COMPLETED
-
-    def __sub__(self, obj):
-        if isinstance(obj, Order):
-            opposite = obj
-            order = self
-            order.status = constants.ORDER_PENDING
-
-            # save fraction of order to store history of orders
-            (fraction, order) = order.split(opposite)
-
-            fraction.link = opposite
-            opposite.link = fraction
-
-            if fraction.need_approve or opposite.need_approve:
-                # wait for approving
-                fraction.status = constants.ORDER_APPROVING
-                opposite.status = constants.ORDER_APPROVING
-
-            else:
-                # merge opposite orders
-                fraction.merge(opposite)
-
-            if order is not None:
-                fraction.save()
-
-            return fraction, order
-        else:
-            return NotImplemented
-
-    @operation_wrapper
-    def __lt__(self, value):
-        return self.amount < value
-
-    @operation_wrapper
-    def __gt__(self, value):
-        return self.amount > value
-
-    @operation_wrapper
-    def __le__(self, value):
-        return self.amount <= value
-
-    @operation_wrapper
-    def __ge__(self, value):
-        return self.amount >= value
-
-    @operation_wrapper
-    def __eq__(self, value):
-        return self.amount == value
-
-    @operation_wrapper
-    def __ne__(self, value):
-        return self.amount != value
 
 
 class Deposit(models.Model):
