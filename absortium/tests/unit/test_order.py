@@ -206,14 +206,6 @@ class MalformedTest(BaseTest):
 
         self.create_order(price="1.0", amount="10.0", status=constants.ORDER_INIT, extra_data=extra_data)
 
-    def test_order_readonly_system(self):
-        # check that we can't set the order status
-        extra_data = {
-            'system': constants.SYSTEM_POLONIEX
-        }
-
-        self.create_order(price="1.0", amount="10.0", status=constants.ORDER_INIT, extra_data=extra_data)
-
     def test_malformed(self, *args, **kwargs):
         trash_order_pk = "972368423423"
 

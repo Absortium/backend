@@ -20,7 +20,6 @@ class CreateOrderMixin():
                      order_type=constants.ORDER_BUY,
                      pair=constants.PAIR_BTC_ETH,
                      status=constants.ORDER_COMPLETED,
-                     system=constants.SYSTEM_OWN,
                      need_approve=False,
                      user=None,
                      with_checks=True,
@@ -62,7 +61,6 @@ class CreateOrderMixin():
                 self.fail("Order object wasn't found in db")
 
             self.assertEqual(order['status'], status)
-            self.assertEqual(order['system'], system)
             self.assertEqual(obj.owner_id, self.client.handler._force_user.pk)
 
         return order
