@@ -8,13 +8,15 @@ ORDER_APPROVING = 'approving'
 ORDER_APPROVED = 'approved'
 ORDER_CANCELED = 'canceled'
 ORDER_COMPLETED = 'completed'
+ORDER_LOCKED = 'locked'
 AVAILABLE_ORDER_STATUSES = [
     ORDER_INIT,
     ORDER_PENDING,
     ORDER_APPROVING,
     ORDER_APPROVED,
     ORDER_CANCELED,
-    ORDER_COMPLETED
+    ORDER_COMPLETED,
+    ORDER_LOCKED
 ]
 
 ORDER_SELL = 'sell'
@@ -84,6 +86,7 @@ ERROR_INTERNAL = 'internal_server_error'
 ERROR_PERMISSION_DENIED = 'permission_denied'
 ERROR_NOT_ENOUGH_MONEY = 'not_enough_money'
 ERROR_LOCK_FAILURE = 'lock_failure'
+ERROR_UNLOCK_FAILURE = 'unlock_failure'
 ERROR_ALREADY_EXIST = 'already_exist'
 ERROR_NOT_ALLOWED = 'not_allowed'
 ERROR_VALIDATION = 'validation_error'

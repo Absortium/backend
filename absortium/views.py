@@ -1,7 +1,22 @@
 import json
 
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import Sum
+from django.http import HttpResponse
+from rest_framework import mixins, viewsets
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
+from rest_framework.response import Response
+from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK
+
 from absortium import constants
 from absortium.celery import tasks
+from absortium.mixins import \
+    CreateCeleryMixin, \
+    DestroyCeleryMixin, \
+    ApproveCeleryMixin, \
+    UpdateCeleryMixin, \
+    LockCeleryMixin
 from absortium.model.models import Offer, Order, Account, MarketInfo
 from absortium.serializers import \
     OfferSerializer, \
@@ -11,18 +26,7 @@ from absortium.serializers import \
     WithdrawSerializer, \
     MarketInfoSerializer
 from absortium.utils import get_field
-from django.core.serializers.json import DjangoJSONEncoder
-from django.db import transaction
-from django.db.models import Sum
-from django.http import HttpResponse
-from rest_framework import mixins, viewsets
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
-from rest_framework.response import Response
-from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK
-
 from core.utils.logging import getPrettyLogger
-from absortium.mixins import CreateCeleryMixin, DestroyCeleryMixin, ApproveCeleryMixin, UpdateCeleryMixin
 
 __author__ = 'andrew.shvv@gmail.com'
 
@@ -149,6 +153,7 @@ class OrderViewSet(CreateCeleryMixin,
                    DestroyCeleryMixin,
                    ApproveCeleryMixin,
                    UpdateCeleryMixin,
+                   LockCeleryMixin,
                    mixins.RetrieveModelMixin,
                    mixins.ListModelMixin,
                    viewsets.GenericViewSet):
@@ -215,6 +220,22 @@ class OrderViewSet(CreateCeleryMixin,
         }
 
         return tasks.cancel_order.delay(**context)
+
+    def lock_in_celery(self, request, *args, **kwargs):
+        context = {
+            "order_pk": self.get_object().pk,
+            "user_pk": request.user.pk,
+        }
+
+        return tasks.lock_order.delay(**context)
+
+    def unlock_in_celery(self, request, *args, **kwargs):
+        context = {
+            "order_pk": self.get_object().pk,
+            "user_pk": request.user.pk,
+        }
+
+        return tasks.unlock_order.delay(**context)
 
 
 class HistoryViewSet(viewsets.GenericViewSet,

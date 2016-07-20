@@ -1,9 +1,10 @@
 import decimal
 from datetime import timedelta
 
-from absortium.utils import calculate_total_or_amount
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
+
+from absortium.utils import calculate_total_or_amount
 
 __author__ = 'andrew.shvv@gmail.com'
 
@@ -15,7 +16,7 @@ from absortium import constants
 from absortium.wallet.pool import AccountPool
 from absortium.celery.base import get_base_class
 from absortium.crossbarhttp import publishment
-from absortium.exceptions import AlreadyExistError
+from absortium.exceptions import AlreadyExistError, LockFailureError, UnlockFailureError
 from absortium.model.locks import lockaccounts, get_opposites
 from absortium.model.models import Account, Order, MarketInfo
 from absortium.serializers import \
@@ -147,6 +148,64 @@ def cancel_order(self, *args, **kwargs):
             """
             pass
 
+
+    except OperationalError:
+        raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
+
+
+@shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
+def lock_order(self, *args, **kwargs):
+    order_pk = kwargs['order_pk']
+    user_pk = kwargs['user_pk']
+
+    try:
+        try:
+            with publishment.atomic():
+                with transaction.atomic():
+                    order = Order.lock(owner__pk=user_pk, pk=order_pk)
+
+                    if order.status not in [constants.ORDER_INIT, constants.ORDER_PENDING]:
+                        order.status = constants.ORDER_LOCKED
+                        order.save()
+
+                        return OrderSerializer(order).data
+                    else:
+                        raise LockFailureError("Can't lock order in status {}".format(order.status))
+
+        except Order.DoesNotExist:
+            """
+                If Order does not exist this means that it was processed or deleted.
+            """
+            pass
+
+    except OperationalError:
+        raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
+
+
+@shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
+def unlock_order(self, *args, **kwargs):
+    order_pk = kwargs['order_pk']
+    user_pk = kwargs['user_pk']
+
+    try:
+        try:
+            with publishment.atomic():
+                with transaction.atomic():
+                    order = Order.lock(owner__pk=user_pk, pk=order_pk)
+
+                    if order.status == constants.ORDER_LOCKED:
+                        order.status = constants.ORDER_INIT
+                        order.save()
+
+                        return OrderSerializer(order).data
+                    else:
+                        raise UnlockFailureError("Can't lock order in status {}".format(order.status))
+
+        except Order.DoesNotExist:
+            """
+                If Order does not exist this means that it was processed or deleted.
+            """
+            pass
 
     except OperationalError:
         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)

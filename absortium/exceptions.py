@@ -61,6 +61,10 @@ class LockFailureError(ValidationError):
     error_id = constants.ERROR_LOCK_FAILURE
 
 
+class UnlockFailureError(ValidationError):
+    error_id = constants.ERROR_UNLOCK_FAILURE
+
+
 class AlreadyExistError(ValidationError):
     error_id = constants.ERROR_ALREADY_EXIST
     status_code = status.HTTP_409_CONFLICT
