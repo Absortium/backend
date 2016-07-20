@@ -101,10 +101,6 @@ class AccountViewSet(CreateCeleryMixin,
 
         return tasks.create_account.delay(**context)
 
-    def perform_create(self, serializer):
-        with transaction.atomic():
-            serializer.save(owner=self.request.user)
-
 
 class DepositViewSet(mixins.ListModelMixin,
                      viewsets.GenericViewSet):
