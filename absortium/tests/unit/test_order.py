@@ -399,6 +399,16 @@ class CancelTest(BaseTest):
 
         self.assertEqual(len(self.get_orders()), 1)
 
+class LockTest(BaseTest):
+    def test_lock(self):
+        order = self.create_order(order_type=constants.ORDER_BUY, total="1.0", status=constants.ORDER_INIT)
+        self.lock_order(pk=order['pk'])
+
+        self.check_account_amount(self.primary_btc_account, amount="10.0")
+        self.check_account_amount(self.primary_eth_account, amount="0.0")
+
+        self.assertEqual(len(self.get_orders()), 1)
+
 
 class UpdateTest(BaseTest):
     def test_simple(self):
