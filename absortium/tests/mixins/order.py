@@ -223,7 +223,7 @@ class CreateOrderMixin():
         if debug:
             logger.debug(orders)
 
-        is_exist = False
+        is_matched = False
         for order in orders:
             c1 = decimal.Decimal(order['price']) == decimal.Decimal(price) if price is not None else True
             c2 = decimal.Decimal(order['amount']) == decimal.Decimal(amount) if amount is not None else True
@@ -233,6 +233,6 @@ class CreateOrderMixin():
             c6 = order['pk'] == pk if pk is not None else True
 
             if c1 and c2 and c3 and c4 and c5 and c6:
-                is_exist = True
+                is_matched = True
 
-        self.assertEqual(is_exist, should_exist)
+        self.assertEqual(is_matched, should_exist)
