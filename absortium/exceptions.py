@@ -3,8 +3,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.views import exception_handler
 
 from absortium import constants
-from core.utils.logging import getPrettyLogger
 from core.utils.general import switch
+from core.utils.logging import getPrettyLogger
 
 __author__ = 'andrew.shvv@gmail.com'
 
@@ -38,6 +38,10 @@ def custom_exception_handler(exc, context):
                 error_id = constants.ERROR_NOT_ALLOWED
                 break
 
+            if case(status.HTTP_401_UNAUTHORIZED):
+                error_id = constants.ERROR_AUTHENTICATION
+                break
+
         response.data = {
             'detail': response.data['detail'] if 'detail' in response.data else response.data,
             'status_code': response.status_code
@@ -55,6 +59,10 @@ class NotEnoughMoneyError(ValidationError):
 
 class LockFailureError(ValidationError):
     error_id = constants.ERROR_LOCK_FAILURE
+
+
+class UnlockFailureError(ValidationError):
+    error_id = constants.ERROR_UNLOCK_FAILURE
 
 
 class AlreadyExistError(ValidationError):

@@ -115,3 +115,37 @@ class DestroyCeleryMixin():
 
     def destroy_in_celery(self, request, *args, **kwargs):
         raise NotImplemented("You should implement 'destroy_in_celery' method")
+
+
+class LockCeleryMixin():
+    @detail_route(methods=['post'])
+    def lock(self, request, *args, **kwargs):
+        async_result = self.lock_in_celery(request, *args, **kwargs)
+
+        try:
+            obj = async_result.get(timeout=10, propagate=True)
+            return Response(obj, status=HTTP_200_OK)
+        except TimeoutError:
+            data = {
+                "id": async_result.id
+            }
+            return Response(data, status=HTTP_204_NO_CONTENT)
+
+    @detail_route(methods=['post'])
+    def unlock(self, request, *args, **kwargs):
+        async_result = self.unlock_in_celery(request, *args, **kwargs)
+
+        try:
+            obj = async_result.get(timeout=10, propagate=True)
+            return Response(obj, status=HTTP_200_OK)
+        except TimeoutError:
+            data = {
+                "id": async_result.id
+            }
+            return Response(data, status=HTTP_204_NO_CONTENT)
+
+    def lock_in_celery(self, request, *args, **kwargs):
+        raise NotImplemented("You should implement 'destroy_in_celery' method")
+
+    def unlock_in_celery(self, request, *args, **kwargs):
+        raise NotImplemented("You should implement 'destroy_in_celery' method")

@@ -11,8 +11,9 @@ from absortium.crossbarhttp import get_crossbar_client
 from absortium.model.models import Order, Offer, MarketInfo
 from absortium.serializers import MarketInfoSerializer, OrderSerializer
 from absortium.utils import safe_offer_update
-from core.utils.logging import getPrettyLogger
 from core.apikeyauth.models import Client
+from core.utils.logging import getPrettyLogger
+
 __author__ = 'andrew.shvv@gmail.com'
 
 logger = getPrettyLogger(__name__)
@@ -54,7 +55,7 @@ def order_pre_save(sender, instance, *args, **kwargs):
         old_order = Order.objects.get(pk=order.pk)
         do(update=lambda amount: amount + order.amount - old_order.amount)
 
-    elif order.status in [constants.ORDER_COMPLETED, constants.ORDER_CANCELED]:
+    elif order.status in [constants.ORDER_COMPLETED, constants.ORDER_CANCELED, constants.ORDER_LOCKED]:
         do(update=lambda amount: amount - order.amount)
 
 

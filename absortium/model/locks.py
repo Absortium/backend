@@ -1,5 +1,5 @@
 from absortium import constants
-from absortium.model.models import Order, Account
+from absortium.model import models
 from core.utils.logging import getLogger
 
 __author__ = 'andrew.shvv@gmail.com'
@@ -34,9 +34,9 @@ class lockaccounts:
 
             """
 
-            accounts = Account.locks(owner__pk=self.order.owner_id,
-                                     currency__in=[self.order.primary_currency,
-                                                   self.order.secondary_currency])
+            accounts = models.Account.locks(owner__pk=self.order.owner_id,
+                                            currency__in=[self.order.primary_currency,
+                                                          self.order.secondary_currency])
 
             for account in accounts:
                 if account.currency == self.order.from_currency:
@@ -51,8 +51,8 @@ class lockaccounts:
             """
                 Account always should be updated even if order in 'init' state, because we subtract order amount from account.
             """
-            Account.update(pk=self.order.from_account.pk, amount=self.order.from_account.amount)
-            Account.update(pk=self.order.to_account.pk, amount=self.order.to_account.amount)
+            models.Account.update(pk=self.order.from_account.pk, amount=self.order.from_account.amount)
+            models.Account.update(pk=self.order.to_account.pk, amount=self.order.to_account.amount)
 
             c1 = self.status != self.order.status
             c2 = self.amount != self.order.amount
@@ -87,21 +87,21 @@ class get_opposites:
                 """
                     Get first non-blocked order which suit out conditions (price, status, currency) and block it.
                 """
-                opposite = Order.objects.raw('SELECT * '
-                                             'FROM absortium_order '
-                                             'WHERE (status = %s OR status = %s) '
-                                             'AND pg_try_advisory_xact_lock(id) '
-                                             'AND price {sign} %s '
-                                             'AND pair = %s '
-                                             'AND type = %s '
-                                             'AND owner_id <> %s '
-                                             'FOR UPDATE '
-                                             'LIMIT 1 '.format(sign=sign),
-                                             [constants.ORDER_PENDING, constants.ORDER_INIT,
-                                              self.order.price,
-                                              self.order.pair,
-                                              self.order.opposite_type,
-                                              self.order.owner_id])[0]
+                opposite = models.Order.objects.raw('SELECT * '
+                                                    'FROM absortium_order '
+                                                    'WHERE (status = %s OR status = %s) '
+                                                    'AND pg_try_advisory_xact_lock(id) '
+                                                    'AND price {sign} %s '
+                                                    'AND pair = %s '
+                                                    'AND type = %s '
+                                                    'AND owner_id <> %s '
+                                                    'FOR UPDATE '
+                                                    'LIMIT 1 '.format(sign=sign),
+                                                    [constants.ORDER_PENDING, constants.ORDER_INIT,
+                                                     self.order.price,
+                                                     self.order.pair,
+                                                     self.order.opposite_type,
+                                                     self.order.owner_id])[0]
 
             except IndexError:
                 """

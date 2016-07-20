@@ -149,15 +149,52 @@ class CreateOrderMixin():
 
         self.assertIn(response.status_code, [HTTP_200_OK])
 
-    def get_orders(self,
-                   order_type=constants.ORDER_BUY,
-                   pair=constants.PAIR_BTC_ETH,
+    def lock_order(self,
+                   pk,
+                   user=None,
                    debug=False):
 
-        data = {
-            "pair": pair,
-            "type": order_type
-        }
+        # Authenticate normal user
+        if user:
+            self.client.force_authenticate(user)
+
+        # Create order
+        url = '/api/orders/{pk}/lock/'.format(pk=pk)
+        response = self.client.post(url, format='json')
+
+        if debug:
+            logger.debug(response.content)
+
+        self.assertIn(response.status_code, [HTTP_200_OK])
+
+    def unlock_order(self,
+                     pk,
+                     user=None,
+                     debug=False):
+
+        if user:
+            self.client.force_authenticate(user)
+
+        # Create order
+        url = '/api/orders/{pk}/unlock/'.format(pk=pk)
+        response = self.client.post(url, format='json')
+
+        if debug:
+            logger.debug(response.content)
+
+        self.assertIn(response.status_code, [HTTP_200_OK])
+
+    def get_orders(self,
+                   order_type=None,
+                   pair=None,
+                   debug=False):
+
+        data = {}
+        if order_type:
+            data['type'] = order_type
+
+        if pair:
+            data['pair'] = pair
 
         # Create order
         url = '/api/orders/'
@@ -174,10 +211,14 @@ class CreateOrderMixin():
                     status=None,
                     total=None,
                     pk=None,
-                    order_type=constants.ORDER_BUY,
-                    pair=constants.PAIR_BTC_ETH,
+                    user=None,
+                    order_type=None,
+                    pair=None,
                     should_exist=True,
                     debug=False):
+        if user:
+            self.client.force_authenticate(user)
+
         orders = self.get_orders(order_type=order_type,
                                  pair=pair)
 
