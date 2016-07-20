@@ -78,3 +78,12 @@ ORDER_MIN_TOTAL_AMOUNT = round(decimal.Decimal(0.001), 3)
 WEI_IN_ETH = 10 ** 18
 
 COINBASE_PAYMENT_NOTIFICATION = "wallet:addresses:new-payment"
+
+ERROR_NOT_FOUND = 'not_found'
+ERROR_INTERNAL = 'internal_server_error'
+ERROR_PERMISSION_DENIED = 'permission_denied'
+ERROR_NOT_ENOUGH_MONEY = 'not_enough_money'
+ERROR_LOCK_FAILURE = 'lock_failure'
+ERROR_ALREADY_EXIST = 'already_exist'
+ERROR_NOT_ALLOWED = 'not_allowed'
+ERROR_VALIDATION = 'validation_error'

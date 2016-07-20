@@ -1,8 +1,8 @@
 from django.conf import settings
 from django.db import models
-from rest_framework.exceptions import ValidationError
 
 from absortium import constants
+from absortium.exceptions import NotEnoughMoneyError
 from absortium.wallet.base import get_wallet_client
 from core.utils.logging import getLogger
 
@@ -287,7 +287,7 @@ class Order(models.Model):
             # Subtract money from account because it is locked by order
             self.from_account.amount -= self.from_amount
         else:
-            raise ValidationError("Not enough money for order creation/update")
+            raise NotEnoughMoneyError("Not enough money for order creation/update")
 
     def unfreeze_money(self):
         self.from_account.amount += self.from_amount
@@ -421,7 +421,7 @@ class Withdrawal(models.Model):
 
             Account.update(pk=account.pk, amount=amount)
         else:
-            raise ValidationError("Not enough money for withdrawal")
+            raise NotEnoughMoneyError("Not enough money for withdrawal")
 
 
 class MarketInfo(models.Model):

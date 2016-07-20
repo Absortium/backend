@@ -59,4 +59,4 @@ class MalformedTest(AbsoritumUnitTest):
     def test_malformed_retrieve(self):
         # User trying to delete not created account
         with self.assertRaises(AssertionError):
-            self.get_account("19087698021", debug=True)
+            self.get_account("19087698021")
