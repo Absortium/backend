@@ -3,8 +3,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.views import exception_handler
 
 from absortium import constants
-from core.utils.logging import getPrettyLogger
 from core.utils.general import switch
+from core.utils.logging import getPrettyLogger
 
 __author__ = 'andrew.shvv@gmail.com'
 
@@ -36,6 +36,10 @@ def custom_exception_handler(exc, context):
 
             if case(status.HTTP_405_METHOD_NOT_ALLOWED):
                 error_id = constants.ERROR_NOT_ALLOWED
+                break
+
+            if case(status.HTTP_401_UNAUTHORIZED):
+                error_id = constants.ERROR_AUTHENTICATION
                 break
 
         response.data = {
