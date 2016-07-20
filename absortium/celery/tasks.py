@@ -17,7 +17,7 @@ from absortium.wallet.pool import AccountPool
 from absortium.celery.base import get_base_class
 from absortium.crossbarhttp import publishment
 from absortium.exceptions import AlreadyExistError, LockFailureError, UnlockFailureError
-from absortium.model.locks import lockaccounts, get_opposites
+from absortium.model.locks import lockaccounts
 from absortium.model.models import Account, Order, MarketInfo
 from absortium.serializers import \
     OrderSerializer, \
@@ -31,38 +31,42 @@ logger = getPrettyLogger(__name__)
 
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
 def do_deposit(self, *args, **kwargs):
+    def do():
+        data = kwargs['data']
+        user_pk = kwargs['user_pk']
+
+        serializer = DepositSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        deposit = serializer.save(owner_id=user_pk)
+        deposit.process_account()
+
+        return serializer.data
+
     try:
         with transaction.atomic():
-            data = kwargs['data']
-            user_pk = kwargs['user_pk']
-
-            serializer = DepositSerializer(data=data)
-            serializer.is_valid(raise_exception=True)
-
-            deposit = serializer.save(owner_id=user_pk)
-            deposit.process_account()
-
-            return serializer.data
-
+            return do()
     except OperationalError:
         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
 
 
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
 def do_withdrawal(self, *args, **kwargs):
+    def do():
+        data = kwargs['data']
+        user_pk = kwargs['user_pk']
+
+        serializer = WithdrawSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        withdrawal = serializer.save(owner_id=user_pk)
+        withdrawal.process_account()
+
+        return serializer.data
+
     try:
         with transaction.atomic():
-            data = kwargs['data']
-            user_pk = kwargs['user_pk']
-
-            serializer = WithdrawSerializer(data=data)
-            serializer.is_valid(raise_exception=True)
-
-            withdrawal = serializer.save(owner_id=user_pk)
-            withdrawal.process_account()
-
-            return serializer.data
-
+            return do()
     except OperationalError:
         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
 
@@ -72,45 +76,19 @@ def create_order(self, *args, **kwargs):
     data = kwargs['data']
     user_pk = kwargs['user_pk']
 
+    serializer = OrderSerializer(data=data)
+    serializer.is_valid(raise_exception=True)
+    order = serializer.object(owner_id=user_pk)
+
+    if order.total < constants.ORDER_MIN_TOTAL_AMOUNT:
+        raise ValidationError("Total amount lower than {}".format(constants.ORDER_MIN_TOTAL_AMOUNT))
+
     try:
-        serializer = OrderSerializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        order = serializer.object(owner_id=user_pk)
-
-        def process(order):
-            history = []
-
-            for opposite in get_opposites(order):
-                with lockaccounts(opposite):
-                    if order >= opposite:
-                        (fraction, order) = order - opposite
-
-                        if order is None:
-                            order = fraction
-                            break
-                        else:
-                            history.append(fraction)
-
-                    elif order < opposite:
-                        """
-                            In this case order will be in the ORDER_COMPLETED status, so just break loop and
-                            than add order to the history
-                        """
-                        (_, opposite) = opposite - order
-                        break
-
-            return history + [order]
-
-        if order.total < constants.ORDER_MIN_TOTAL_AMOUNT:
-            raise ValidationError("Total amount lower than {}".format(constants.ORDER_MIN_TOTAL_AMOUNT))
-
         with publishment.atomic():
             with transaction.atomic():
                 with lockaccounts(order):
                     order.freeze_money()
-                    history = process(order)
-
-        return [OrderSerializer(e).data for e in history]
+                    return [OrderSerializer(e).data for e in order.process()]
 
     except OperationalError:
         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
@@ -118,166 +96,134 @@ def create_order(self, *args, **kwargs):
 
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
 def cancel_order(self, *args, **kwargs):
-    order_pk = kwargs['order_pk']
-    user_pk = kwargs['user_pk']
+    def do():
+        order_pk = kwargs['order_pk']
+        order = Order.lock(pk=order_pk)
+
+        if order.status not in [constants.ORDER_CANCELED, constants.ORDER_COMPLETED]:
+            with lockaccounts(order):
+                if order.status in [constants.ORDER_APPROVING, constants.ORDER_APPROVED]:
+                    opposite = Order.lock(pk=order.link.pk)
+
+                    with lockaccounts(opposite):
+                        opposite.status = constants.ORDER_PENDING
+
+                order.unfreeze_money()
+                order.status = constants.ORDER_CANCELED
+
+            return OrderSerializer(order).data
+        else:
+            raise ValidationError("Order already canceled")
 
     try:
-        try:
-            with publishment.atomic():
-                with transaction.atomic():
-                    order = Order.lock(owner__pk=user_pk, pk=order_pk)
-
-                    if order.status not in [constants.ORDER_CANCELED, constants.ORDER_COMPLETED]:
-                        with lockaccounts(order):
-                            if order.status in [constants.ORDER_APPROVING, constants.ORDER_APPROVED]:
-                                opposite = Order.lock(pk=order.link.pk)
-
-                                with lockaccounts(opposite):
-                                    opposite.status = constants.ORDER_PENDING
-
-                            order.unfreeze_money()
-                            order.status = constants.ORDER_CANCELED
-
-                        return OrderSerializer(order).data
-                    else:
-                        raise ValidationError("Order already canceled")
-
-        except Order.DoesNotExist:
-            """
-                If Order does not exist this means that it was processed or deleted.
-            """
-            pass
-
-
+        with publishment.atomic():
+            with transaction.atomic():
+                return do()
     except OperationalError:
         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
 
 
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
 def lock_order(self, *args, **kwargs):
-    order_pk = kwargs['order_pk']
-    user_pk = kwargs['user_pk']
+    def do():
+        order_pk = kwargs['order_pk']
+        order = Order.lock(pk=order_pk)
+
+        if order.status in [constants.ORDER_INIT, constants.ORDER_PENDING]:
+            order.status = constants.ORDER_LOCKED
+            order.save()
+
+            return OrderSerializer(order).data
+        else:
+            raise LockFailureError("Can't lock order in status {}".format(order.status))
 
     try:
-        try:
-            with publishment.atomic():
-                with transaction.atomic():
-                    order = Order.lock(owner__pk=user_pk, pk=order_pk)
-
-                    if order.status not in [constants.ORDER_INIT, constants.ORDER_PENDING]:
-                        order.status = constants.ORDER_LOCKED
-                        order.save()
-
-                        return OrderSerializer(order).data
-                    else:
-                        raise LockFailureError("Can't lock order in status {}".format(order.status))
-
-        except Order.DoesNotExist:
-            """
-                If Order does not exist this means that it was processed or deleted.
-            """
-            pass
-
+        with publishment.atomic():
+            with transaction.atomic():
+                return do()
     except OperationalError:
         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
 
 
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
 def unlock_order(self, *args, **kwargs):
-    order_pk = kwargs['order_pk']
-    user_pk = kwargs['user_pk']
+    def do():
+        order_pk = kwargs['order_pk']
+        order = Order.lock(pk=order_pk)
+
+        if order.status == constants.ORDER_LOCKED:
+            order.status = constants.ORDER_INIT
+
+            with lockaccounts(order):
+                return [OrderSerializer(e).data for e in order.process()]
+
+        else:
+            raise UnlockFailureError("Can't unlock not locked order")
 
     try:
-        try:
-            with publishment.atomic():
-                with transaction.atomic():
-                    order = Order.lock(owner__pk=user_pk, pk=order_pk)
-
-                    if order.status == constants.ORDER_LOCKED:
-                        order.status = constants.ORDER_INIT
-                        order.save()
-
-                        return OrderSerializer(order).data
-                    else:
-                        raise UnlockFailureError("Can't lock order in status {}".format(order.status))
-
-        except Order.DoesNotExist:
-            """
-                If Order does not exist this means that it was processed or deleted.
-            """
-            pass
-
+        with publishment.atomic():
+            with transaction.atomic():
+                return do()
     except OperationalError:
         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
 
 
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
 def approve_order(self, *args, **kwargs):
-    order_pk = kwargs['order_pk']
-    user_pk = kwargs['user_pk']
+    def do():
+        order_pk = kwargs['order_pk']
+        order = Order.lock(pk=order_pk)
+
+        with lockaccounts(order):
+            if order.need_approve and order.status != constants.ORDER_APPROVED:
+                order.status = constants.ORDER_APPROVED
+
+                with lockaccounts(Order.lock(pk=order.link.pk)) as opposite:
+
+                    if opposite.need_approve:
+                        if opposite.status == constants.ORDER_APPROVED:
+                            order.merge(opposite)
+                    else:
+                        order.merge(opposite)
+
+        return OrderSerializer(order).data
 
     try:
-        try:
-            with transaction.atomic():
-                order = Order.lock(owner__pk=user_pk, pk=order_pk)
-                with lockaccounts(order):
-
-                    if order.need_approve and order.status != constants.ORDER_APPROVED:
-                        order.status = constants.ORDER_APPROVED
-
-                        with lockaccounts(Order.lock(pk=order.link.pk)) as opposite:
-
-                            if opposite.need_approve:
-                                if opposite.status == constants.ORDER_APPROVED:
-                                    order.merge(opposite)
-                            else:
-                                order.merge(opposite)
-
-                return OrderSerializer(order).data
-
-        except Order.DoesNotExist:
-            """
-                If Order does not exist this means that it was canceled.
-            """
-            pass
-
+        with transaction.atomic():
+            return do()
     except OperationalError:
         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)
 
 
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
 def update_order(self, *args, **kwargs):
-    data = kwargs['data']
-    order_pk = kwargs['order_pk']
-    user_pk = kwargs['user_pk']
+    def do():
+        data = kwargs['data']
+        order_pk = kwargs['order_pk']
+
+        order = Order.lock(pk=order_pk)
+        with lockaccounts(order):
+            if order.status in [constants.ORDER_INIT, constants.ORDER_PENDING]:
+
+                order.unfreeze_money()
+
+                if data.get('price') is None:
+                    data['price'] = str(order.price)
+
+                data = calculate_total_or_amount(data)
+                order.price = decimal.Decimal(data.get('price'))
+                order.amount = decimal.Decimal(data.get('amount'))
+                order.total = decimal.Decimal(data.get('total'))
+                order.freeze_money()
+            else:
+                raise ValidationError("You can't modify orders in status '{}'".format(order.status))
+
+        return OrderSerializer(order).data
 
     try:
-        try:
+        with publishment.atomic():
             with transaction.atomic():
-                order = Order.lock(owner__pk=user_pk, pk=order_pk)
-                with lockaccounts(order):
-                    if order.status in [constants.ORDER_INIT, constants.ORDER_PENDING]:
-
-                        order.unfreeze_money()
-
-                        if data.get('price') is None:
-                            data['price'] = str(order.price)
-
-                        data = calculate_total_or_amount(data)
-                        order.price = decimal.Decimal(data.get('price'))
-                        order.amount = decimal.Decimal(data.get('amount'))
-                        order.total = decimal.Decimal(data.get('total'))
-                        order.freeze_money()
-                    else:
-                        raise ValidationError("You can't modify orders in status '{}'".format(order.status))
-
-                return OrderSerializer(order).data
-
-        except Order.DoesNotExist:
-            """
-                If Order does not exist this means that it was canceled.
-            """
-            pass
+                return do()
 
     except OperationalError:
         raise self.retry(countdown=constants.CELERY_RETRY_COUNTDOWN)

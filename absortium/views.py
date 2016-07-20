@@ -11,7 +11,7 @@ from rest_framework.status import HTTP_201_CREATED, HTTP_200_OK
 
 from absortium import constants
 from absortium.celery import tasks
-from absortium.mixins import \
+from absortium.mixins.celery import \
     CreateCeleryMixin, \
     DestroyCeleryMixin, \
     ApproveCeleryMixin, \
@@ -200,7 +200,6 @@ class OrderViewSet(CreateCeleryMixin,
         context = {
             "data": request.data,
             "order_pk": self.get_object().pk,
-            "user_pk": request.user.pk,
         }
 
         return tasks.update_order.delay(**context)
@@ -208,7 +207,6 @@ class OrderViewSet(CreateCeleryMixin,
     def approve_in_celery(self, request, *args, **kwargs):
         context = {
             "order_pk": self.get_object().pk,
-            "user_pk": request.user.pk,
         }
 
         return tasks.approve_order.delay(**context)
@@ -216,7 +214,6 @@ class OrderViewSet(CreateCeleryMixin,
     def destroy_in_celery(self, request, *args, **kwargs):
         context = {
             "order_pk": self.get_object().pk,
-            "user_pk": request.user.pk,
         }
 
         return tasks.cancel_order.delay(**context)
@@ -224,7 +221,6 @@ class OrderViewSet(CreateCeleryMixin,
     def lock_in_celery(self, request, *args, **kwargs):
         context = {
             "order_pk": self.get_object().pk,
-            "user_pk": request.user.pk,
         }
 
         return tasks.lock_order.delay(**context)
@@ -232,7 +228,6 @@ class OrderViewSet(CreateCeleryMixin,
     def unlock_in_celery(self, request, *args, **kwargs):
         context = {
             "order_pk": self.get_object().pk,
-            "user_pk": request.user.pk,
         }
 
         return tasks.unlock_order.delay(**context)
