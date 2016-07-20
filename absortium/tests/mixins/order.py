@@ -172,7 +172,6 @@ class CreateOrderMixin():
                      user=None,
                      debug=False):
 
-        # Authenticate normal user
         if user:
             self.client.force_authenticate(user)
 
@@ -186,14 +185,16 @@ class CreateOrderMixin():
         self.assertIn(response.status_code, [HTTP_200_OK])
 
     def get_orders(self,
-                   order_type=constants.ORDER_BUY,
-                   pair=constants.PAIR_BTC_ETH,
+                   order_type=None,
+                   pair=None,
                    debug=False):
 
-        data = {
-            "pair": pair,
-            "type": order_type
-        }
+        data = {}
+        if order_type:
+            data['type'] = order_type
+
+        if pair:
+            data['pair'] = pair
 
         # Create order
         url = '/api/orders/'
@@ -210,10 +211,14 @@ class CreateOrderMixin():
                     status=None,
                     total=None,
                     pk=None,
-                    order_type=constants.ORDER_BUY,
-                    pair=constants.PAIR_BTC_ETH,
+                    user=None,
+                    order_type=None,
+                    pair=None,
                     should_exist=True,
                     debug=False):
+        if user:
+            self.client.force_authenticate(user)
+
         orders = self.get_orders(order_type=order_type,
                                  pair=pair)
 

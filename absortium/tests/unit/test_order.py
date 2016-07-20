@@ -1,9 +1,9 @@
-from absortium import constants
 from django.contrib.auth import get_user_model
 from rest_framework.status import HTTP_404_NOT_FOUND
 
-from core.utils.logging import getLogger
+from absortium import constants
 from absortium.tests.base import AbsoritumUnitTest
+from core.utils.logging import getLogger
 
 __author__ = "andrew.shvv@gmail.com"
 
@@ -399,15 +399,47 @@ class CancelTest(BaseTest):
 
         self.assertEqual(len(self.get_orders()), 1)
 
+
 class LockTest(BaseTest):
     def test_lock(self):
-        order = self.create_order(order_type=constants.ORDER_BUY, total="1.0", status=constants.ORDER_INIT)
+        order = self.create_order(order_type=constants.ORDER_BUY,
+                                  amount="1.0",
+                                  price="1.0",
+                                  status=constants.ORDER_INIT)
+
         self.lock_order(pk=order['pk'])
+        self.check_order(pk=order['pk'], status=constants.ORDER_LOCKED)
 
-        self.check_account_amount(self.primary_btc_account, amount="10.0")
-        self.check_account_amount(self.primary_eth_account, amount="0.0")
+        self.client.force_authenticate(self.some_user)
+        opposite_order = self.create_order(order_type=constants.ORDER_SELL,
+                                           amount="1.0",
+                                           price="1.0",
+                                           status=constants.ORDER_INIT)
 
-        self.assertEqual(len(self.get_orders()), 1)
+        self.client.force_authenticate(self.user)
+        self.unlock_order(pk=order['pk'])
+        self.check_order(pk=order['pk'], status=constants.ORDER_COMPLETED)
+
+        self.client.force_authenticate(self.some_user)
+        self.check_order(pk=opposite_order['pk'], status=constants.ORDER_COMPLETED)
+
+    def test_lock_while_approving(self):
+        order = self.create_order(order_type=constants.ORDER_BUY,
+                                  amount="1.0",
+                                  price="1.0",
+                                  status=constants.ORDER_INIT)
+
+        self.client.force_authenticate(self.some_user)
+        opposite_order = self.create_order(order_type=constants.ORDER_SELL,
+                                           amount="1.0",
+                                           price="1.0",
+                                           need_approve=True,
+                                           status=constants.ORDER_APPROVING)
+
+        self.client.force_authenticate(self.user)
+
+        with self.assertRaises(AssertionError):
+            self.lock_order(pk=order['pk'])
 
 
 class UpdateTest(BaseTest):
