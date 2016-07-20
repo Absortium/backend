@@ -27,7 +27,7 @@ before_install:
   - cd ..
   - git clone --recursive https://github.com/absortium/deluge.git
   - pushd deluge
-  - ./useful/update_submodules.sh
+  - ./useful/update_submodules.sh -b "$TRAVIS_BRANCH"
   - rm -rf "services/$SERVICE"
   - mv "../$SERVICE" "services/$SERVICE"
 
