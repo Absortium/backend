@@ -2,51 +2,15 @@ from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 
 from absortium import constants
-from absortium.model.models import Account, Order, Offer, Deposit, Withdrawal, MarketInfo
+from absortium.model.models import Account, Order, Deposit, Withdrawal, MarketInfo
 from absortium.utils import calculate_total_or_amount
 from core.serializer.fields import MyChoiceField
-from core.serializer.serializers import DynamicFieldsModelSerializer
 from core.utils.logging import getPrettyLogger
 
 __author__ = 'andrew.shvv@gmail.com'
 
 logger = getPrettyLogger(__name__)
 
-
-class UserSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = User
-        fields = ('username', 'email')
-
-
-class GroupSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = Group
-        fields = ('url', 'name')
-
-
-class OfferSerializer(DynamicFieldsModelSerializer):
-    system = MyChoiceField(choices=constants.AVAILABLE_SYSTEMS,
-                           default=constants.SYSTEM_OWN,
-                           write_only=True)
-
-    type = MyChoiceField(choices=constants.AVAILABLE_ORDER_TYPES)
-
-    pair = MyChoiceField(choices=constants.AVAILABLE_CURRENCY_PAIRS,
-                         default=constants.PAIR_BTC_ETH)
-
-    amount = serializers.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
-                                      decimal_places=constants.DECIMAL_PLACES,
-                                      read_only=True)
-
-    price = serializers.DecimalField(max_digits=constants.MAX_DIGITS,
-                                     decimal_places=constants.DECIMAL_PLACES,
-                                     min_value=constants.PRICE_MIN_VALUE,
-                                     read_only=True)
-
-    class Meta:
-        model = Offer
-        fields = ('pair', 'type', 'amount', 'price', 'system')
 
 
 class AccountSerializer(serializers.ModelSerializer):
@@ -79,8 +43,6 @@ class OrderSerializer(serializers.ModelSerializer):
     """
     status = MyChoiceField(choices=constants.AVAILABLE_ORDER_STATUSES, default=constants.ORDER_INIT, read_only=True)
 
-    system = MyChoiceField(choices=constants.AVAILABLE_SYSTEMS, default=constants.SYSTEM_OWN, read_only=True)
-
     type = MyChoiceField(choices=constants.AVAILABLE_ORDER_TYPES)
 
     pair = MyChoiceField(choices=constants.AVAILABLE_CURRENCY_PAIRS,
@@ -99,7 +61,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ('pk', 'price', 'created', 'status', 'type', 'system', 'amount', 'total', 'pair', 'need_approve')
+        fields = ('pk', 'price', 'created', 'status', 'type', 'amount', 'total', 'pair', 'need_approve')
 
     def __init__(self, *args, **kwargs):
 

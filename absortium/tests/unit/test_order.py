@@ -206,14 +206,6 @@ class MalformedTest(BaseTest):
 
         self.create_order(price="1.0", amount="10.0", status=constants.ORDER_INIT, extra_data=extra_data)
 
-    def test_order_readonly_system(self):
-        # check that we can't set the order status
-        extra_data = {
-            'system': constants.SYSTEM_POLONIEX
-        }
-
-        self.create_order(price="1.0", amount="10.0", status=constants.ORDER_INIT, extra_data=extra_data)
-
     def test_malformed(self, *args, **kwargs):
         trash_order_pk = "972368423423"
 
@@ -440,6 +432,48 @@ class LockTest(BaseTest):
 
         with self.assertRaises(AssertionError):
             self.lock_order(pk=order['pk'])
+
+
+class PriorityTest(BaseTest):
+    def test_first_created_order_is_prior(self):
+        order = self.create_order(order_type=constants.ORDER_BUY,
+                                  amount="1.0",
+                                  price="1.0",
+                                  status=constants.ORDER_INIT)
+
+        self.create_order(order_type=constants.ORDER_BUY,
+                          amount="1.0",
+                          price="1.0",
+                          status=constants.ORDER_INIT)
+
+        self.client.force_authenticate(self.some_user)
+        self.create_order(order_type=constants.ORDER_SELL,
+                          amount="1.0",
+                          price="1.0",
+                          status=constants.ORDER_COMPLETED)
+
+        self.client.force_authenticate(self.user)
+        self.check_order(pk=order['pk'], status=constants.ORDER_COMPLETED)
+
+    def test_price_priority(self):
+        self.create_order(order_type=constants.ORDER_BUY,
+                          amount="1.0",
+                          price="1.0",
+                          status=constants.ORDER_INIT)
+
+        order = self.create_order(order_type=constants.ORDER_BUY,
+                                  amount="1.0",
+                                  price="1.1",
+                                  status=constants.ORDER_INIT)
+
+        self.client.force_authenticate(self.some_user)
+        self.create_order(order_type=constants.ORDER_SELL,
+                          amount="1.0",
+                          price="1.0",
+                          status=constants.ORDER_COMPLETED)
+
+        self.client.force_authenticate(self.user)
+        self.check_order(pk=order['pk'], status=constants.ORDER_COMPLETED)
 
 
 class UpdateTest(BaseTest):

@@ -3,8 +3,8 @@ from django.db import models
 
 from absortium import constants
 from absortium.exceptions import NotEnoughMoneyError
-from absortium.wallet.base import get_wallet_client
 from absortium.mixins.model import OrderMixin
+from absortium.wallet.base import get_wallet_client
 from core.utils.logging import getLogger
 
 __author__ = 'andrew.shvv@gmail.com'
@@ -16,75 +16,6 @@ def calculate_len(choices):
         Calculate length for choice filed in django model.
     """
     return max([len(t) for t in choices]) + 1
-
-
-class Offer(models.Model):
-    """
-        Offer model represent summarized amount of currency that we want to sell grouped by price.
-
-    from_currency/to_currency; example order BTC to XMR, from_currency will be BTC, to_currency will be XMR.
-    As input we get string but values stored in Integer, translation from
-    string representation "BTC" to integer code 0 happens on the serialization state.
-
-    amount - represent amount of the currency that user want to order.
-
-    price - represent the price for the 1 amount of primary currency represented in secondary currency.
-    """
-    system = models.CharField(max_length=calculate_len(constants.AVAILABLE_SYSTEMS),
-                              default=constants.SYSTEM_OWN)
-
-    pair = models.CharField(max_length=calculate_len(constants.AVAILABLE_CURRENCY_PAIRS))
-
-    type = models.CharField(max_length=calculate_len(constants.AVAILABLE_ORDER_TYPES))
-
-    amount = models.DecimalField(max_digits=constants.OFFER_MAX_DIGITS,
-                                 decimal_places=constants.DECIMAL_PLACES,
-                                 default=0)
-
-    price = models.DecimalField(max_digits=constants.MAX_DIGITS,
-                                decimal_places=constants.DECIMAL_PLACES)
-
-    class Meta:
-        ordering = ('price',)
-        unique_together = ('pair', 'price', 'system', 'type')
-
-    @staticmethod
-    def update(pk, **kwargs):
-        # update() is converted directly to an SQL statement; it doesn't exec save() on the model
-        # instances, and so the pre_save and post_save signals aren't emitted.
-        Offer.objects.filter(pk=pk).update(**kwargs)
-
-    @property
-    def primary_currency(self):
-        primary_currency = self.pair.split("_")[0]
-
-        if primary_currency not in constants.AVAILABLE_CURRENCIES:
-            raise Exception("Not available currency {}".format(primary_currency))
-
-        return primary_currency
-
-    @property
-    def secondary_currency(self):
-        secondary_currency = self.pair.split("_")[1]
-
-        if secondary_currency not in constants.AVAILABLE_CURRENCIES:
-            raise Exception("Not available currency {}".format(secondary_currency))
-
-        return secondary_currency
-
-    @property
-    def from_currency(self):
-        if self.type == constants.ORDER_BUY:
-            return self.primary_currency
-        elif self.type == constants.ORDER_SELL:
-            return self.secondary_currency
-
-    @property
-    def to_currency(self):
-        if self.type == constants.ORDER_BUY:
-            return self.secondary_currency
-        elif self.type == constants.ORDER_SELL:
-            return self.primary_currency
 
 
 class Account(models.Model):
@@ -154,9 +85,6 @@ class Order(models.Model, OrderMixin):
     status = models.CharField(max_length=calculate_len(constants.AVAILABLE_ORDER_STATUSES),
                               default=constants.ORDER_INIT)
 
-    system = models.CharField(max_length=calculate_len(constants.AVAILABLE_SYSTEMS),
-                              default=constants.SYSTEM_OWN)
-
     pair = models.CharField(max_length=calculate_len(constants.AVAILABLE_CURRENCY_PAIRS))
 
     type = models.CharField(max_length=calculate_len(constants.AVAILABLE_ORDER_TYPES))
@@ -179,9 +107,6 @@ class Order(models.Model, OrderMixin):
     link = models.ForeignKey('Order', null=True)
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="orders")
-
-    class Meta:
-        ordering = ['-price', 'created']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

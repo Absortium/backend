@@ -1,6 +1,7 @@
 import json
 
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import Q
 from django.db.models import Sum
 from django.http import HttpResponse
 from rest_framework import mixins, viewsets
@@ -17,9 +18,8 @@ from absortium.mixins.celery import \
     ApproveCeleryMixin, \
     UpdateCeleryMixin, \
     LockCeleryMixin
-from absortium.model.models import Offer, Order, Account, MarketInfo
+from absortium.model.models import Order, Account, MarketInfo
 from absortium.serializers import \
-    OfferSerializer, \
     AccountSerializer, \
     OrderSerializer, \
     DepositSerializer, \
@@ -39,8 +39,8 @@ class OfferViewSet(viewsets.GenericViewSet):
     by the given currencies.
     """
 
-    serializer_class = OfferSerializer
-    queryset = Offer.objects.all()
+    serializer_class = OrderSerializer
+    queryset = Order.objects.filter(Q(status=constants.ORDER_INIT) | Q(status=constants.ORDER_PENDING))
     permission_classes = ()
     authentication_classes = ()
 

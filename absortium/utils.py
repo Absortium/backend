@@ -1,14 +1,11 @@
 import decimal
 from decimal import Decimal
 from random import choice
-from sqlite3 import IntegrityError
 from string import printable
 
-from django.db import transaction
 from rest_framework.exceptions import ValidationError
 
 from absortium import constants
-from absortium.model.models import Offer
 from core.utils.logging import getPrettyLogger
 
 __author__ = 'andrew.shvv@gmail.com'
@@ -60,53 +57,6 @@ def get_field(data, name, choices, throw=True):
             raise ValidationError("You should specify 'pair' field'".format())
         else:
             return None
-
-
-def get_or_create_offer(price, order_type, pair, should_exist=False, system=constants.SYSTEM_OWN):
-    try:
-        with transaction.atomic():
-            offer = Offer.objects.select_for_update().get(price=price,
-                                                          pair=pair,
-                                                          type=order_type,
-                                                          system=system)
-    except Offer.DoesNotExist:
-        if should_exist:
-            raise
-        else:
-            offer = Offer(price=price,
-                          pair=pair,
-                          type=order_type,
-                          system=system)
-
-    return offer
-
-
-def safe_offer_update(price, order_type, pair, update, system=constants.SYSTEM_OWN):
-    def do():
-        with transaction.atomic():
-            offer = get_or_create_offer(price=price,
-                                        pair=pair,
-                                        order_type=order_type,
-                                        system=system)
-
-            offer.amount = update(offer.amount)
-            if offer.amount > 0:
-                offer.save()
-            else:
-                if offer.pk:
-                    offer.delete()
-
-    try:
-        do()
-
-    except IntegrityError:
-        """
-            Multiple offer with the same price might be created if threads/processes simultaneously trying to create
-            not existing offer object with similar price. If this happen, duplication integrity error will be thrown,
-            this means that thread/process tried to find offer, didn't find it, and then create new one, but another
-            thread/process do the same thing. So if we encounter this exception try to do() second time.
-        """
-        do()
 
 
 def calculate_total_or_amount(data):

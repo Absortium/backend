@@ -4,9 +4,7 @@ import random
 from django.contrib.auth import get_user_model
 
 from absortium import constants
-from absortium.poloniexsync import PoloniexApp
 from absortium.tests.base import AbsoritumUnitTest
-from absortium.tests.data.poloniex import create_poloniex_update, create_order_book
 from core.utils.logging import getLogger
 
 __author__ = 'andrew.shvv@gmail.com'
@@ -124,110 +122,6 @@ class OfferTest(AbsoritumUnitTest):
         order = self.create_order(order_type=constants.ORDER_SELL, status=constants.ORDER_INIT)
         self.cancel_order(order['pk'])
         self.check_offers_empty()
-
-    def test_poloniex_update(self):
-        """
-            For example Poloniex Sync service subscribed on topic PAIR_BTC_ETH.
-            When we receive update with order_type="newTrade" and offer_type="buy" it means
-            that someone create ETH buy order. == BTC-> ETH order.
-        """
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_MODIFIED,
-                                                             order_type="bid",
-                                                             price="1",
-                                                             amount="1"))
-        self.check_offer(order_type=constants.ORDER_BUY, price="1", amount="1")
-
-    def test_poloniex_two_updates(self):
-        """
-            For example Poloniex Sync service subscribed on topic PAIR_BTC_ETH.
-            When we receive update with order_type="newTrade" and offer_type="buy" it means
-            that someone create ETH buy order. == BTC-> ETH order.
-        """
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_MODIFIED,
-                                                             order_type="bid",
-                                                             price="1",
-                                                             amount="1"))
-
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_MODIFIED,
-                                                             order_type="bid",
-                                                             price="1",
-                                                             amount="2"))
-
-        self.check_offer(order_type=constants.ORDER_BUY, price="1", amount="2")
-
-    def test_poloniex_offer_remove(self):
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_MODIFIED,
-                                                             order_type="bid",
-                                                             price="1",
-                                                             amount="1"))
-
-        self.check_offer(order_type=constants.ORDER_BUY, price="1", amount="1")
-
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_REMOVED,
-                                                             order_type="bid",
-                                                             price="1"))
-
-        self.check_offers_empty()
-
-    def test_poloniex_offer_remove_without_creating(self):
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_REMOVED,
-                                                             order_type="bid",
-                                                             price="1"))
-
-        self.check_offers_empty()
-
-    def test_poloniex_notification(self):
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_MODIFIED,
-                                                             order_type="ask",
-                                                             price="1",
-                                                             amount="1"))
-        self.assertEqual(len(self.get_publishments("offers_btc_eth_sell")), 1)
-
-    def test_notification_offer_amount_accumulation(self):
-        """
-            Create offers from different system and check that amount from different offers are accumulated into one.
-        """
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_MODIFIED,
-                                                             order_type="bid",
-                                                             price="1",
-                                                             amount="1"))
-
-        self.make_deposit(self.get_account('btc'), amount="1.0")
-        self.create_order(order_type=constants.ORDER_BUY, price="1.0", amount="1.0", status=constants.ORDER_INIT)
-
-        publishments = self.get_publishments("offers_btc_eth_buy")
-
-        self.assertEqual(len(publishments), 2)
-        self.assertEqual(decimal.Decimal(publishments[1]['amount']), 2)
-
-    def test_poloniex_offer_sync(self):
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_MODIFIED,
-                                                             order_type="bid",
-                                                             price="1",
-                                                             amount="1"))
-
-        order_book_data = create_order_book(
-            asks=[
-                ["1", "1"]
-            ],
-            bids=[
-                ["1", "2"]
-            ],
-        )
-        PoloniexApp.synchronize_offers(order_book_data)
-
-        self.check_offer(order_type=constants.ORDER_BUY, price="1", amount="2")
-
-    def test_offer_sum(self):
-        PoloniexApp.updates_handler(**create_poloniex_update(update_type=constants.POLONIEX_OFFER_MODIFIED,
-                                                             order_type="bid",
-                                                             price="1",
-                                                             amount="1"))
-
-        self.make_deposit(self.get_account('btc'), amount="1.0")
-        self.create_order(price="1.0", amount="1.0", status=constants.ORDER_INIT)
-
-        self.check_offer(price="1", amount="2")
 
     def test_malformed_pair(self):
         malformed_pair = "asdasd907867t67g"

@@ -79,8 +79,10 @@ class get_opposites:
     def __next__(self):
         if self.order.type == constants.ORDER_BUY:
             sign = "<="
+            order = "ASC"
         elif self.order.type == constants.ORDER_SELL:
             sign = ">="
+            order = "DESC"
 
         while True:
             try:
@@ -95,8 +97,9 @@ class get_opposites:
                                                     'AND pair = %s '
                                                     'AND type = %s '
                                                     'AND owner_id <> %s '
+                                                    'ORDER BY price {order}, created ASC '
                                                     'FOR UPDATE '
-                                                    'LIMIT 1 '.format(sign=sign),
+                                                    'LIMIT 1 '.format(sign=sign, order=order),
                                                     [constants.ORDER_PENDING, constants.ORDER_INIT,
                                                      self.order.price,
                                                      self.order.pair,

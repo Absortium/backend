@@ -20,7 +20,6 @@ class CreateOrderMixin():
                      order_type=constants.ORDER_BUY,
                      pair=constants.PAIR_BTC_ETH,
                      status=constants.ORDER_COMPLETED,
-                     system=constants.SYSTEM_OWN,
                      need_approve=False,
                      user=None,
                      with_checks=True,
@@ -62,7 +61,6 @@ class CreateOrderMixin():
                 self.fail("Order object wasn't found in db")
 
             self.assertEqual(order['status'], status)
-            self.assertEqual(order['system'], system)
             self.assertEqual(obj.owner_id, self.client.handler._force_user.pk)
 
         return order
@@ -225,7 +223,7 @@ class CreateOrderMixin():
         if debug:
             logger.debug(orders)
 
-        is_exist = False
+        is_matched = False
         for order in orders:
             c1 = decimal.Decimal(order['price']) == decimal.Decimal(price) if price is not None else True
             c2 = decimal.Decimal(order['amount']) == decimal.Decimal(amount) if amount is not None else True
@@ -235,6 +233,6 @@ class CreateOrderMixin():
             c6 = order['pk'] == pk if pk is not None else True
 
             if c1 and c2 and c3 and c4 and c5 and c6:
-                is_exist = True
+                is_matched = True
 
-        self.assertEqual(is_exist, should_exist)
+        self.assertEqual(is_matched, should_exist)
