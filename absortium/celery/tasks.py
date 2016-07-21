@@ -16,8 +16,8 @@ from absortium import constants
 from absortium.wallet.pool import AccountPool
 from absortium.celery.base import get_base_class
 from absortium.crossbarhttp import publishment
-from absortium.exceptions import AlreadyExistError, LockFailureError, UnlockFailureError
-from absortium.model.locks import lockaccounts
+from absortium.exceptions import AlreadyExistError, LockFailureError, UnlockFailureError, UpdateFailureError
+from absortium.model.locks import lockorder
 from absortium.model.models import Account, Order, MarketInfo
 from absortium.serializers import \
     OrderSerializer, \
@@ -86,7 +86,7 @@ def create_order(self, *args, **kwargs):
     try:
         with publishment.atomic():
             with transaction.atomic():
-                with lockaccounts(order):
+                with lockorder(order=order):
                     order.freeze_money()
                     return [OrderSerializer(e).data for e in order.process()]
 
@@ -97,23 +97,19 @@ def create_order(self, *args, **kwargs):
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
 def cancel_order(self, *args, **kwargs):
     def do():
-        order_pk = kwargs['order_pk']
-        order = Order.lock(pk=order_pk)
+        with lockorder(pk=kwargs['order_pk']) as order:
 
-        if order.status not in [constants.ORDER_CANCELED, constants.ORDER_COMPLETED]:
-            with lockaccounts(order):
+            if order.status not in [constants.ORDER_CANCELED, constants.ORDER_COMPLETED]:
                 if order.status in [constants.ORDER_APPROVING, constants.ORDER_APPROVED]:
-                    opposite = Order.lock(pk=order.link.pk)
-
-                    with lockaccounts(opposite):
+                    with lockorder(pk=order.link.pk) as opposite:
                         opposite.status = constants.ORDER_PENDING
 
                 order.unfreeze_money()
                 order.status = constants.ORDER_CANCELED
 
-            return OrderSerializer(order).data
-        else:
-            raise ValidationError("Order already canceled")
+                return OrderSerializer(order).data
+            else:
+                raise ValidationError("Order already canceled")
 
     try:
         with publishment.atomic():
@@ -126,8 +122,7 @@ def cancel_order(self, *args, **kwargs):
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
 def lock_order(self, *args, **kwargs):
     def do():
-        order_pk = kwargs['order_pk']
-        order = Order.lock(pk=order_pk)
+        order = Order.lock(pk=kwargs['order_pk'])
 
         if order.status in [constants.ORDER_INIT, constants.ORDER_PENDING]:
             order.status = constants.ORDER_LOCKED
@@ -148,17 +143,14 @@ def lock_order(self, *args, **kwargs):
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
 def unlock_order(self, *args, **kwargs):
     def do():
-        order_pk = kwargs['order_pk']
-        order = Order.lock(pk=order_pk)
+        with lockorder(pk=kwargs['order_pk']) as order:
+            if order.status == constants.ORDER_LOCKED:
+                order.status = constants.ORDER_INIT
 
-        if order.status == constants.ORDER_LOCKED:
-            order.status = constants.ORDER_INIT
-
-            with lockaccounts(order):
                 return [OrderSerializer(e).data for e in order.process()]
 
-        else:
-            raise UnlockFailureError("Can't unlock not locked order")
+            else:
+                raise UnlockFailureError("Can't unlock not locked order")
 
     try:
         with publishment.atomic():
@@ -171,14 +163,11 @@ def unlock_order(self, *args, **kwargs):
 @shared_task(bind=True, max_retries=constants.CELERY_MAX_RETRIES, base=get_base_class())
 def approve_order(self, *args, **kwargs):
     def do():
-        order_pk = kwargs['order_pk']
-        order = Order.lock(pk=order_pk)
-
-        with lockaccounts(order):
+        with lockorder(pk=kwargs['order_pk']) as order:
             if order.need_approve and order.status != constants.ORDER_APPROVED:
                 order.status = constants.ORDER_APPROVED
 
-                with lockaccounts(Order.lock(pk=order.link.pk)) as opposite:
+                with lockorder(pk=order.link.pk) as opposite:
 
                     if opposite.need_approve:
                         if opposite.status == constants.ORDER_APPROVED:
@@ -199,11 +188,8 @@ def approve_order(self, *args, **kwargs):
 def update_order(self, *args, **kwargs):
     def do():
         data = kwargs['data']
-        order_pk = kwargs['order_pk']
-
-        order = Order.lock(pk=order_pk)
-        with lockaccounts(order):
-            if order.status in [constants.ORDER_INIT, constants.ORDER_PENDING]:
+        with lockorder(pk=kwargs['order_pk']) as order:
+            if order.status in [constants.ORDER_INIT, constants.ORDER_PENDING, constants.ORDER_LOCKED]:
 
                 order.unfreeze_money()
 
@@ -216,7 +202,7 @@ def update_order(self, *args, **kwargs):
                 order.total = decimal.Decimal(data.get('total'))
                 order.freeze_money()
             else:
-                raise ValidationError("You can't modify orders in status '{}'".format(order.status))
+                raise UpdateFailureError("Can't update orders in status '{}'".format(order.status))
 
         return OrderSerializer(order).data
 

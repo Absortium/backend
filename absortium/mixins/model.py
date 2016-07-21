@@ -1,7 +1,7 @@
 from absortium import constants
 from absortium.exceptions import NotEnoughMoneyError
 from absortium.model import models
-from absortium.model.locks import get_opposites, lockaccounts
+from absortium.model.locks import get_opposites, lockorder
 from core.utils.logging import getLogger
 
 __author__ = 'andrew.shvv@gmail.com'
@@ -29,7 +29,7 @@ class OrderMixin():
         history = []
 
         for opposite in get_opposites(order):
-            with lockaccounts(opposite):
+            with lockorder(order=opposite):
                 if order >= opposite:
                     (fraction, order) = order - opposite
 

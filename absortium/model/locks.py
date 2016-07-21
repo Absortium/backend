@@ -7,15 +7,22 @@ __author__ = 'andrew.shvv@gmail.com'
 logger = getLogger(__name__)
 
 
-class lockaccounts:
-    def __init__(self, order=None):
-        self.order = order
-        self.status = order.status
-        self.amount = order.amount
-        self.price = order.price
-        self.total = order.total
+class lockorder:
+    def __init__(self, pk=None, order=None):
 
-        if order.pk is None:
+        if pk:
+            self.order = models.Order.lock(pk=pk)
+        elif order:
+            self.order = order
+        else:
+            raise Exception("'pk' or 'order' should be specified.")
+
+        self.status = self.order.status
+        self.amount = self.order.amount
+        self.price = self.order.price
+        self.total = self.order.total
+
+        if self.order.pk is None:
             self.order.save()
 
     def __enter__(self):

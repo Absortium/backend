@@ -1,15 +1,16 @@
 """
     In order to avoid cycle import problem we should separate models and signals
 """
-from django.contrib.auth import get_user_model
-from django.db.models.signals import post_save
-from django.dispatch.dispatcher import receiver
-
-from absortium import constants
 from absortium.celery import tasks
 from absortium.crossbarhttp import get_crossbar_client
 from absortium.model.models import Order, MarketInfo
 from absortium.serializers import MarketInfoSerializer, OrderSerializer
+from django.contrib.auth import get_user_model
+from django.db.models import Q
+from django.db.models.signals import post_save
+from django.dispatch.dispatcher import receiver
+
+from absortium import constants
 from core.apikeyauth.models import Client
 from core.utils.logging import getPrettyLogger
 
@@ -57,7 +58,10 @@ def order_post_save(sender, instance, *args, **kwargs):
             Send websocket notification to the router if offers is changed.
         """
 
-        orders = Order.objects.filter(pair=order.pair, type=order.type, price=order.price)
+        orders = Order.objects.filter(Q(status=constants.ORDER_INIT) | Q(status=constants.ORDER_PENDING),
+                                      pair=order.pair,
+                                      type=order.type,
+                                      price=order.price)
 
         amount = sum((offer.amount for offer in orders))
         total = sum((offer.total for offer in orders))
