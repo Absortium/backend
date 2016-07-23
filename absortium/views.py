@@ -62,7 +62,7 @@ class OfferViewSet(viewsets.GenericViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        queryset = queryset.values("price", "type", "pair").annotate(amount=Sum('amount'))
+        queryset = queryset.values("price", "type", "pair").annotate(amount=Sum('amount'), total=Sum('total'))
         return HttpResponse(json.dumps(list(queryset), cls=DjangoJSONEncoder), content_type="application/json")
 
 
