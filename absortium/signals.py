@@ -44,7 +44,7 @@ def order_post_save(sender, instance, *args, **kwargs):
     """
 
     def history_notification(order):
-        if order.status in [constants.ORDER_COMPLETED, constants.ORDER_CANCELED]:
+        if order.status == constants.ORDER_COMPLETED:
             serializer = OrderSerializer(order)
             publishment = serializer.data
 
