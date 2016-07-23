@@ -1,21 +1,15 @@
+from absortium.exceptions import NotEnoughMoneyError
+from absortium.mixins.model import OrderMixin
+from absortium.wallet.base import get_wallet_client
 from django.conf import settings
 from django.db import models
 
 from absortium import constants
-from absortium.exceptions import NotEnoughMoneyError
-from absortium.mixins.model import OrderMixin
-from absortium.wallet.base import get_wallet_client
 from core.utils.logging import getLogger
+from core.utils.model import calculate_len
 
 __author__ = 'andrew.shvv@gmail.com'
 logger = getLogger(__name__)
-
-
-def calculate_len(choices):
-    """
-        Calculate length for choice filed in django model.
-    """
-    return max([len(t) for t in choices]) + 1
 
 
 class Account(models.Model):
