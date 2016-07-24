@@ -31,10 +31,6 @@ before_install:
   - rm -rf "services/$SERVICE"
   - mv "../$SERVICE" "services/$SERVICE"
 
-
-  # Create mock '.sensitive'
-  - ./useful/create_mock_sensitive.sh
-
   # List 'docker-engine' versions
   - apt-cache madison docker-engine
 
